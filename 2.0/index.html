@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Cobra 3D</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #startScreen, #endScreen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('assets/bcktest.png');
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+        #title {
+            background-image: url('assets/titletest.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            width: 500px;
+            height: 200px;
+            margin-bottom: 50px;
+        }
+        #playButton, #playAgainButton {
+            background-image: url('assets/starttest.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            width: 200px;
+            height: 100px;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #scoreBoard {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            z-index: 1;
+        }
+        #endScreen {
+            display: none;
+            background-color: rgba(0, 0, 0, 0.7); /* semi-transparente para dar contraste */
+            background-image: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #finalScore {
+            font-size: 32px;
+            color: white;
+            margin-bottom: 10px;
+        }
+        #highscoreEnd {
+            font-size: 24px;
+            color: white;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Tela inicial -->
+    <div id="startScreen">
+        <div id="title"></div>
+        <button id="playButton"></button>
+    </div>
+
+    <!-- Tela de fim de jogo -->
+    <div id="endScreen">
+        <div id="finalScore">Score: 0</div>
+        <div id="highscoreEnd">Highscore: 0</div>
+        <button id="playAgainButton"></button>
+    </div>
+
+    <!-- Placar durante o jogo -->
+    <div id="scoreBoard">
+        <span id="score">Score: 0</span><br>
+        <span id="highscore">Highscore: 0</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
