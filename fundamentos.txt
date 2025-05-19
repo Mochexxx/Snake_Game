@@ -1,0 +1,16 @@
+Calendarização do Projeto
+Semana 1: Criação do tópico, pesquisa, definição da proposta e calendarização;
+
+Semana 2: Criação do cenário 3D base e elementos iniciais (plano e cobra);
+
+Semana 3: Implementação do movimento automático da cobra;
+
+Semana 4: Introdução da lógica de frutas e crescimento da cobra;
+
+Semana 5: Deteção de colisões (paredes e corpo);
+
+Semana 6: Implementação das câmaras (perspetiva e ortográfica) e sistema de luzes;
+
+Semana 7: Melhorias visuais, pontuação (HUD), reinício do jogo;
+
+Semana 8: Fase de testes, conclusão e entrega do relatório final;

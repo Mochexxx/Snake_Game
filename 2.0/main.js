@@ -1,3 +1,8 @@
+// main.js
+import * as Scene from './scene.js';
+import { createSnake, moveSnake, isAppleOnSnake } from './Snake.js';
+import { createApple } from './apple.js';
+
 // Variáveis globais
 let scene, camera, renderer;
 let snake = [], snakeHead, snakeDirection;
@@ -7,9 +12,40 @@ let gameRunning = false;
 let lastMoveTime = 0, moveInterval = 200;
 let score = 0;
 let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
+let gameMode = 'classic'; // classic, barriers, obstacles
+
+// Mode selection logic
+const playButton = document.getElementById('playButton');
+const modeClassic = document.getElementById('modeClassic');
+const modeBarriers = document.getElementById('modeBarriers');
+const modeObstacles = document.getElementById('modeObstacles');
+
+function selectMode(mode) {
+    gameMode = mode;
+    playButton.style.display = '';
+    // Highlight selected mode
+    [modeClassic, modeBarriers, modeObstacles].forEach(btn => btn.style.background = '');
+    if (mode === 'classic') modeClassic.style.background = '#444';
+    if (mode === 'barriers') modeBarriers.style.background = '#444';
+    if (mode === 'obstacles') modeObstacles.style.background = '#444';
+}
+
+modeClassic.addEventListener('click', () => selectMode('classic'));
+modeBarriers.addEventListener('click', () => selectMode('barriers'));
+modeObstacles.addEventListener('click', () => selectMode('obstacles'));
+
+window.onload = function() {
+    document.getElementById('mainMenu').style.display = 'flex';
+    document.getElementById('startScreen').style.display = 'none';
+};
+
+document.getElementById('startMenuButton').addEventListener('click', function () {
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
+});
 
 // Função para esconder a tela de início e iniciar o jogo
-document.getElementById('playButton').addEventListener('click', function () {
+playButton.addEventListener('click', function () {
     document.getElementById('startScreen').style.display = 'none';
     isPaused = false;
     gameRunning = true;
@@ -40,142 +76,20 @@ function startGame() {
         document.body.removeChild(renderer.domElement);
     }
 
-    initScene();
-    createSnake();
-    createApple();
+    scene = Scene.createScene();
+    camera = Scene.createCamera();
+    renderer = Scene.createRenderer();
+    Scene.addLights(scene);
+    Scene.addFloor(scene);
+
+    const snakeObj = createSnake(scene);
+    snake = snakeObj.snake;
+    snakeHead = snakeObj.snakeHead;
+    snakeDirection = snakeObj.snakeDirection;
+
+    apple = createApple(scene, snake, isAppleOnSnake);
     setupControls();
     animate();
-}
-
-// Inicializar a cena
-function initScene() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x202020);
-
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(10, 20, 10);
-    scene.add(dirLight);
-
-    const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(21, 21, 20, 20),
-        new THREE.MeshStandardMaterial({ color: 0x333333 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
-
-    camera.position.set(12, 12.5, 12);
-    camera.lookAt(3, 0, 3);
-}
-
-// Criar cobra
-function createSnake() {
-    const cubeSize = 1;
-    const fullMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    const headMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-
-    // Cabeça trapezoidal invertida
-    const shape = new THREE.Shape();
-    shape.moveTo(-0.5, -0.5);  // base maior (frente)
-    shape.lineTo(0.5, -0.5);
-    shape.lineTo(0.25, 0.5);     // base menor (parte conectada ao corpo)
-    shape.lineTo(-0.25, 0.5);
-    shape.lineTo(-0.5, -0.5);
-
-    const extrudeSettings = {
-        depth: 1,
-        bevelEnabled: false
-    };
-
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    geometry.rotateX(Math.PI / 2); // Deita no plano horizontal
-    geometry.center();
-
-    const head = new THREE.Mesh(geometry, headMaterial);
-    head.position.set(0, 0.5, 0);
-    scene.add(head);
-    snake.push(head);
-
-    for (let i = 1; i < 5; i++) {
-        const segment = new THREE.Mesh(
-            new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize),
-            fullMaterial
-        );
-        segment.position.set(-i, 0.5, 0);
-        scene.add(segment);
-        snake.push(segment);
-    }
-
-    snakeDirection = new THREE.Vector3(1, 0, 0);
-    snakeHead = snake[0];
-}
-
-// Criar maçã
-function createApple() {
-    const appleGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const appleMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    apple = new THREE.Mesh(appleGeometry, appleMaterial);
-
-    let x, z;
-    do {
-        x = Math.floor(Math.random() * 21) - 10;
-        z = Math.floor(Math.random() * 21) - 10;
-    } while (isAppleOnSnake(x, z));
-
-    apple.position.set(x, 0.5, z);
-    scene.add(apple);
-}
-
-// Verificar se a maçã está na cobra
-function isAppleOnSnake(x, z) {
-    return snake.some(segment => segment.position.x === x && segment.position.z === z);
-}
-
-// Mover cobra com teletransporte
-function moveSnake() {
-    const limit = 10;
-    let newHeadPosition = snakeHead.position.clone().add(snakeDirection);
-
-    // Teletransporte
-    if (newHeadPosition.x > limit) newHeadPosition.x = -limit;
-    else if (newHeadPosition.x < -limit) newHeadPosition.x = limit;
-    if (newHeadPosition.z > limit) newHeadPosition.z = -limit;
-    else if (newHeadPosition.z < -limit) newHeadPosition.z = limit;
-
-    for (let i = 1; i < snake.length; i++) {
-        if (snake[i].position.distanceTo(newHeadPosition) < 0.1) {
-            endGame();
-            return;
-        }
-    }
-
-    if (snakeHead.position.distanceTo(apple.position) < 1) {
-        score += 10;
-        document.getElementById('score').textContent = 'Score: ' + score;
-
-        const tail = snake[snake.length - 1];
-        const newSegment = new THREE.Mesh(tail.geometry, tail.material);
-        newSegment.position.copy(tail.position);
-        snake.push(newSegment);
-        scene.add(newSegment);
-        scene.remove(apple);
-        createApple();
-    }
-
-    for (let i = snake.length - 1; i > 0; i--) {
-        snake[i].position.copy(snake[i - 1].position);
-    }
-
-    snakeHead.position.copy(newHeadPosition);
-
-    // Atualizar rotação da cabeça para seguir o movimento
-    const angle = Math.atan2(snakeDirection.x, snakeDirection.z);
-    snakeHead.rotation.y = angle;
 }
 
 // Fim de jogo
@@ -207,11 +121,31 @@ document.getElementById('playAgainButton').addEventListener('click', function ()
 function animate(time) {
     requestAnimationFrame(animate);
     if (isPaused || !gameRunning) return;
-
     if (time - lastMoveTime > moveInterval) {
-        moveSnake();
+        moveSnake(
+            snake,
+            snakeHead,
+            snakeDirection,
+            apple,
+            gameMode,
+            endGame,
+            () => {
+                // addSegment
+                const tail = snake[snake.length - 1];
+                const newSegment = new THREE.Mesh(tail.geometry, tail.material);
+                newSegment.position.copy(tail.position);
+                snake.push(newSegment);
+                scene.add(newSegment);
+                scene.remove(apple);
+                apple = createApple(scene, snake, isAppleOnSnake);
+            },
+            () => {
+                // updateScore
+                score += 10;
+                document.getElementById('score').textContent = 'Score: ' + score;
+            }
+        );
         lastMoveTime = time;
     }
-
     renderer.render(scene, camera);
 }
