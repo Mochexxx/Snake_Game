@@ -1,12 +1,13 @@
 // main.js
 import * as Scene from './scene.js';
-import { createSnake, moveSnake, isAppleOnSnake } from './Snake.js';
+import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
 import { createApple } from './apple.js';
 import { createObstacles, checkObstacleCollision, removeObstacles } from './obstacles.js';
 import { createHitboxVisualization, toggleHitboxVisualization, toggleDebugMode } from './debug.js';
 import { showTutorial } from './tutorial.js';
 import { addControlsHelpButton } from './game-controls.js';
 import { setupTouchControls } from './touch-controls.js';
+import { checkGameIntegrity } from './integrity-checker.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -41,19 +42,20 @@ function selectMode(mode) {
     gameMode = mode;
     
     playButton.style.display = '';
-    // Highlight selected mode
-    [modeClassic, modeBarriers, modeObstacles].forEach(btn => btn.style.background = '');
+    
+    // Remove classe 'active' de todos os botões
+    [modeClassic, modeBarriers, modeObstacles].forEach(btn => btn.classList.remove('active'));
     
     // Ajusta o texto do modo e destaque visual
     let modeText = '';
     if (mode === 'classic') {
-        modeClassic.style.background = '#444';
+        modeClassic.classList.add('active');
         modeText = 'Classic (Teleport)';
     } else if (mode === 'barriers') {
-        modeBarriers.style.background = '#444';
+        modeBarriers.classList.add('active');
         modeText = 'Barriers';
     } else if (mode === 'obstacles') {
-        modeObstacles.style.background = '#444';
+        modeObstacles.classList.add('active');
         modeText = 'Obstacles';
     }
     
@@ -189,6 +191,14 @@ function setupControls() {
                     }
                 }
                 break;
+            case 'c': // Tecla C para visualizar colisões (debug)
+                if (debugMode) {
+                    // Visualiza as posições da cobra por alguns segundos
+                    debugCollisions(scene, snakeBoard, hitboxes);
+                    console.log("Matriz da cobra:", JSON.stringify(snakeBoard));
+                    console.log("Posição da cabeça:", snakeHead.position);
+                }
+                break;
             case 'b': // Tecla B para ativar/desativar modo debug (não usa mais 'D' para evitar conflito com movimento)
                 debugMode = !debugMode;
                 toggleDebugMode(debugMode);
@@ -273,6 +283,17 @@ function startGame() {
 
 // Fim de jogo
 function endGame() {
+    // Evita múltiplas chamadas (pode acontecer devido a bugs de colisão)
+    if (!gameRunning || isPaused) {
+        return;
+    }
+    
+    // Verifica se é uma colisão válida
+    if (debugMode) {
+        console.log("Jogo finalizado - Score:", score);
+        console.log("Posições finais da cobra:", JSON.stringify(snakeBoard));
+    }
+    
     if (score > highscore) {
         highscore = score;
         localStorage.setItem('highscore', highscore);
@@ -284,7 +305,7 @@ function endGame() {
     document.getElementById('scoreBoard').style.display = 'none';
 
     // Limpar obstáculos
-    if (obstacles.length > 0) {
+    if (obstacles && obstacles.length > 0) {
         removeObstacles(scene, obstacles);
         obstacles = [];
     }
@@ -315,8 +336,7 @@ document.getElementById('playAgainButton').addEventListener('click', function ()
 // Animação
 function animate(time) {
     requestAnimationFrame(animate);
-    
-    // Anima os obstáculos mesmo se o jogo estiver pausado
+      // Anima os obstáculos mesmo se o jogo estiver pausado
     if (gameMode === 'obstacles' && obstacles.length > 0) {
         // Importa a função de animação dos obstáculos
         import('./obstacles.js').then(module => {
@@ -324,11 +344,24 @@ function animate(time) {
         });
     }
     
-    if (isPaused || !gameRunning) {
+    // Anima a maçã se existir (rotação e flutuação)
+    if (apple && apple.userData && apple.userData.animate) {
+        apple.userData.animate(time);
+    }
+      if (isPaused || !gameRunning) {
         // Continua renderizando mesmo se pausado para que efeitos visuais funcionem
         renderer.render(scene, camera);
         return;
-    }      if (time - lastMoveTime > moveInterval) {
+    }
+      // Verificação periódica de integridade do jogo (a cada 2 segundos)
+    if (time % 2000 < 20) { // Verificamos sempre, não apenas em modo debug
+        const needsCorrection = checkGameIntegrity(scene, snake, snakeHead, snakeBoard, apple, obstacles, hitboxes);
+        if (needsCorrection && debugMode) {
+            console.log("Correções de integridade aplicadas");
+        }
+    }
+        
+    if (time - lastMoveTime > moveInterval) {
         // Aplica a próxima direção, se existir, antes de mover a cobra
         if (nextDirection) {
             // Verifica se a direção ainda é válida (não oposta à direção atual)
@@ -339,41 +372,108 @@ function animate(time) {
                 snakeDirection = nextDirection;
             }
             nextDirection = null;
-        }
-        moveSnake(
+        }        moveSnake(
             snake,
             snakeHead,
             snakeDirection,
             apple,
             gameMode,
-            endGame,
-            () => {
-                // addSegment
+            endGame,            () => {
+                // Verifica se existe limite máximo de segmentos
+                const MAX_SEGMENTS = 100; // Defina um limite razoável para sua cobra (ajuste conforme necessário)
+                
+                // Se a cobra atingir o limite máximo, não adiciona mais segmentos e apenas pontua
+                if (snake.length >= MAX_SEGMENTS) {
+                    console.log(`Limite máximo de segmentos (${MAX_SEGMENTS}) atingido!`);
+                    // Mesmo sem adicionar segmento, ainda incrementa o score e remove a maçã
+                    scene.remove(apple);
+                    return;
+                }
+                
+                // addSegment - Adiciona um novo segmento na posição do último segmento
                 const tail = snakeBoard[snakeBoard.length - 1];
-                const { x, z } = tail;
-                snakeBoard.push({ x, z });
-                const { centerX, centerZ } = hitboxes[tail.x][tail.z];
-                const newSegment = new THREE.Mesh(snake[snake.length - 1].geometry, snake[snake.length - 1].material);
+                // Cria uma cópia das coordenadas para não modificar o original
+                const { x, z } = {...tail};
+                
+                // Verifica se as coordenadas estão nos limites do tabuleiro
+                const validX = Math.max(0, Math.min(19, x));
+                const validZ = Math.max(0, Math.min(19, z));
+                
+                // Primeiro cria o segmento visual 3D
+                // Obtém as coordenadas 3D corretas para o novo segmento
+                const { centerX, centerZ } = hitboxes[validX][validZ];
+                
+                // Materiais e geometria consistentes para todos os segmentos
+                const segmentMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x00ff00, 
+                    roughness: 0.5,
+                    metalness: 0.2,
+                    flatShading: false
+                });
+                
+                // Cria um novo segmento visual com geometria e material consistentes
+                const newSegment = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.9, 1.9, 1.9),  // Ligeiramente menor para evitar problemas de colisão
+                    segmentMaterial
+                );
+                
+                // Define a posição correta no espaço 3D
                 newSegment.position.set(centerX, 1, centerZ);
+                
+                // Adiciona o segmento à cena e ao array de segmentos
                 snake.push(newSegment);
                 scene.add(newSegment);
-                scene.remove(apple);
                 
-                // Cria uma nova maçã em uma posição que não está em um obstáculo
+                // Só depois que garantimos que o objeto visual foi criado, atualizamos a matriz
+                // Adiciona a posição à matriz do tabuleiro com coordenadas validadas
+                snakeBoard.push({ x: validX, z: validZ });
+                
+                // Garante sincronização entre matriz e objetos visuais
+                if (snake.length !== snakeBoard.length) {
+                    console.warn(`Corrigindo discrepância: snake (${snake.length}) vs snakeBoard (${snakeBoard.length})`);
+                    // Sincroniza os tamanhos
+                    while (snakeBoard.length > snake.length) {
+                        snakeBoard.pop();
+                    }
+                }
+                
+                // Remove a maçã existente
+                scene.remove(apple);
+                  // Cria uma nova maçã em uma posição que não está em um obstáculo ou na cobra
                 let appleX, appleZ;
                 let validPosition = false;
+                let maxAttempts = 50; // Limite de tentativas para evitar loop infinito
+                let attempts = 0;
                 
                 do {
+                    // Cria uma nova maçã usando a função createApple
                     apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
+                    
+                    // Calcula a posição da maçã na matriz do tabuleiro
                     appleX = Math.round((apple.position.x - 1) / 2);
                     appleZ = Math.round((apple.position.z - 1) / 2);
                     
-                    // Verifica se a maçã não está em um obstáculo
-                    validPosition = !obstacles.some(obstacle => 
-                        obstacle.boardPosition.x === appleX && obstacle.boardPosition.z === appleZ);
+                    // Por padrão, a posição é válida
+                    validPosition = true;
                     
+                    // Verifica se a maçã não está em um obstáculo (modo obstáculos)
+                    if (gameMode === 'obstacles') {
+                        if (obstacles.some(obstacle => 
+                            obstacle.boardPosition.x === appleX && obstacle.boardPosition.z === appleZ)) {
+                            validPosition = false;
+                        }
+                    }
+                    
+                    // Se a posição não for válida, remove a maçã para criar uma nova
                     if (!validPosition) {
                         scene.remove(apple);
+                    }
+                    
+                    attempts++;
+                    // Evita loop infinito limitando o número de tentativas
+                    if (attempts >= maxAttempts) {
+                        console.warn("Máximo de tentativas atingido para posicionar a maçã");
+                        break;
                     }
                 } while (!validPosition && gameMode === 'obstacles');
             },

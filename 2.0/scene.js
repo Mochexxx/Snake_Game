@@ -86,8 +86,16 @@ export function addBoard(scene) {
 }
 
 export function getBoardCellCenter(x, z) {
+    // Garantir que x e z estão nos limites válidos (0-19)
+    const validX = Math.max(0, Math.min(19, x));
+    const validZ = Math.max(0, Math.min(19, z));
+    
     // x, z de 0 a 19 => centro do quadrado
-    return { x: x * 2 + 1, z: z * 2 + 1 };
+    // Cada célula tem tamanho 2x2, portanto o centro é calculado como posição*2 + 1
+    return { 
+        x: validX * 2 + 1, 
+        z: validZ * 2 + 1 
+    };
 }
 
 // Gera uma matriz de hitboxes para o tabuleiro 20x20
