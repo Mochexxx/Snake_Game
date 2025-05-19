@@ -52,7 +52,7 @@ export function createSnake(scene) {
     return { snake, snakeHead: head, snakeDirection: { x: 1, z: 0 }, snakeBoard, hitboxes };
 }
 
-export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, endGame, addSegment, updateScore, snakeBoard, hitboxes, obstacles = []) {
+export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, endGame, addSegment, updateScore, snakeBoard, hitboxes, obstacles = [], barriers = []) {
     // Verificação e validação de parâmetros
     if (!snake || snake.length === 0 || !snakeHead || !snakeDirection || !snakeBoard || snakeBoard.length === 0) {
         console.error("Parâmetros inválidos para moveSnake:", { snake, snakeHead, snakeDirection, snakeBoard });
@@ -85,6 +85,30 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
             console.log(`Colisão com barreira detectada em posição inválida: ${newX}, ${newZ}`);
             endGame();
             return false;
+        }
+          // Verificação adicional para colisões com barreiras no modo barriers
+        if (gameMode === 'barriers' && barriers && barriers.length > 0) {
+            // Verificar colisão com barreiras complexas
+            const complexCollision = barriers.some(barrier => {
+                if (barrier.type === 'complex') {
+                    return barrier.boardPosition.x === newX && barrier.boardPosition.z === newZ;
+                }
+                return false;
+            });
+            
+            // Verificar colisão com barreiras de limite
+            const boundaryCollision = barriers.some(barrier => {
+                if (barrier.type === 'boundary') {
+                    return barrier.boardPositions.some(pos => pos.x === newX && pos.z === newZ);
+                }
+                return false;
+            });
+            
+            if (complexCollision || boundaryCollision) {
+                console.log(`Colisão com barreira detectada em: ${newX}, ${newZ}`);
+                endGame();
+                return false;
+            }
         }
     }// Colisão com o corpo - verificação mais precisa e com tolerância para evitar falsos positivos
     for (let i = 1; i < snakeBoard.length; i++) {

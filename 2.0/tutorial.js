@@ -73,12 +73,16 @@ export function showTutorial(gameMode, onCloseTutorial) {
         tutorialContent += `
             <h3>Modo Clássico (Teleporte)</h3>
             <p>Ao atingir as bordas do tabuleiro, a cobra teleporta para o lado oposto.</p>
-        `;
-    } else if (gameMode === 'barriers') {
+        `;    } else if (gameMode === 'barriers') {
         tutorialContent += `
             <h3>Modo Barreiras</h3>
             <p>Cuidado! As bordas do tabuleiro são barreiras sólidas.</p>
-            <p>Colidir com as bordas resulta em Game Over.</p>
+            <p>Além disso, há estruturas complexas de barreiras dentro do tabuleiro.</p>
+            <p>Essas estruturas são formadas por cubos empilhados com uma meia-laje no topo.</p>
+            <p>Colidir com qualquer barreira resulta em Game Over.</p>
+            <div style="margin: 15px auto; background-color: #333; padding: 10px; border-radius: 5px;">
+                <span style="color: #aaaaaa; font-weight: bold;">Dica:</span> Observe cuidadosamente o tabuleiro para identificar os padrões de barreiras.
+            </div>
         `;
     } else if (gameMode === 'obstacles') {
         tutorialContent += `

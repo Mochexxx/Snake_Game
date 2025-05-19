@@ -3,6 +3,7 @@ import * as Scene from './scene.js';
 import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
 import { createApple } from './apple.js';
 import { createObstacles, checkObstacleCollision, removeObstacles } from './obstacles.js';
+import { createBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
 import { createHitboxVisualization, toggleHitboxVisualization, toggleDebugMode } from './debug.js';
 import { showTutorial } from './tutorial.js';
 import { addControlsHelpButton } from './game-controls.js';
@@ -14,6 +15,7 @@ let scene, camera, renderer;
 let snake = [], snakeHead, snakeDirection, snakeBoard;
 let apple = null;
 let obstacles = [];
+let barriers = [];
 let hitboxVisuals = [];
 let isPaused = true;
 let gameRunning = false;
@@ -222,6 +224,7 @@ function startGame() {
     score = 0;
     snake = [];
     obstacles = [];
+    barriers = [];
     hitboxVisuals = [];
     
     // Atualiza a interface
@@ -264,6 +267,11 @@ function startGame() {
     // Criar maçã
     apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
     
+    // Criar barreiras se o modo for "barriers"
+    if (gameMode === 'barriers') {
+        barriers = createBarriers(scene, snakeBoard, hitboxes);
+    }
+    
     // Criar obstáculos se o modo for "obstacles"
     if (gameMode === 'obstacles') {
         obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 10); // 10 é o número de obstáculos
@@ -282,7 +290,7 @@ function startGame() {
 }
 
 // Fim de jogo
-function endGame() {
+function endGame(gameCompleted = false) {
     // Evita múltiplas chamadas (pode acontecer devido a bugs de colisão)
     if (!gameRunning || isPaused) {
         return;
@@ -301,6 +309,13 @@ function endGame() {
 
     document.getElementById('finalScore').textContent = 'Score: ' + score;
     document.getElementById('highscoreEnd').textContent = 'Highscore: ' + highscore;
+    
+    // Muda a mensagem se o jogo foi completado (tabuleiro preenchido)
+    if (gameCompleted) {
+        document.getElementById('finalScore').textContent = 'PARABÉNS! Você venceu o jogo!';
+        document.getElementById('highscoreEnd').textContent = 'Score Final: ' + score;
+    }
+    
     document.getElementById('endScreen').style.display = 'flex';
     document.getElementById('scoreBoard').style.display = 'none';
 
@@ -308,6 +323,12 @@ function endGame() {
     if (obstacles && obstacles.length > 0) {
         removeObstacles(scene, obstacles);
         obstacles = [];
+    }
+    
+    // Limpar barreiras
+    if (barriers && barriers.length > 0) {
+        removeBarriers(scene, barriers);
+        barriers = [];
     }
 
     isPaused = true;
@@ -344,6 +365,12 @@ function animate(time) {
         });
     }
     
+    // Anima as barreiras no modo barriers
+    if (gameMode === 'barriers' && barriers.length > 0) {
+        // Anima as barreiras complexas
+        animateBarriers(barriers, time);
+    }
+    
     // Anima a maçã se existir (rotação e flutuação)
     if (apple && apple.userData && apple.userData.animate) {
         apple.userData.animate(time);
@@ -352,10 +379,9 @@ function animate(time) {
         // Continua renderizando mesmo se pausado para que efeitos visuais funcionem
         renderer.render(scene, camera);
         return;
-    }
-      // Verificação periódica de integridade do jogo (a cada 2 segundos)
+    }      // Verificação periódica de integridade do jogo (a cada 2 segundos)
     if (time % 2000 < 20) { // Verificamos sempre, não apenas em modo debug
-        const needsCorrection = checkGameIntegrity(scene, snake, snakeHead, snakeBoard, apple, obstacles, hitboxes);
+        const needsCorrection = checkGameIntegrity(scene, snake, snakeHead, snakeBoard, apple, obstacles, hitboxes, barriers);
         if (needsCorrection && debugMode) {
             console.log("Correções de integridade aplicadas");
         }
@@ -435,23 +461,31 @@ function animate(time) {
                         snakeBoard.pop();
                     }
                 }
-                
-                // Remove a maçã existente
+                  // Remove a maçã existente
                 scene.remove(apple);
                   // Cria uma nova maçã em uma posição que não está em um obstáculo ou na cobra
                 let appleX, appleZ;
                 let validPosition = false;
-                let maxAttempts = 50; // Limite de tentativas para evitar loop infinito
+                let maxAttempts = 100; // Aumenta o limite de tentativas
                 let attempts = 0;
+                let spawnFailed = false;
+                
+                // Cria uma nova maçã usando a função createApple
+                apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
+                  // Verifica se o jogo foi completado (tabuleiro quase cheio)
+                if (apple.userData && apple.userData.gameCompleted) {
+                    // Mostra uma mensagem de vitória
+                    console.log("PARABÉNS! Você preencheu o tabuleiro!");
+                    alert("PARABÉNS! Você preencheu quase todo o tabuleiro e venceu o jogo!");
+                    endGame(true); // Encerra o jogo com vitória
+                    return;
+                }
+                
+                // Calcula a posição da maçã na matriz do tabuleiro
+                appleX = Math.round((apple.position.x - 1) / 2);
+                appleZ = Math.round((apple.position.z - 1) / 2);
                 
                 do {
-                    // Cria uma nova maçã usando a função createApple
-                    apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
-                    
-                    // Calcula a posição da maçã na matriz do tabuleiro
-                    appleX = Math.round((apple.position.x - 1) / 2);
-                    appleZ = Math.round((apple.position.z - 1) / 2);
-                    
                     // Por padrão, a posição é válida
                     validPosition = true;
                     
@@ -463,18 +497,129 @@ function animate(time) {
                         }
                     }
                     
-                    // Se a posição não for válida, remove a maçã para criar uma nova
-                    if (!validPosition) {
-                        scene.remove(apple);
+                    // Verifica se a maçã não está em uma barreira (modo barreiras)
+                    if (gameMode === 'barriers') {
+                        // Verifica colisão com barreiras complexas
+                        const complexCollision = barriers.some(barrier => {
+                            if (barrier.type === 'complex') {
+                                return barrier.boardPosition.x === appleX && barrier.boardPosition.z === appleZ;
+                            }
+                            return false;
+                        });
+                        
+                        // Verifica colisão com barreiras de limite (não deveria acontecer, mas por segurança)
+                        const boundaryCollision = barriers.some(barrier => {
+                            if (barrier.type === 'boundary') {
+                                return barrier.boardPositions.some(pos => pos.x === appleX && pos.z === appleZ);
+                            }
+                            return false;
+                        });
+                        
+                        if (complexCollision || boundaryCollision) {
+                            validPosition = false;
+                        }
                     }
                     
-                    attempts++;
-                    // Evita loop infinito limitando o número de tentativas
-                    if (attempts >= maxAttempts) {
-                        console.warn("Máximo de tentativas atingido para posicionar a maçã");
-                        break;
+                    // Se a posição não for válida, remove a maçã e tenta criar uma nova
+                    if (!validPosition) {
+                        scene.remove(apple);
+                        attempts++;
+                        
+                        // Se exceder o número máximo de tentativas, busca uma posição manualmente
+                        if (attempts >= maxAttempts) {
+                            console.warn("Máximo de tentativas atingido para posicionar a maçã. Buscando posição alternativa.");
+                            
+                            // Encontra todas as posições livres, considerando obstáculos e barreiras
+                            const availablePositions = findAvailableSpot();
+                            
+                            if (availablePositions && availablePositions.x !== undefined) {
+                                // Usa a posição encontrada
+                                appleX = availablePositions.x;
+                                appleZ = availablePositions.z;
+                                const { centerX, centerZ } = hitboxes[appleX][appleZ];
+                                
+                                // Cria uma nova maçã na posição encontrada
+                                const appleGeometry = new THREE.SphereGeometry(1, 16, 16);
+                                const appleMaterial = new THREE.MeshStandardMaterial({ 
+                                    color: 0xff0000,
+                                    roughness: 0.5,
+                                    metalness: 0.2
+                                });
+                                apple = new THREE.Mesh(appleGeometry, appleMaterial);
+                                apple.position.set(centerX, 1, centerZ);
+                                scene.add(apple);
+                                
+                                // Anima a maçã
+                                const originalY = apple.position.y;
+                                apple.userData.animationStartTime = Date.now();
+                                apple.userData.animate = function(time) {
+                                    apple.rotation.y += 0.005;
+                                    apple.position.y = originalY + Math.sin(time * 0.002) * 0.2;
+                                };
+                                
+                                validPosition = true;
+                                console.log("Maçã posicionada manualmente em:", appleX, appleZ);
+                            } else {
+                                console.error("ERRO: Impossível encontrar posição para a maçã!");
+                                spawnFailed = true;
+                            }
+                            break;
+                        }
+                        
+                        // Tenta uma nova posição aleatória
+                        apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
+                        appleX = Math.round((apple.position.x - 1) / 2);
+                        appleZ = Math.round((apple.position.z - 1) / 2);
                     }
-                } while (!validPosition && gameMode === 'obstacles');
+                } while (!validPosition && (gameMode === 'obstacles' || gameMode === 'barriers'));
+                
+                // Função para encontrar um espaço disponível manualmente
+                function findAvailableSpot() {
+                    // Percorre todo o tabuleiro em busca de uma posição livre
+                    for (let x = 0; x < 20; x++) {
+                        for (let z = 0; z < 20; z++) {
+                            // Verifica se a posição está ocupada pela cobra
+                            const isOnSnake = snakeBoard.some(seg => seg.x === x && seg.z === z);
+                            if (isOnSnake) continue;
+                            
+                            // Verifica se a posição está em algum obstáculo
+                            let isOnObstacle = false;
+                            if (gameMode === 'obstacles') {
+                                isOnObstacle = obstacles.some(obs => obs.boardPosition.x === x && obs.boardPosition.z === z);
+                            }
+                            if (isOnObstacle) continue;
+                            
+                            // Verifica se a posição está em alguma barreira
+                            let isOnBarrier = false;
+                            if (gameMode === 'barriers') {
+                                // Verifica barreiras complexas
+                                isOnBarrier = barriers.some(barrier => {
+                                    if (barrier.type === 'complex') {
+                                        return barrier.boardPosition.x === x && barrier.boardPosition.z === z;
+                                    }
+                                    return false;
+                                });
+                                
+                                // Verifica barreiras de limite
+                                if (!isOnBarrier) {
+                                    isOnBarrier = barriers.some(barrier => {
+                                        if (barrier.type === 'boundary') {
+                                            return barrier.boardPositions.some(pos => pos.x === x && pos.z === z);
+                                        }
+                                        return false;
+                                    });
+                                }
+                            }
+                            if (isOnBarrier) continue;
+                            
+                            // Se chegou até aqui, a posição está livre
+                            return { x, z };
+                        }
+                    }
+                    
+                    // Se não encontrar nenhuma posição, retorna null
+                    return null;
+                }
             },
             () => {
                 // Aumenta o score e atualiza o placar
@@ -485,10 +630,10 @@ function animate(time) {
                 if (moveInterval > 50) {
                     moveInterval = Math.max(50, moveInterval - 2);
                 }
-            },
-            snakeBoard,
+            },            snakeBoard,
             hitboxes,
-            obstacles
+            obstacles,
+            barriers
         );
         lastMoveTime = time;
     }

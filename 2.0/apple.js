@@ -14,9 +14,23 @@ export function createApple(scene, snake, isAppleOnSnake, snakeBoard, hitboxes) 
     });
     const apple = new THREE.Mesh(appleGeometry, appleMaterial);
 
+    // Verifica se ainda existem células livres no tabuleiro
+    const totalCells = 20 * 20; // Tabuleiro 20x20
+    const occupiedCells = snakeBoard.length;
+    
+    // Se a cobra ocupar quase todo o tabuleiro (mais de 90%), considere vitória
+    if (occupiedCells > totalCells * 0.9) {
+        console.log("Tabuleiro quase cheio! A cobra venceu o jogo!");
+        // Coloca a maçã em uma posição padrão e marca como "vitória"
+        x = 0;
+        z = 0;
+        apple.userData.gameCompleted = true;
+        return apple;
+    }
+
     // Gera posições aleatórias até encontrar uma que não colida com a cobra
     let x, z;
-    let maxAttempts = 100; // Evita loop infinito
+    let maxAttempts = 200; // Aumenta o número de tentativas para lidar com tabuleiros mais cheios
     let attempts = 0;
     
     do {
@@ -26,7 +40,21 @@ export function createApple(scene, snake, isAppleOnSnake, snakeBoard, hitboxes) 
         
         // Sai do loop se atingir o máximo de tentativas
         if (attempts >= maxAttempts) {
-            console.warn("Máximo de tentativas atingido para posicionar a maçã. Aceitando posição atual.");
+            console.warn("Máximo de tentativas atingido para posicionar a maçã. Usando método alternativo.");
+            // Método alternativo: verifica o tabuleiro de forma sistemática
+            const availablePositions = findAvailablePositions(snakeBoard);
+            if (availablePositions.length > 0) {
+                // Escolhe uma posição aleatória entre as disponíveis
+                const randomIndex = Math.floor(Math.random() * availablePositions.length);
+                x = availablePositions[randomIndex].x;
+                z = availablePositions[randomIndex].z;
+                console.log("Posição alternativa encontrada:", x, z);
+            } else {
+                console.error("Nenhuma posição disponível para a maçã!");
+                // Coloca em uma posição padrão
+                x = 0;
+                z = 0;
+            }
             break;
         }
     } while (isAppleOnSnake(snake, x, z, snakeBoard));
@@ -75,4 +103,24 @@ function animateApple(apple) {
         const elapsed = Date.now() - apple.userData.animationStartTime;
         apple.position.y = originalY + Math.sin(elapsed * 0.002) * floatHeight;
     };
+}
+
+// Função para encontrar posições disponíveis no tabuleiro (que não colidem com a cobra)
+function findAvailablePositions(snakeBoard) {
+    const availablePositions = [];
+    
+    // Verifica cada posição do tabuleiro 20x20
+    for (let x = 0; x < 20; x++) {
+        for (let z = 0; z < 20; z++) {
+            // Verifica se a posição atual está ocupada pela cobra
+            const isOccupied = snakeBoard.some(segment => segment.x === x && segment.z === z);
+            
+            // Se não estiver ocupada, adiciona às posições disponíveis
+            if (!isOccupied) {
+                availablePositions.push({ x, z });
+            }
+        }
+    }
+    
+    return availablePositions;
 }

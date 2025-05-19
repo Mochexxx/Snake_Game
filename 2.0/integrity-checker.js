@@ -159,10 +159,46 @@ export function checkAppleIntegrity(apple, snake, snakeBoard, hitboxes) {
 }
 
 // Função principal para verificar a integridade do jogo
-export function checkGameIntegrity(scene, snake, snakeHead, snakeBoard, apple, obstacles, hitboxes) {
+export function checkGameIntegrity(scene, snake, snakeHead, snakeBoard, apple, obstacles, hitboxes, barriers) {
     const snakeCorrected = checkSnakeIntegrity(snake, snakeBoard, hitboxes, scene);
     const obstaclesCorrected = obstacles ? checkObstaclesIntegrity(obstacles, hitboxes) : false;
     const appleCorrected = checkAppleIntegrity(apple, snake, snakeBoard, hitboxes);
+    const barriersCorrected = barriers ? checkBarriersIntegrity(barriers, hitboxes) : false;
     
-    return snakeCorrected || obstaclesCorrected || appleCorrected;
+    return snakeCorrected || obstaclesCorrected || appleCorrected || barriersCorrected;
+}
+
+// Função para verificar a integridade das barreiras
+function checkBarriersIntegrity(barriers, hitboxes) {
+    if (!barriers || barriers.length === 0) {
+        return false;
+    }
+    
+    let hasCorrection = false;
+    
+    // Verifica as barreiras complexas
+    barriers.forEach(barrier => {
+        if (barrier.type === 'complex' && barrier.boardPosition) {
+            const { x, z } = barrier.boardPosition;
+            
+            // Verifica se a posição está fora dos limites
+            if (x < 0 || x > 19 || z < 0 || z > 19) {
+                console.warn(`Barreira com posição inválida: ${x}, ${z}`);
+                // Corrige para uma posição válida
+                barrier.boardPosition.x = Math.max(0, Math.min(19, x));
+                barrier.boardPosition.z = Math.max(0, Math.min(19, z));
+                
+                // Atualiza a posição visual se a barreira tiver um mesh
+                if (barrier.mesh) {
+                    const { centerX, centerZ } = hitboxes[barrier.boardPosition.x][barrier.boardPosition.z];
+                    barrier.mesh.position.x = centerX;
+                    barrier.mesh.position.z = centerZ;
+                }
+                
+                hasCorrection = true;
+            }
+        }
+    });
+    
+    return hasCorrection;
 }
