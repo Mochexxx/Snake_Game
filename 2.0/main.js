@@ -402,8 +402,7 @@ function animate(time) {
                 // Primeiro cria o segmento visual 3D
                 // Obtém as coordenadas 3D corretas para o novo segmento
                 const { centerX, centerZ } = hitboxes[validX][validZ];
-                
-                // Materiais e geometria consistentes para todos os segmentos
+                  // Materiais e geometria consistentes para todos os segmentos
                 const segmentMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0x00ff00, 
                     roughness: 0.5,
@@ -413,7 +412,7 @@ function animate(time) {
                 
                 // Cria um novo segmento visual com geometria e material consistentes
                 const newSegment = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.9, 1.9, 1.9),  // Ligeiramente menor para evitar problemas de colisão
+                    new THREE.BoxGeometry(2, 2, 2),  // Tamanho padrão de 2x2x2
                     segmentMaterial
                 );
                 
