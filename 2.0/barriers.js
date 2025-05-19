@@ -241,18 +241,8 @@ export function removeBarriers(scene, barriers) {
 }
 
 // Função para adicionar pequenas animações às barreiras (opcional)
+// Agora configurada para não ter animação (barreiras estáticas)
 export function animateBarriers(barriers, time) {
-    if (!barriers || barriers.length === 0) return;
-    
-    // Anima apenas as barreiras complexas
-    barriers.forEach(barrier => {
-        if (barrier.type === 'complex' && barrier.mesh) {
-            // Pulso sutil na altura
-            const pulseFactor = Math.sin(time * 0.002) * 0.1;
-            barrier.mesh.scale.y = 1 + pulseFactor;
-            
-            // Pequena rotação
-            barrier.mesh.rotation.y += 0.001;
-        }
-    });
+    // Função mantida para compatibilidade, mas as barreiras agora são estáticas
+    return;
 }

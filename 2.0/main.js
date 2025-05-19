@@ -9,6 +9,21 @@ import { showTutorial } from './tutorial.js';
 import { addControlsHelpButton } from './game-controls.js';
 import { setupTouchControls } from './touch-controls.js';
 import { checkGameIntegrity } from './integrity-checker.js';
+import { 
+    campaignLevels,  
+    nextLevel, 
+    resetCampaign,
+    getLevelInfo, 
+    createCampaignBarriers, 
+    showLevelInfo 
+} from './campaign.js';
+import {
+    showCampaignMenu,
+    loadCampaignProgress,
+    markLevelCompleted,
+    setCurrentLevel,
+    getCurrentLevel
+} from './campaign-menu.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -22,14 +37,17 @@ let gameRunning = false;
 let lastMoveTime = 0, moveInterval = 200;
 let score = 0;
 let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
-let gameMode = 'classic'; // classic, barriers, obstacles
+let gameMode = 'classic'; // classic, barriers, obstacles, campaign
 let hitboxes;
-let debugMode = false; // Flag para ativar/desativar o modo de debug
+// Carrega o estado do modo debug do localStorage
+export let debugMode = localStorage.getItem('debugMode') === 'true'; // Flag para ativar/desativar o modo de debug
+let applesCollected = 0; // Contador de maçãs para o modo campanha
 // Rastreia quais tutoriais já foram exibidos nesta sessão
 const tutorialsShown = {
     'classic': false,
     'barriers': false,
-    'obstacles': false
+    'obstacles': false,
+    'campaign': false
 };
 
 // Mode selection logic
@@ -37,16 +55,20 @@ const playButton = document.getElementById('playButton');
 const modeClassic = document.getElementById('modeClassic');
 const modeBarriers = document.getElementById('modeBarriers');
 const modeObstacles = document.getElementById('modeObstacles');
+const modeCampaign = document.getElementById('modeCampaign'); // Novo botão para modo campanha
+const debugModeToggle = document.getElementById('debugModeToggle'); // Checkbox para ativar/desativar debug
 
-function selectMode(mode) {
-    // Verifica se houve mudança no modo
+function selectMode(mode) {    // Verifica se houve mudança no modo
     const previousMode = gameMode;
     gameMode = mode;
     
-    playButton.style.display = '';
+    // Garantir que o botão de jogar esteja visível
+    playButton.style.display = 'block';
     
     // Remove classe 'active' de todos os botões
-    [modeClassic, modeBarriers, modeObstacles].forEach(btn => btn.classList.remove('active'));
+    [modeClassic, modeBarriers, modeObstacles, modeCampaign].forEach(btn => {
+        if (btn) btn.classList.remove('active');
+    });
     
     // Ajusta o texto do modo e destaque visual
     let modeText = '';
@@ -59,12 +81,24 @@ function selectMode(mode) {
     } else if (mode === 'obstacles') {
         modeObstacles.classList.add('active');
         modeText = 'Obstacles';
+    } else if (mode === 'campaign') {
+        if (modeCampaign) modeCampaign.classList.add('active');
+        const levelInfo = getLevelInfo();
+        modeText = `Campaign - Level ${levelInfo.level}: ${levelInfo.name}`;
     }
     
     // Atualiza o texto do modo atual
     const currentModeElement = document.getElementById('currentMode');
     if (currentModeElement) {
         currentModeElement.textContent = 'Mode: ' + modeText;
+    }
+    
+    // Reset do contador de maçãs ao mudar de modo
+    applesCollected = 0;
+    
+    // Reset da campanha se estiver entrando no modo campanha
+    if (mode === 'campaign') {
+        resetCampaign();
     }
 }
 
@@ -84,19 +118,82 @@ modeObstacles.addEventListener('click', () => {
     }
 });
 
+// Adiciona evento para o novo botão de modo campanha
+if (modeCampaign) {        modeCampaign.addEventListener('click', () => {
+            // Carrega o progresso da campanha para ter dados atualizados
+            loadCampaignProgress();
+              // Mostra o menu de campanha em vez de selecionar diretamente o modo
+            showCampaignMenu(levelNumber => {
+                // Callback chamado quando um nível é selecionado
+                console.log(`Nível selecionado: ${levelNumber}`);
+                
+                gameMode = 'campaign'; // Define o modo de jogo como campanha
+                
+                // Define o nível atual baseado na seleção do usuário
+                const success = setCurrentLevel(levelNumber);
+                console.log(`Nível definido: ${levelNumber}, sucesso: ${success}, nível atual: ${getCurrentLevel()}`);
+                
+                // Inicia o jogo diretamente
+                document.getElementById('startScreen').style.display = 'none';
+                gameRunning = true;
+                startGame();
+            });
+        });
+}
+
 window.onload = function() {
     document.getElementById('mainMenu').style.display = 'flex';
     document.getElementById('startScreen').style.display = 'none';
+    
+    // Inicializa o modo debug se necessário
+    initDebugMode();
 };
 
 document.getElementById('startMenuButton').addEventListener('click', function () {
     document.getElementById('mainMenu').style.display = 'none';
     document.getElementById('startScreen').style.display = 'flex';
+    
+    // Sincronizar o estado do checkbox com o valor atual do modo debug
+    if (debugModeToggle) {
+        debugModeToggle.checked = debugMode;
+    }
 });
+
+// Evento para alternar o modo debug a partir do checkbox
+if (debugModeToggle) {
+    debugModeToggle.addEventListener('change', function() {
+        debugMode = this.checked;
+        toggleDebugMode(debugMode);
+        console.log(`Modo debug ${debugMode ? 'ATIVADO' : 'DESATIVADO'} a partir do menu inicial`);
+    });
+}
+
+// Inicializa o modo debug com base nas configurações salvas
+function initDebugMode() {
+    // Se o modo debug estiver ativo, mostrar a notificação
+    if (debugMode) {
+        toggleDebugMode(true);
+    }
+      // Sincronizar o checkbox de debug com o valor atual
+    const debugToggle = document.getElementById('debugModeToggle');
+    if (debugToggle) {
+        debugToggle.checked = debugMode;
+        
+        // Atualizar o estilo do container do debug toggle
+        const debugToggleContainer = document.getElementById('debugToggleContainer');
+        if (debugToggleContainer) {
+            debugToggleContainer.style.backgroundColor = debugMode ? 
+                'rgba(155, 89, 182, 0.6)' : 
+                'rgba(155, 89, 182, 0.2)';
+        }
+    }
+}
 
 // Função para esconder a tela de início e iniciar o jogo
 playButton.addEventListener('click', function () {
+    console.log("Play button clicked");
     document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('scoreBoard').style.display = 'block'; // Make sure the scoreboard is visible
     gameRunning = true;
     startGame();
     
@@ -119,8 +216,18 @@ playButton.addEventListener('click', function () {
 // Variável para armazenar a próxima direção (para melhorar responsividade)
 let nextDirection = null;
 
+// Flag para verificar se os controles já foram configurados
+let controlsSetup = false;
+
 // Função para configurar os controles da cobra
 function setupControls() {
+    // Evita configurar os controles mais de uma vez
+    if (controlsSetup) {
+        console.log("Controles já configurados, ignorando nova configuração");
+        return;
+    }
+    
+    controlsSetup = true;
     // Função auxiliar para definir a direção garantindo que não vá na direção oposta
     function setDirection(newX, newZ) {
         const dir = snakeDirection;
@@ -199,15 +306,45 @@ function setupControls() {
                     debugCollisions(scene, snakeBoard, hitboxes);
                     console.log("Matriz da cobra:", JSON.stringify(snakeBoard));
                     console.log("Posição da cabeça:", snakeHead.position);
+                }                break;              case 'b': // Tecla B para ativar/desativar modo debug
+            case 'f3': // Tecla F3 como alternativa para ativar/desativar modo debug (mais comum em jogos)
+                // Impede comportamento padrão e execução duplicada
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Evita toggle quando a tecla é mantida pressionada
+                if (event.repeat) {
+                    break;
                 }
-                break;
-            case 'b': // Tecla B para ativar/desativar modo debug (não usa mais 'D' para evitar conflito com movimento)
-                debugMode = !debugMode;
-                toggleDebugMode(debugMode);
+                
+                // Apenas altera o modo debug se não estiver em transição
+                if (!window.debugToggleInProgress) {
+                    window.debugToggleInProgress = true;
+                    debugMode = !debugMode;
+                    toggleDebugMode(debugMode);
+                    console.log(`Debug mode toggled to: ${debugMode}`);
+                    
+                    // Limpa a flag após um pequeno atraso para evitar múltiplas chamadas
+                    setTimeout(() => {
+                        window.debugToggleInProgress = false;
+                    }, 300);
+                }
                 break;
             case 'p': // Tecla P como alternativa para pausar
                 if (gameRunning) {
                     isPaused = !isPaused;
+                }
+                break;
+            case 'm': // Tecla M para abrir o menu de campanha (apenas no modo campanha)
+                if (gameMode === 'campaign' && gameRunning) {
+                    isPaused = true; // Pausa o jogo
+                    showCampaignMenu(levelNumber => {
+                        // Callback chamado quando um nível é selecionado
+                        setCurrentLevel(levelNumber);
+                        // Reinicia o jogo para o nível selecionado
+                        startNextCampaignLevel();
+                        isPaused = false; // Retoma o jogo
+                    });
                 }
                 break;
         }
@@ -262,9 +399,7 @@ function startGame() {
     snake = snakeObj.snake;
     snakeHead = snakeObj.snakeHead;
     snakeDirection = snakeObj.snakeDirection;
-    snakeBoard = snakeObj.snakeBoard;
-
-    // Criar maçã
+    snakeBoard = snakeObj.snakeBoard;    // Criar maçã
     apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
     
     // Criar barreiras se o modo for "barriers"
@@ -275,6 +410,39 @@ function startGame() {
     // Criar obstáculos se o modo for "obstacles"
     if (gameMode === 'obstacles') {
         obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 10); // 10 é o número de obstáculos
+    }
+    
+    // Configurar modo campanha
+    if (gameMode === 'campaign') {
+        // Obter informações do nível atual
+        const levelInfo = getLevelInfo();
+        
+        // Criar barreiras baseadas no nível atual
+        barriers = createCampaignBarriers(scene, snakeBoard, hitboxes);
+        
+        // Reset do contador de maçãs para o nível
+        applesCollected = 0;
+          // Atualizar o texto do modo para incluir informações do nível
+        document.getElementById('currentMode').textContent = `Campaign - Level ${levelInfo.level}: ${levelInfo.name}`;
+        
+        // Mostrar objetivo na pontuação e manter o highscore
+        document.getElementById('score').textContent = `Maçãs: 0/${levelInfo.targetApples}`;
+        document.getElementById('highscore').textContent = `Highscore: ${highscore}`;
+        
+        // Adiciona informação sobre o menu de campanha
+        const campaignInfo = document.createElement('div');
+        campaignInfo.id = 'campaign-info';
+        campaignInfo.textContent = 'Pressione M para acessar o menu de níveis';
+        campaignInfo.style.position = 'absolute';
+        campaignInfo.style.bottom = '10px';
+        campaignInfo.style.left = '10px';
+        campaignInfo.style.color = 'white';
+        campaignInfo.style.fontSize = '14px';
+        campaignInfo.style.opacity = '0.7';
+        document.body.appendChild(campaignInfo);
+        
+        // Mostrar informações do nível na overlay
+        showCampaignLevelInfo(levelInfo);
     }
       // Configura controles e inicia a animação
     setupControls();
@@ -294,6 +462,12 @@ function endGame(gameCompleted = false) {
     // Evita múltiplas chamadas (pode acontecer devido a bugs de colisão)
     if (!gameRunning || isPaused) {
         return;
+    }
+    
+    // Remove a informação de campanha se existir
+    const campaignInfo = document.getElementById('campaign-info');
+    if (campaignInfo) {
+        document.body.removeChild(campaignInfo);
     }
     
     // Verifica se é uma colisão válida
@@ -620,17 +794,42 @@ function animate(time) {
                     // Se não encontrar nenhuma posição, retorna null
                     return null;
                 }
-            },
-            () => {
+            },            () => {
                 // Aumenta o score e atualiza o placar
                 score += 10;
-                document.getElementById('score').textContent = 'Score: ' + score;
+                
+                // Tratamento especial para o modo campanha
+                if (gameMode === 'campaign') {
+                    // Incrementa o contador de maçãs coletadas
+                    applesCollected++;
+                    
+                    // Obtém informações do nível atual
+                    const levelInfo = getLevelInfo();
+                      // Atualiza o placar mostrando progresso
+                    document.getElementById('score').textContent = `Maçãs: ${applesCollected}/${levelInfo.targetApples}`;
+                    
+                    // Ainda atualiza o score interno para highscore
+                    if (score > highscore) {
+                        highscore = score;
+                        localStorage.setItem('highscore', highscore);
+                        document.getElementById('highscore').textContent = `Highscore: ${highscore}`;
+                    }
+                    
+                    // Verifica se completou o objetivo do nível
+                    if (applesCollected >= levelInfo.targetApples) {
+                        // Avança para o próximo nível
+                        handleLevelCompletion();
+                    }
+                } else {
+                    // Modo normal - apenas atualiza o placar
+                    document.getElementById('score').textContent = 'Score: ' + score;
+                }
                 
                 // Aumenta a velocidade do jogo ligeiramente a cada ponto
                 if (moveInterval > 50) {
                     moveInterval = Math.max(50, moveInterval - 2);
                 }
-            },            snakeBoard,
+            },snakeBoard,
             hitboxes,
             obstacles,
             barriers
@@ -639,4 +838,192 @@ function animate(time) {
     }
     
     renderer.render(scene, camera);
+}
+
+// Função para mostrar informações do nível na overlay
+function showCampaignLevelInfo(levelInfo) {
+    // Verifica se já existe uma overlay de nível e remove
+    const existingOverlay = document.getElementById('level-overlay');
+    if (existingOverlay) {
+        document.body.removeChild(existingOverlay);
+    }
+    
+    // Cria o elemento de overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'level-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '50%';
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translate(-50%, -50%)';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+    overlay.style.color = 'white';
+    overlay.style.padding = '30px';
+    overlay.style.borderRadius = '10px';
+    overlay.style.textAlign = 'center';
+    overlay.style.zIndex = '1000';
+    overlay.style.width = '80%';
+    overlay.style.maxWidth = '600px';
+    
+    // Adiciona o conteúdo
+    overlay.innerHTML = `
+        <h2 style="color:#3498db">Nível ${levelInfo.level}: ${levelInfo.name}</h2>
+        <p style="font-size:18px;margin:20px 0">${levelInfo.description}</p>
+        <p style="color:#2ecc71;font-weight:bold;font-size:20px">Objetivo: Coletar ${levelInfo.targetApples} maçãs</p>
+        <p style="color:#e74c3c;font-size:16px">Obstáculos: ${levelInfo.barrierCount}</p>
+        <button id="start-level-button" style="background-color:#3498db;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;font-size:16px;margin-top:20px">Começar Nível</button>
+    `;
+    
+    // Adiciona o overlay ao corpo do documento
+    document.body.appendChild(overlay);
+    
+    // Pausa o jogo enquanto mostra o overlay
+    isPaused = true;
+    
+    // Configura o evento de clique para o botão de início
+    document.getElementById('start-level-button').addEventListener('click', function() {
+        // Remove a overlay
+        document.body.removeChild(overlay);
+        
+        // Inicia o jogo
+        isPaused = false;
+    });
+}
+
+// Função para lidar com a conclusão de um nível na campanha
+function handleLevelCompletion() {
+    // Pausa o jogo
+    isPaused = true;
+    
+    // Marca o nível atual como completado
+    markLevelCompleted(getCurrentLevel());
+    
+    // Avança para o próximo nível
+    const nextLevelInfo = nextLevel();
+    
+    // Verifica se ainda há níveis disponíveis
+    if (nextLevelInfo) {
+        // Criar overlay de conclusão de nível
+        const overlay = document.createElement('div');
+        overlay.id = 'level-complete-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '50%';
+        overlay.style.left = '50%';
+        overlay.style.transform = 'translate(-50%, -50%)';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        overlay.style.color = 'white';
+        overlay.style.padding = '40px';
+        overlay.style.borderRadius = '10px';
+        overlay.style.textAlign = 'center';
+        overlay.style.zIndex = '1000';
+        overlay.style.width = '80%';
+        overlay.style.maxWidth = '600px';
+        
+        // Adiciona o conteúdo de conclusão
+        overlay.innerHTML = `
+            <h1 style="color:#2ecc71;margin-bottom:30px">Nível Concluído!</h1>
+            <h3 style="margin:20px 0">Você coletou todas as ${applesCollected} maçãs!</h3>
+            <p style="font-size:18px;margin:20px 0">Próximo Nível: ${nextLevelInfo.level} - ${nextLevelInfo.name}</p>
+            <p style="color:#f39c12;font-size:16px;margin-bottom:30px">${nextLevelInfo.description}</p>
+            <button id="next-level-button" style="background-color:#2ecc71;color:white;border:none;padding:15px 30px;border-radius:5px;cursor:pointer;font-size:18px">Continuar para Próximo Nível</button>
+        `;
+        
+        // Adiciona o overlay ao corpo do documento
+        document.body.appendChild(overlay);
+        
+        // Configura o evento de clique para o botão de próximo nível
+        document.getElementById('next-level-button').addEventListener('click', function() {
+            // Remove a overlay
+            document.body.removeChild(overlay);
+            
+            // Reinicia o jogo com o novo nível
+            startNextCampaignLevel();
+        });
+    } else {
+        // Campanha completa - mostrar tela final
+        showCampaignComplete();
+    }
+}
+
+// Função para iniciar o próximo nível da campanha
+function startNextCampaignLevel() {
+    // Remove todos os elementos existentes
+    if (barriers && barriers.length > 0) {
+        removeBarriers(scene, barriers);
+        barriers = [];
+    }
+    
+    if (obstacles && obstacles.length > 0) {
+        removeObstacles(scene, obstacles);
+        obstacles = [];
+    }
+    
+    // Reset do contador de maçãs
+    applesCollected = 0;
+    
+    // Reinicia o jogo mantendo o modo campanha
+    startGame();
+}
+
+// Função para exibir tela de finalização da campanha
+function showCampaignComplete() {
+    // Pausa o jogo
+    isPaused = true;
+    
+    // Criar overlay de conclusão da campanha
+    const overlay = document.createElement('div');
+    overlay.id = 'campaign-complete-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '50%';
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translate(-50%, -50%)';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
+    overlay.style.color = 'white';
+    overlay.style.padding = '40px';
+    overlay.style.borderRadius = '10px';
+    overlay.style.textAlign = 'center';
+    overlay.style.zIndex = '1000';
+    overlay.style.width = '80%';
+    overlay.style.maxWidth = '700px';
+    
+    // Adiciona o conteúdo de conclusão da campanha
+    overlay.innerHTML = `
+        <h1 style="color:gold;margin-bottom:30px;font-size:36px">PARABÉNS!</h1>
+        <h2 style="color:#2ecc71;margin:20px 0;font-size:28px">Você Completou Todos os Níveis da Campanha!</h2>
+        <p style="font-size:20px;margin:30px 0">Uma jornada incrível de 10 níveis chegou ao fim. Você é um verdadeiro mestre da Serpente!</p>
+        <p style="color:#3498db;font-size:18px;margin-bottom:40px">Score Total: ${score}</p>
+        <button id="return-menu-button" style="background-color:#e74c3c;color:white;border:none;padding:15px 30px;margin-right:20px;border-radius:5px;cursor:pointer;font-size:18px">Voltar ao Menu</button>
+        <button id="play-again-campaign-button" style="background-color:#3498db;color:white;border:none;padding:15px 30px;border-radius:5px;cursor:pointer;font-size:18px">Jogar Novamente</button>
+    `;
+    
+    // Adiciona o overlay ao corpo do documento
+    document.body.appendChild(overlay);
+    
+    // Configura o evento de clique para o botão de voltar ao menu
+    document.getElementById('return-menu-button').addEventListener('click', function() {
+        // Remove a overlay
+        document.body.removeChild(overlay);
+        
+        // Volta para o menu principal
+        document.getElementById('endScreen').style.display = 'none';
+        document.getElementById('mainMenu').style.display = 'flex';
+        document.getElementById('scoreBoard').style.display = 'none';
+        
+        // Reset da campanha para o próximo jogo
+        resetCampaign();
+    });
+    
+    // Configura o evento de clique para o botão de jogar novamente
+    document.getElementById('play-again-campaign-button').addEventListener('click', function() {
+        // Remove a overlay
+        document.body.removeChild(overlay);
+        
+        // Reset da campanha
+        resetCampaign();
+        
+        // Reinicia o jogo no modo campanha
+        document.getElementById('endScreen').style.display = 'none';
+        document.getElementById('scoreBoard').style.display = 'block';
+        gameRunning = true;
+        startGame();
+    });
 }
