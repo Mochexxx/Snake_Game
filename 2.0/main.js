@@ -1,4 +1,6 @@
 // main.js
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+
 import * as Scene from './scene.js';
 import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
 import { createApple } from './apple.js';

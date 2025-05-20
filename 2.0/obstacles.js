@@ -1,7 +1,7 @@
 // obstacles.js
 // Responsável por criar e gerenciar obstáculos no jogo
 
-import { getBoardCellCenter } from './scene.js';
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 
 // Criação dos obstáculos para o modo "obstacles"
 export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) {

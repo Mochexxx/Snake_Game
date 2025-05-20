@@ -1,7 +1,6 @@
 // barriers.js
 // Responsável por criar e gerenciar barreiras no modo "barriers"
-
-import { getBoardCellCenter } from './scene.js';
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 
 // Criação das barreiras para o modo "barriers"
 export function createBarriers(scene, snakeBoard, hitboxes) {

@@ -172,7 +172,9 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
                 return false;
             }
         }
-    }    // Colisão com maçã - usando as hitboxes para maior precisão
+    }    
+    
+    // Colisão com maçã - usando as hitboxes para maior precisão
     // Validação para garantir que temos uma maçã válida
     if (!apple || !apple.position) {
         console.warn("Maçã inválida detectada");
