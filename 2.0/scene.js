@@ -1,6 +1,7 @@
 // scene.js
 // Responsável por criar e configurar a cena, câmera, luzes e chão
-
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+// ...existing code...
 export function createScene() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x202020);
@@ -119,4 +120,55 @@ export function generateBoardHitboxes() {
         }
     }
     return hitboxes;
+}
+
+// Variável para guardar o modo de câmara
+export let cameraMode = 0; // 0: perspetiva, 1: ortográfica, 2: primeira pessoa
+
+export function createPerspectiveCamera() {
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(50, 30, 35);
+    camera.lookAt(20, 0, 20);
+    return camera;
+}
+
+export function createOrthographicCamera() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 22;
+    const camera = new THREE.OrthographicCamera(
+        -d * aspect, d * aspect, d, -d, 0.1, 1000
+    );
+    camera.position.set(20, 50, 20); // Vista de cima
+    camera.lookAt(20, 0, 20);
+    return camera;
+}
+
+// Cria uma câmara lateral (side view)
+export function createSideCamera() {
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // Posição lateral afastada e um pouco acima
+    camera.position.set(20, 20, 60);
+    camera.lookAt(20, 0, 20); // Centro do tabuleiro
+    return camera;
+}
+
+// Alterna entre as câmaras disponíveis
+export function switchCamera(currentCamera, renderer) {
+    cameraMode = (cameraMode + 1) % 4; // Agora são 4 modos
+    let newCamera;
+    if (cameraMode === 0) {
+        // Câmara perspetiva tradicional
+        newCamera = createPerspectiveCamera();
+    } else if (cameraMode === 1) {
+        // Câmara ortográfica (vista de cima)
+        newCamera = createOrthographicCamera();
+    } else {
+        // Câmara lateral (side view)
+        newCamera = createSideCamera();
+    }
+    // Atualiza parâmetros da câmara para corresponder ao tamanho da janela
+    newCamera.aspect = window.innerWidth / window.innerHeight;
+    newCamera.updateProjectionMatrix();
+    renderer.renderLists.dispose();
+    return newCamera;
 }

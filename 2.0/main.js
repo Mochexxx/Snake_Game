@@ -9,6 +9,7 @@ import { showTutorial } from './tutorial.js';
 import { addControlsHelpButton } from './game-controls.js';
 import { setupTouchControls } from './touch-controls.js';
 import { checkGameIntegrity } from './integrity-checker.js';
+import { createPerspectiveCamera, createOrthographicCamera, createSideCamera,switchCamera, cameraMode } from './scene.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -25,6 +26,8 @@ let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getIte
 let gameMode = 'classic'; // classic, barriers, obstacles
 let hitboxes;
 let debugMode = false; // Flag para ativar/desativar o modo de debug
+
+
 // Rastreia quais tutoriais já foram exibidos nesta sessão
 const tutorialsShown = {
     'classic': false,
@@ -92,6 +95,13 @@ window.onload = function() {
 document.getElementById('startMenuButton').addEventListener('click', function () {
     document.getElementById('mainMenu').style.display = 'none';
     document.getElementById('startScreen').style.display = 'flex';
+});
+
+//usar o event listener para alternar entre câmeras
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'c') {
+        camera = switchCamera(camera, renderer, snake);
+    }
 });
 
 // Função para esconder a tela de início e iniciar o jogo
@@ -226,6 +236,8 @@ function startGame() {
     obstacles = [];
     barriers = [];
     hitboxVisuals = [];
+
+    camera = createPerspectiveCamera();
     
     // Atualiza a interface
     document.getElementById('score').textContent = 'Score: 0';
@@ -245,9 +257,7 @@ function startGame() {
 
     // Cria a nova cena
     scene = Scene.createScene();
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(40, 38, 40); // Vista isométrica, acima e para o lado
-    camera.lookAt(20, 0, 20); // Centro do tabuleiro
+    camera = createPerspectiveCamera();
     renderer = Scene.createRenderer();
     
     // Adiciona elementos na cena
@@ -357,6 +367,10 @@ document.getElementById('playAgainButton').addEventListener('click', function ()
 // Animação
 function animate(time) {
     requestAnimationFrame(animate);
+
+    // Renderiza a cena com a câmara atual
+    renderer.render(scene, camera);
+
       // Anima os obstáculos mesmo se o jogo estiver pausado
     if (gameMode === 'obstacles' && obstacles.length > 0) {
         // Importa a função de animação dos obstáculos
