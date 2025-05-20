@@ -20,7 +20,7 @@ let barriers = [];
 let hitboxVisuals = [];
 let isPaused = true;
 let gameRunning = false;
-let lastMoveTime = 0, moveInterval = 200;
+let lastMoveTime = 0, moveInterval = 250;
 let score = 0;
 let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
 let gameMode = 'classic'; // classic, barriers, obstacles
@@ -40,7 +40,17 @@ const playButton = document.getElementById('playButton');
 const modeClassic = document.getElementById('modeClassic');
 const modeBarriers = document.getElementById('modeBarriers');
 const modeObstacles = document.getElementById('modeObstacles');
+const startMenuButton = document.getElementById('startMenuButton');
+const mainMenu = document.getElementById('mainMenu');
+const startScreen = document.getElementById('startScreen');
 
+// Mostra o menu de modos ao clicar em "Jogar" do menu principal
+startMenuButton.addEventListener('click', () => {
+    mainMenu.style.display = 'none';
+    startScreen.style.display = '';
+});
+
+// Função para selecionar modo
 function selectMode(mode) {
     // Verifica se houve mudança no modo
     const previousMode = gameMode;
@@ -69,23 +79,35 @@ function selectMode(mode) {
     if (currentModeElement) {
         currentModeElement.textContent = 'Mode: ' + modeText;
     }
+
 }
 
-modeClassic.addEventListener('click', () => {
-    if (gameMode !== 'classic') {
-        selectMode('classic');
-    }
+ // Liga os botões de modo à função selectMode
+    modeClassic.addEventListener('click', () => selectMode('classic'));
+    modeBarriers.addEventListener('click', () => selectMode('barriers'));
+    modeObstacles.addEventListener('click', () => selectMode('obstacles'));
+
+    // Botão "Jogar" inicia o jogo
+    playButton.addEventListener('click', () => {
+        // Esconde o menu de modos e mostra o placar
+        startScreen.style.display = 'none';
+        document.getElementById('scoreBoard').style.display = '';
+        gameRunning = true;
+        startGame();
+
+        // Mostra tutorial se necessário
+        isPaused = true;
+        if (!tutorialsShown[gameMode]) {
+            showTutorial(gameMode, () => {
+                isPaused = false;
+                tutorialsShown[gameMode] = true;
+            });
+        } else {
+            isPaused = false;
+        }
+    
 });
-modeBarriers.addEventListener('click', () => {
-    if (gameMode !== 'barriers') {
-        selectMode('barriers');
-    }
-});
-modeObstacles.addEventListener('click', () => {
-    if (gameMode !== 'obstacles') {
-        selectMode('obstacles');
-    }
-});
+
 
 window.onload = function() {
     document.getElementById('mainMenu').style.display = 'flex';
