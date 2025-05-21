@@ -99,14 +99,22 @@ export function showTutorial(gameMode, onCloseTutorial) {
                 <li>Colidir com uma barreira resulta em fim de jogo</li>
                 <li>Evite as barreiras e seu próprio corpo</li>
             </ul>
-        `;
-    } else if (gameMode === 'obstacles') {
+        `;    } else if (gameMode === 'obstacles') {
         tutorialContent += `
             <p><strong>Modo Obstáculos:</strong></p>
             <ul>
                 <li>Há obstáculos móveis pelo tabuleiro</li>
                 <li>Os obstáculos se movem aleatoriamente</li>
                 <li>Colidir com um obstáculo resulta em fim de jogo</li>
+            </ul>
+        `;    } else if (gameMode === 'random') {
+        tutorialContent += `
+            <p><strong>Modo Barreiras Aleatórias:</strong></p>
+            <ul>
+                <li>Aproximadamente 70 células do tabuleiro estão ocupadas por barreiras em formas variadas</li>
+                <li>As barreiras são geradas aleatoriamente a cada partida</li>
+                <li>Colidir com uma barreira resulta em fim de jogo</li>
+                <li>Cada vez que você perde, um novo padrão de barreiras é gerado</li>
             </ul>
         `;
     }
