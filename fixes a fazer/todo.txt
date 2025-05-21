@@ -5,3 +5,10 @@ fazer 1 animação
 modo multiplayer, cada cobra começa com a mesma dimensão se uma bater 
 na outra a que bate com a cabeça perde e no final de 2 minutos se nenhuma 
 tiver batido ganha a que tem mais maças comidas
+
+
+
+
+
+no modo obstaculos os obstaculos terão um tempo de vida após esse tempo terminar,
+serão gerados noutro sitio 

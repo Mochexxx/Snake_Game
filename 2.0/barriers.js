@@ -11,8 +11,8 @@ export function createBarriers(scene, snakeBoard, hitboxes) {
     // Paredes norte, sul, leste e oeste
     createBoundaryBarriers(scene, barriers, hitboxes);
     
-    // Criar alguns obstáculos complexos dentro do tabuleiro
-    createComplexBarriers(scene, barriers, snakeBoard, hitboxes);
+    // Remover barreiras no meio para modo padrão
+    // createComplexBarriers(scene, barriers, snakeBoard, hitboxes);
     
     return barriers;
 }
