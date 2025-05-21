@@ -79,8 +79,8 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
         else if (newX > max) newX = min;
         if (newZ < min) newZ = max;
         else if (newZ > max) newZ = min;
-    } else if (gameMode === 'barriers' || gameMode === 'obstacles' || gameMode === 'campaign' || gameMode === 'random') {
-        // Nos modos barreiras, obstáculos, campanha ou barreiras aleatórias, colisão com a borda termina o jogo
+    } else if (gameMode === 'barriers' || gameMode === 'obstacles' || gameMode === 'campaign') {
+        // Nos modos barreiras, obstáculos ou campanha, colisão com a borda termina o jogo
         if (newX < min || newX > max || newZ < min || newZ > max) {
             console.log(`Colisão com barreira detectada em posição inválida: ${newX}, ${newZ}`);
             endGame();
@@ -106,23 +106,6 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
             
             if (complexCollision || boundaryCollision) {
                 console.log(`Colisão com barreira detectada em: ${newX}, ${newZ}`);
-                endGame();
-                return false;
-            }
-        }
-        
-        // Verificação para colisões com barreiras aleatórias no modo random
-        if (gameMode === 'random' && barriers && barriers.length > 0) {
-            // Verificar colisão com barreiras aleatórias
-            const randomBarrierCollision = barriers.some(barrier => {
-                if (barrier.type === 'random') {
-                    return barrier.boardPositions.some(pos => pos.x === newX && pos.z === newZ);
-                }
-                return false;
-            });
-            
-            if (randomBarrierCollision) {
-                console.log(`Colisão com barreira aleatória detectada em: ${newX}, ${newZ}`);
                 endGame();
                 return false;
             }

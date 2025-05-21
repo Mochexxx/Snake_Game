@@ -4,7 +4,6 @@ import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake
 import { createApple } from './apple.js';
 import { createObstacles, checkObstacleCollision, removeObstacles } from './obstacles.js';
 import { createBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
-import { createRandomBarriers, checkRandomBarrierCollision, removeRandomBarriers, animateRandomBarriers } from './random-barriers.js';
 import { createHitboxVisualization, toggleHitboxVisualization, toggleDebugMode } from './debug.js';
 import { showTutorial } from './tutorial.js';
 import { addControlsHelpButton } from './game-controls.js';
@@ -38,7 +37,7 @@ let gameRunning = false;
 let lastMoveTime = 0, moveInterval = 200;
 let score = 0;
 let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
-let gameMode = 'classic'; // classic, barriers, obstacles, campaign, random
+let gameMode = 'classic'; // classic, barriers, obstacles, campaign
 let hitboxes;
 // Carrega o estado do modo debug do localStorage
 export let debugMode = localStorage.getItem('debugMode') === 'true'; // Flag para ativar/desativar o modo de debug
@@ -48,7 +47,6 @@ const tutorialsShown = {
     'classic': false,
     'barriers': false,
     'obstacles': false,
-    'random': false,
     'campaign': false
 };
 
@@ -57,7 +55,6 @@ const playButton = document.getElementById('playButton');
 const modeClassic = document.getElementById('modeClassic');
 const modeBarriers = document.getElementById('modeBarriers');
 const modeObstacles = document.getElementById('modeObstacles');
-const modeRandom = document.getElementById('modeRandom'); // Botão para modo de barreiras aleatórias
 const modeCampaign = document.getElementById('modeCampaign'); // Novo botão para modo campanha
 const debugModeToggle = document.getElementById('debugModeToggle'); // Checkbox para ativar/desativar debug
 
@@ -69,7 +66,7 @@ function selectMode(mode) {    // Verifica se houve mudança no modo
     playButton.style.display = 'block';
     
     // Remove classe 'active' de todos os botões
-    [modeClassic, modeBarriers, modeObstacles, modeRandom, modeCampaign].forEach(btn => {
+    [modeClassic, modeBarriers, modeObstacles, modeCampaign].forEach(btn => {
         if (btn) btn.classList.remove('active');
     });
     
@@ -84,9 +81,6 @@ function selectMode(mode) {    // Verifica se houve mudança no modo
     } else if (mode === 'obstacles') {
         modeObstacles.classList.add('active');
         modeText = 'Obstacles';
-    } else if (mode === 'random') {
-        modeRandom.classList.add('active');
-        modeText = 'Random Barriers';
     } else if (mode === 'campaign') {
         if (modeCampaign) modeCampaign.classList.add('active');
         const levelInfo = getLevelInfo();
@@ -123,15 +117,6 @@ modeObstacles.addEventListener('click', () => {
         selectMode('obstacles');
     }
 });
-
-// Adiciona evento para o botão de barreiras aleatórias
-if (modeRandom) {
-    modeRandom.addEventListener('click', () => {
-        if (gameMode !== 'random') {
-            selectMode('random');
-        }
-    });
-}
 
 // Adiciona evento para o novo botão de modo campanha
 if (modeCampaign) {        modeCampaign.addEventListener('click', () => {
@@ -382,12 +367,12 @@ function startGame() {
     // Atualiza a interface
     document.getElementById('score').textContent = 'Score: 0';
     document.getElementById('highscore').textContent = 'Highscore: ' + highscore;
-      // Atualiza o texto do modo
+    
+    // Atualiza o texto do modo
     let modeText = '';
     if (gameMode === 'classic') modeText = 'Classic (Teleport)';
     else if (gameMode === 'barriers') modeText = 'Barriers';
     else if (gameMode === 'obstacles') modeText = 'Obstacles';
-    else if (gameMode === 'random') modeText = 'Random Barriers';
     document.getElementById('currentMode').textContent = 'Mode: ' + modeText;
     
     // Remove o renderer antigo se existir
@@ -421,14 +406,10 @@ function startGame() {
     if (gameMode === 'barriers') {
         barriers = createBarriers(scene, snakeBoard, hitboxes);
     }
-      // Criar obstáculos se o modo for "obstacles"
+    
+    // Criar obstáculos se o modo for "obstacles"
     if (gameMode === 'obstacles') {
         obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 10); // 10 é o número de obstáculos
-    }
-    
-    // Criar barreiras aleatórias se o modo for "random"
-    if (gameMode === 'random') {
-        barriers = createRandomBarriers(scene, snakeBoard, hitboxes);
     }
     
     // Configurar modo campanha
@@ -510,7 +491,9 @@ function endGame(gameCompleted = false) {
     }
     
     document.getElementById('endScreen').style.display = 'flex';
-    document.getElementById('scoreBoard').style.display = 'none';    // Limpar obstáculos
+    document.getElementById('scoreBoard').style.display = 'none';
+
+    // Limpar obstáculos
     if (obstacles && obstacles.length > 0) {
         removeObstacles(scene, obstacles);
         obstacles = [];
@@ -518,11 +501,7 @@ function endGame(gameCompleted = false) {
     
     // Limpar barreiras
     if (barriers && barriers.length > 0) {
-        if (gameMode === 'random') {
-            removeRandomBarriers(scene, barriers);
-        } else {
-            removeBarriers(scene, barriers);
-        }
+        removeBarriers(scene, barriers);
         barriers = [];
     }
 
@@ -559,16 +538,11 @@ function animate(time) {
             module.animateObstacles(obstacles, time);
         });
     }
-      // Anima as barreiras no modo barriers
+    
+    // Anima as barreiras no modo barriers
     if (gameMode === 'barriers' && barriers.length > 0) {
         // Anima as barreiras complexas
         animateBarriers(barriers, time);
-    }
-    
-    // Anima as barreiras no modo random
-    if (gameMode === 'random' && barriers.length > 0) {
-        // Anima as barreiras aleatórias
-        animateRandomBarriers(barriers, time);
     }
     
     // Anima a maçã se existir (rotação e flutuação)
@@ -635,10 +609,10 @@ function animate(time) {
                     metalness: 0.2,
                     flatShading: false
                 });
-                
-                // Cria um novo segmento visual com geometria e material consistentes
+                  // Cria um novo segmento visual com geometria e material consistentes
+                const segmentSize = 1.8; // Igual ao valor usado em Snake.js
                 const newSegment = new THREE.Mesh(
-                    new THREE.BoxGeometry(2, 2, 2),  // Tamanho padrão de 2x2x2
+                    new THREE.BoxGeometry(segmentSize, segmentSize, segmentSize),
                     segmentMaterial
                 );
                 
@@ -696,7 +670,8 @@ function animate(time) {
                             validPosition = false;
                         }
                     }
-                      // Verifica se a maçã não está em uma barreira (modo barreiras)
+                    
+                    // Verifica se a maçã não está em uma barreira (modo barreiras)
                     if (gameMode === 'barriers') {
                         // Verifica colisão com barreiras complexas
                         const complexCollision = barriers.some(barrier => {
@@ -715,20 +690,6 @@ function animate(time) {
                         });
                         
                         if (complexCollision || boundaryCollision) {
-                            validPosition = false;
-                        }
-                    }
-                    
-                    // Verifica se a maçã não está em uma barreira aleatória (modo random)
-                    if (gameMode === 'random') {
-                        const randomBarrierCollision = barriers.some(barrier => {
-                            if (barrier.type === 'random') {
-                                return barrier.boardPositions.some(pos => pos.x === appleX && pos.z === appleZ);
-                            }
-                            return false;
-                        });
-                        
-                        if (randomBarrierCollision) {
                             validPosition = false;
                         }
                     }
@@ -801,7 +762,8 @@ function animate(time) {
                                 isOnObstacle = obstacles.some(obs => obs.boardPosition.x === x && obs.boardPosition.z === z);
                             }
                             if (isOnObstacle) continue;
-                              // Verifica se a posição está em alguma barreira
+                            
+                            // Verifica se a posição está em alguma barreira
                             let isOnBarrier = false;
                             if (gameMode === 'barriers') {
                                 // Verifica barreiras complexas
@@ -821,14 +783,6 @@ function animate(time) {
                                         return false;
                                     });
                                 }
-                            } else if (gameMode === 'random') {
-                                // Verifica barreiras aleatórias
-                                isOnBarrier = barriers.some(barrier => {
-                                    if (barrier.type === 'random') {
-                                        return barrier.boardPositions.some(pos => pos.x === x && pos.z === z);
-                                    }
-                                    return false;
-                                });
                             }
                             if (isOnBarrier) continue;
                             
