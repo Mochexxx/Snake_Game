@@ -3,7 +3,7 @@ import * as Scene from './scene.js';
 import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
 import { createApple } from './apple.js';
 import { createObstacles, checkObstacleCollision, removeObstacles } from './obstacles.js';
-import { createBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
+import { createBarriers, createRandomBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
 import { createHitboxVisualization, toggleHitboxVisualization, toggleDebugMode } from './debug.js';
 import { showTutorial } from './tutorial.js';
 import { addControlsHelpButton } from './game-controls.js';
@@ -54,6 +54,7 @@ const tutorialsShown = {
 const playButton = document.getElementById('playButton');
 const modeClassic = document.getElementById('modeClassic');
 const modeBarriers = document.getElementById('modeBarriers');
+const modeRandomBarriers = document.getElementById('modeRandomBarriers');
 const modeObstacles = document.getElementById('modeObstacles');
 const modeCampaign = document.getElementById('modeCampaign'); // Novo botão para modo campanha
 const debugModeToggle = document.getElementById('debugModeToggle'); // Checkbox para ativar/desativar debug
@@ -61,15 +62,12 @@ const debugModeToggle = document.getElementById('debugModeToggle'); // Checkbox 
 function selectMode(mode) {    // Verifica se houve mudança no modo
     const previousMode = gameMode;
     gameMode = mode;
-    
     // Garantir que o botão de jogar esteja visível
     playButton.style.display = 'block';
-    
     // Remove classe 'active' de todos os botões
-    [modeClassic, modeBarriers, modeObstacles, modeCampaign].forEach(btn => {
+    [modeClassic, modeBarriers, modeRandomBarriers, modeObstacles, modeCampaign].forEach(btn => {
         if (btn) btn.classList.remove('active');
     });
-    
     // Ajusta o texto do modo e destaque visual
     let modeText = '';
     if (mode === 'classic') {
@@ -78,6 +76,9 @@ function selectMode(mode) {    // Verifica se houve mudança no modo
     } else if (mode === 'barriers') {
         modeBarriers.classList.add('active');
         modeText = 'Barriers';
+    } else if (mode === 'randomBarriers') {
+        if (modeRandomBarriers) modeRandomBarriers.classList.add('active');
+        modeText = 'Random Barriers';
     } else if (mode === 'obstacles') {
         modeObstacles.classList.add('active');
         modeText = 'Obstacles';
@@ -86,16 +87,13 @@ function selectMode(mode) {    // Verifica se houve mudança no modo
         const levelInfo = getLevelInfo();
         modeText = `Campaign - Level ${levelInfo.level}: ${levelInfo.name}`;
     }
-    
     // Atualiza o texto do modo atual
     const currentModeElement = document.getElementById('currentMode');
     if (currentModeElement) {
         currentModeElement.textContent = 'Mode: ' + modeText;
     }
-    
     // Reset do contador de maçãs ao mudar de modo
     applesCollected = 0;
-    
     // Reset da campanha se estiver entrando no modo campanha
     if (mode === 'campaign') {
         resetCampaign();
@@ -112,6 +110,13 @@ modeBarriers.addEventListener('click', () => {
         selectMode('barriers');
     }
 });
+if (modeRandomBarriers) {
+    modeRandomBarriers.addEventListener('click', () => {
+        if (gameMode !== 'randomBarriers') {
+            selectMode('randomBarriers');
+        }
+    });
+}
 modeObstacles.addEventListener('click', () => {
     if (gameMode !== 'obstacles') {
         selectMode('obstacles');
@@ -372,6 +377,7 @@ function startGame() {
     let modeText = '';
     if (gameMode === 'classic') modeText = 'Classic (Teleport)';
     else if (gameMode === 'barriers') modeText = 'Barriers';
+    else if (gameMode === 'randomBarriers') modeText = 'Random Barriers';
     else if (gameMode === 'obstacles') modeText = 'Obstacles';
     document.getElementById('currentMode').textContent = 'Mode: ' + modeText;
     
@@ -405,6 +411,13 @@ function startGame() {
     // Criar barreiras se o modo for "barriers"
     if (gameMode === 'barriers') {
         barriers = createBarriers(scene, snakeBoard, hitboxes);
+    }
+    // Criar barreiras aleatórias se o modo for "randomBarriers"
+    if (gameMode === 'randomBarriers') {
+        barriers = [];
+        if (typeof createRandomBarriers === 'function') {
+            createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
+        }
     }
     
     // Criar obstáculos se o modo for "obstacles"
@@ -666,30 +679,34 @@ function animate(time) {
                     // Verifica se a maçã não está em um obstáculo (modo obstáculos)
                     if (gameMode === 'obstacles') {
                         if (obstacles.some(obstacle => 
-                            obstacle.boardPosition.x === appleX && obstacle.boardPosition.z === appleZ)) {
+                            obstacle.boardPosition && obstacle.boardPosition.x === appleX && obstacle.boardPosition.z === appleZ)) {
                             validPosition = false;
                         }
                     }
-                    
-                    // Verifica se a maçã não está em uma barreira (modo barreiras)
-                    if (gameMode === 'barriers') {
-                        // Verifica colisão com barreiras complexas
+                    // Verifica se a maçã não está em uma barreira (qualquer modo com barreiras)
+                    if (barriers && barriers.length > 0) {
+                        // Barreiras complexas (campanha)
                         const complexCollision = barriers.some(barrier => {
-                            if (barrier.type === 'complex') {
+                            if (barrier.type === 'complex' && barrier.boardPosition) {
                                 return barrier.boardPosition.x === appleX && barrier.boardPosition.z === appleZ;
                             }
                             return false;
                         });
-                        
-                        // Verifica colisão com barreiras de limite (não deveria acontecer, mas por segurança)
+                        // Barreiras de limite
                         const boundaryCollision = barriers.some(barrier => {
-                            if (barrier.type === 'boundary') {
+                            if (barrier.type === 'boundary' && barrier.boardPositions) {
                                 return barrier.boardPositions.some(pos => pos.x === appleX && pos.z === appleZ);
                             }
                             return false;
                         });
-                        
-                        if (complexCollision || boundaryCollision) {
+                        // Barreiras random-piece (aleatórias)
+                        const randomPieceCollision = barriers.some(barrier => {
+                            if (barrier.type === 'random-piece' && barrier.boardPositions) {
+                                return barrier.boardPositions.some(pos => pos.x === appleX && pos.z === appleZ);
+                            }
+                            return false;
+                        });
+                        if (complexCollision || boundaryCollision || randomPieceCollision) {
                             validPosition = false;
                         }
                     }
@@ -723,6 +740,7 @@ function animate(time) {
                                 apple.position.set(centerX, 1, centerZ);
                                 scene.add(apple);
                                 
+
                                 // Anima a maçã
                                 const originalY = apple.position.y;
                                 apple.userData.animationStartTime = Date.now();

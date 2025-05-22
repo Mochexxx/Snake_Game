@@ -79,7 +79,7 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
         else if (newX > max) newX = min;
         if (newZ < min) newZ = max;
         else if (newZ > max) newZ = min;
-    } else if (gameMode === 'barriers' || gameMode === 'obstacles' || gameMode === 'campaign') {
+    } else if (gameMode === 'barriers' || gameMode === 'randomBarriers' || gameMode === 'obstacles' || gameMode === 'campaign') {
         // Nos modos barreiras, obstáculos ou campanha, colisão com a borda termina o jogo
         if (newX < min || newX > max || newZ < min || newZ > max) {
             console.log(`Colisão com barreira detectada em posição inválida: ${newX}, ${newZ}`);
@@ -87,7 +87,7 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
             return false;
         }
           // Verificação adicional para colisões com barreiras no modo barriers
-        if (gameMode === 'barriers' && barriers && barriers.length > 0) {
+        if ((gameMode === 'barriers' || gameMode === 'randomBarriers') && barriers && barriers.length > 0) {
             // Verificar colisão com barreiras complexas
             const complexCollision = barriers.some(barrier => {
                 if (barrier.type === 'complex') {
@@ -95,7 +95,6 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
                 }
                 return false;
             });
-            
             // Verificar colisão com barreiras de limite
             const boundaryCollision = barriers.some(barrier => {
                 if (barrier.type === 'boundary') {
@@ -103,8 +102,14 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
                 }
                 return false;
             });
-            
-            if (complexCollision || boundaryCollision) {
+            // Verificar colisão com barreiras random-piece (aleatórias)
+            const randomPieceCollision = barriers.some(barrier => {
+                if (barrier.type === 'random-piece' && barrier.boardPositions) {
+                    return barrier.boardPositions.some(pos => pos.x === newX && pos.z === newZ);
+                }
+                return false;
+            });
+            if (complexCollision || boundaryCollision || randomPieceCollision) {
                 console.log(`Colisão com barreira detectada em: ${newX}, ${newZ}`);
                 endGame();
                 return false;
