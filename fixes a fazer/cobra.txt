@@ -1,2 +1,2 @@
-a cobra começa com elementos ( quadrados) que te um limite entre cada um -> forma correta
-mas á medida que a cobra aumenta, os quadrados vão ficando colados uns aos outros ( errado ), deveria de manter a mesma lógica
+colocar uma animacao do cubo a surgir quando a cobra ingere uma maca 
+a cor da cobra ira ser dependente da cor do tema que for escohlido
