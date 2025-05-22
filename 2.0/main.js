@@ -24,6 +24,7 @@ import {
     setCurrentLevel,
     getCurrentLevel
 } from './campaign-menu.js';
+import { initTheme, setupThemeButtons } from './theme-manager.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -122,9 +123,17 @@ window.onload = function() {
     document.getElementById('mainMenu').style.display = 'flex';
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameModeMenu').style.display = 'none';
+    document.getElementById('optionsMenu').style.display = 'none';
     
     // Inicializa o modo debug se necessário
     initDebugMode();
+    
+    // Carrega as configurações de opções
+    loadOptionsSettings();
+    
+    // Inicializa o sistema de temas
+    initTheme();
+    setupThemeButtons();
 };
 
 document.getElementById('startMenuButton').addEventListener('click', function () {
@@ -1084,3 +1093,71 @@ function showCampaignComplete() {
         startGame();
     });
 }
+
+// Add event listeners for options menu
+document.getElementById('optionsMenuButton').addEventListener('click', function() {
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('optionsMenu').style.display = 'flex';
+});
+
+document.getElementById('optionsBackButton').addEventListener('click', function() {
+    document.getElementById('optionsMenu').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'flex';
+});
+
+// Save options settings to localStorage
+document.getElementById('musicVolume').addEventListener('change', function() {
+    localStorage.setItem('musicVolume', this.value);
+});
+
+document.getElementById('sfxVolume').addEventListener('change', function() {
+    localStorage.setItem('sfxVolume', this.value);
+});
+
+document.getElementById('muteToggle').addEventListener('change', function() {
+    localStorage.setItem('muted', this.checked);
+});
+
+document.getElementById('graphicsQuality').addEventListener('change', function() {
+    localStorage.setItem('graphicsQuality', this.value);
+});
+
+document.getElementById('showFPSToggle').addEventListener('change', function() {
+    localStorage.setItem('showFPS', this.checked);
+});
+
+// Load options settings from localStorage
+function loadOptionsSettings() {
+    const musicVolume = localStorage.getItem('musicVolume');
+    if (musicVolume !== null) {
+        document.getElementById('musicVolume').value = musicVolume;
+    }
+    
+    const sfxVolume = localStorage.getItem('sfxVolume');
+    if (sfxVolume !== null) {
+        document.getElementById('sfxVolume').value = sfxVolume;
+    }
+    
+    const muted = localStorage.getItem('muted') === 'true';
+    document.getElementById('muteToggle').checked = muted;
+    
+    const graphicsQuality = localStorage.getItem('graphicsQuality');
+    if (graphicsQuality !== null) {
+        document.getElementById('graphicsQuality').value = graphicsQuality;
+    }
+    
+    const showFPS = localStorage.getItem('showFPS') === 'true';
+    document.getElementById('showFPSToggle').checked = showFPS;
+}
+
+// Chama a função para carregar as configurações ao iniciar o jogo
+loadOptionsSettings();
+
+// Configuração inicial do tema
+initTheme();
+
+// Configura os botões de tema
+setupThemeButtons(() => {
+    // Callback para reiniciar o jogo ao mudar o tema
+    resetGame();
+});
