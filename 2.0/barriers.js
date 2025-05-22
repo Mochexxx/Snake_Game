@@ -3,6 +3,7 @@
 
 import { getBoardCellCenter } from './scene.js';
 import { randomPatterns } from './barrier-shapes.js';
+import * as THREE from 'three';
 
 // Criação das barreiras para o modo "barriers"
 export function createBarriers(scene, snakeBoard, hitboxes) {
