@@ -431,6 +431,26 @@ function startGame() {
     }        // Criar obstáculos se o modo for "obstacles"
         if (gameMode === 'obstacles') {
             obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos
+            
+            // Importa e configura os botões para controle dos obstáculos
+            import('./buttons.js').then(module => {
+                // Remove botões existentes se houver
+                const existingButtons = document.getElementById('obstacle-buttons');
+                if (existingButtons) {
+                    document.body.removeChild(existingButtons);
+                }
+                
+                // Configura os callbacks para os botões
+                const buttonCallbacks = {
+                    onTreeAdd: () => addCustomObstacle('tree'),
+                    onRockAdd: () => addCustomObstacle('rock'),
+                    onRandomAdd: () => addCustomObstacle('random'),
+                    onClear: clearAllObstacles
+                };
+                
+                // Adiciona os botões à interface
+                module.setupObstacleButtons(document.body, buttonCallbacks);
+            });
         }
     
     // Configurar modo campanha
@@ -1086,6 +1106,127 @@ function showCampaignComplete() {
         document.getElementById('scoreBoard').style.display = 'block';
         gameRunning = true;
         startGame();
+    });
+}
+
+// Função para adicionar um obstáculo personalizado (árvore ou pedra)
+function addCustomObstacle(type) {
+    // Verifica se estamos no modo obstáculos e se o jogo está rodando
+    if (gameMode !== 'obstacles' || !gameRunning) {
+        console.log("Não é possível adicionar obstáculos neste momento");
+        return;
+    }
+    
+    // Verifica se temos as dependências necessárias
+    if (!scene || !snakeBoard || !hitboxes) {
+        console.error("Dependências ausentes para adicionar obstáculos");
+        return;
+    }
+    
+    // Importa as funções necessárias
+    import('./models.js').then(modelsModule => {
+        import('./obstacles.js').then(obstaclesModule => {
+            // Encontra uma posição válida para o novo obstáculo
+            let x, z;
+            let validPosition = false;
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            while (!validPosition && attempts < maxAttempts) {
+                x = Math.floor(Math.random() * 20);
+                z = Math.floor(Math.random() * 20);
+                
+                // Verifica se a posição está livre
+                validPosition = !isPositionOccupied(x, z);
+                attempts++;
+            }
+            
+            if (!validPosition) {
+                console.warn("Não foi possível encontrar uma posição válida após", maxAttempts, "tentativas");
+                return;
+            }
+            
+            // Cria o obstáculo conforme o tipo
+            let obstacle;
+            const { centerX, centerZ } = hitboxes[x][z];
+            
+            if (type === 'tree' || (type === 'random' && Math.random() > 0.5)) {
+                // Cria uma árvore
+                obstacle = modelsModule.createTreeModel();
+                
+                // Escala e posição
+                const scale = 0.7 + Math.random() * 0.3;
+                obstacle.scale.set(scale, scale, scale);
+                obstacle.position.set(centerX, 0, centerZ);
+                
+                // Propriedades adicionais
+                obstacle.isTree = true;
+            } else {
+                // Cria uma pedra
+                obstacle = modelsModule.createRockModel();
+                
+                // Escala e posição
+                const scale = 0.8 + Math.random() * 0.4;
+                obstacle.scale.set(scale, scale * 0.7, scale);
+                
+                // Rotação aleatória
+                obstacle.rotation.set(
+                    Math.random() * 0.3,
+                    Math.random() * Math.PI * 2,
+                    Math.random() * 0.3
+                );
+                
+                obstacle.position.set(centerX, 0.5, centerZ);
+                obstacle.isTree = false;
+            }
+            
+            // Configura propriedades para o sistema de vida
+            obstacle.boardPosition = { x, z };
+            obstacle.creationTime = Date.now();
+            obstacle.isFading = false;
+            
+            // Adiciona o obstáculo à cena e ao array
+            scene.add(obstacle);
+            obstacles.push(obstacle);
+            
+            console.log(`Novo obstáculo (${type}) adicionado em [${x}, ${z}]`);
+        });
+    });
+}
+
+// Função para verificar se uma posição está ocupada (pela cobra ou obstáculos)
+function isPositionOccupied(x, z) {
+    // Verifica se a cobra está nesta posição
+    const isSnakePos = snakeBoard.some(segment => segment.x === x && segment.z === z);
+    if (isSnakePos) return true;
+    
+    // Verifica se já existe um obstáculo nesta posição
+    const isObstaclePos = obstacles.some(obstacle => 
+        obstacle.boardPosition && obstacle.boardPosition.x === x && obstacle.boardPosition.z === z
+    );
+    
+    return isObstaclePos;
+}
+
+// Função para limpar todos os obstáculos
+function clearAllObstacles() {
+    if (!scene || !obstacles || obstacles.length === 0) return;
+    
+    console.log(`Removendo ${obstacles.length} obstáculos do jogo`);
+    
+    // Remove cada obstáculo da cena
+    obstacles.forEach(obstacle => {
+        if (obstacle && typeof obstacle === 'object') {
+            scene.remove(obstacle);
+        }
+    });
+    
+    // Limpa o array de obstáculos
+    obstacles = [];
+    
+    // Regenera obstáculos básicos
+    import('./obstacles.js').then(module => {
+        obstacles = module.createObstacles(scene, snake, snakeBoard, hitboxes, 18);
     });
 }
 
