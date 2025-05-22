@@ -15,23 +15,22 @@ const COLORS = {
  * Cria um modelo de árvore low poly
  * @returns {THREE.Group} Grupo contendo o modelo da árvore
  */
-export function createTreeModel() {
-    // Criar tronco da árvore
-    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 5);
+export function createTreeModel() {    // Criar tronco da árvore
+    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 1.8, 5);
     const trunkMaterial = new THREE.MeshStandardMaterial({ 
         color: COLORS.trunk,
         flatShading: true
     });
     const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
     
-    // Criar topo da árvore (cone)
-    const topGeometry = new THREE.ConeGeometry(0.8, 2, 6);
+    // Criar topo da árvore (cone) - mais alto
+    const topGeometry = new THREE.ConeGeometry(0.8, 3, 6);
     const topMaterial = new THREE.MeshStandardMaterial({ 
         color: COLORS.treeTop,
         flatShading: true
     });
     const top = new THREE.Mesh(topGeometry, topMaterial);
-    top.position.y = 1.75;
+    top.position.y = 2.2; // Posição ajustada para o tronco mais alto
     
     // Agrupar tronco e topo
     const tree = new THREE.Group();

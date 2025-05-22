@@ -139,6 +139,12 @@ export function generateBoardHitboxes() {
 
 // Adiciona elementos decorativos low poly ao redor do tabuleiro
 export function addLowPolyDecorations(scene) {
+    // Temporariamente desabilitado o spawn de árvores e pedras
+    console.log("Decorações low poly temporariamente desabilitadas");
+    
+    // Código para adicionar árvores e pedras está comentado por enquanto
+    
+    /*
     // Adicionar árvores low poly
     const treeCount = 30;
     const gridSize = 40;
@@ -179,8 +185,7 @@ export function addLowPolyDecorations(scene) {
         
         scene.add(rock);
     }
-    
-    // Nota: O torus flutuante foi removido daqui
+    */
 }
 
 

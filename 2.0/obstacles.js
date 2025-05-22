@@ -1,79 +1,108 @@
 // obstacles.js
 // Responsável por criar e gerenciar obstáculos no jogo
 
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
 import { getBoardCellCenter } from './scene.js';
+import { createTreeModel, createRockModel } from './models.js';
+
+// Configurações dos obstáculos
+const OBSTACLE_LIFETIME = 10000; // 10 segundos em milissegundos
+const OBSTACLE_FADE_TIME = 1000; // 1 segundo para desaparecer
 
 // Criação dos obstáculos para o modo "obstacles"
 export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) {
     const obstacles = [];
-    const obstacleGeometry = new THREE.BoxGeometry(2, 2, 2);
-    const obstacleMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x8800ff,
-        emissive: 0x440088,
-        metalness: 0.7,
-        roughness: 0.2
-    });
     
-    // Posições dos obstáculos na matriz
-    const obstaclePositions = [];
-    
-    // Gera posições aleatórias que não colidem com a cobra
-    for (let i = 0; i < count; i++) {
+    // Função para criar um novo obstáculo em posição válida
+    function createNewObstacle() {
+        // Posições dos obstáculos na matriz
+        const obstaclePositions = obstacles.map(obs => obs.boardPosition);
+        
+        // Encontra uma posição válida
         let x, z;
-        do {
+        let validPosition = false;
+        let attempts = 0;
+        const maxAttempts = 50;
+        
+        while (!validPosition && attempts < maxAttempts) {
             x = Math.floor(Math.random() * 20);
             z = Math.floor(Math.random() * 20);
+            
             // Verifica se a posição já foi usada ou se está ocupada pela cobra
-        } while (
-            isObstacleAtPosition(obstaclePositions, x, z) || 
-            isSnakeAtPosition(snakeBoard, x, z) ||
-            // Evita colocar obstáculos muito próximos à cabeça da cobra
-            isPositionNearSnakeHead(snakeBoard[0], x, z, 3)
-        );
-        
-        obstaclePositions.push({ x, z });
-          // Cria o objeto 3D para o obstáculo - versão melhorada
-        const { centerX, centerZ } = hitboxes[x][z];
-        
-        // Alguns obstáculos terão formas diferentes para variedade visual
-        let obstacle;
-        
-        if (i % 3 === 0) {
-            // Pirâmide para alguns obstáculos
-            const pyramidGeometry = new THREE.ConeGeometry(1.2, 2, 4);
-            obstacle = new THREE.Mesh(pyramidGeometry, obstacleMaterial);
-            obstacle.rotation.y = Math.PI / 4; // Rotaciona para alinhar com o tabuleiro
-        } else if (i % 3 === 1) {
-            // Esfera para alguns obstáculos
-            const sphereGeometry = new THREE.SphereGeometry(1, 16, 16);
-            obstacle = new THREE.Mesh(sphereGeometry, obstacleMaterial);
-        } else {
-            // Cubo para os demais
-            obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+            const isObstaclePos = obstaclePositions.some(pos => pos.x === x && pos.z === z);
+            const isSnakePos = snakeBoard.some(segment => segment.x === x && segment.z === z);
+            const isNearHead = isPositionNearSnakeHead(snakeBoard[0], x, z, 3);
+            
+            validPosition = !isObstaclePos && !isSnakePos && !isNearHead;
+            attempts++;
         }
         
-        obstacle.position.set(centerX, 1, centerZ);
-        obstacle.boardPosition = { x, z };  // Armazena posição no tabuleiro para colisões
+        if (!validPosition) {
+            console.warn("Não foi possível encontrar posição válida para o obstáculo");
+            return null;
+        }
         
-        // Adiciona animação sutíl de flutuação
-        obstacle.initialY = 1;
-        obstacle.animPhase = Math.random() * Math.PI * 2; // Fase aleatória
+        // Obtém as coordenadas 3D para a posição do tabuleiro
+        const { centerX, centerZ } = hitboxes[x][z];
         
+        // Escolhe aleatoriamente entre árvore ou pedra
+        let obstacle;
+        const isTree = Math.random() > 0.5;
+        
+        if (isTree) {
+            // Cria uma árvore como obstáculo
+            obstacle = createTreeModel();
+            
+            // Ajusta a escala para ficar maior
+            const scale = 0.7 + Math.random() * 0.3;
+            obstacle.scale.set(scale, scale, scale);
+            
+            // Posiciona a árvore no chão
+            obstacle.position.set(centerX, 0, centerZ);
+        } else {
+            // Cria uma pedra como obstáculo
+            obstacle = createRockModel();
+            
+            // Ajusta a escala da pedra
+            const scale = 0.8 + Math.random() * 0.4;
+            obstacle.scale.set(scale, scale * 0.7, scale);
+            
+            // Rotação aleatória para as pedras
+            obstacle.rotation.set(
+                Math.random() * 0.3,
+                Math.random() * Math.PI * 2,
+                Math.random() * 0.3
+            );
+            
+            // Posiciona a pedra um pouco acima do chão
+            obstacle.position.set(centerX, 0.5, centerZ);
+        }
+        
+        // Adiciona propriedades para o sistema de vida
+        obstacle.boardPosition = { x, z };
+        obstacle.creationTime = Date.now();
+        obstacle.isTree = isTree;
+        obstacle.isFading = false;
+        
+        // Adiciona à cena
         scene.add(obstacle);
-        obstacles.push(obstacle);
+        
+        // Retorna o obstáculo
+        return obstacle;
     }
     
+    // Cria os obstáculos iniciais
+    for (let i = 0; i < count; i++) {
+        const obstacle = createNewObstacle();
+        if (obstacle) {
+            obstacles.push(obstacle);
+        }
+    }
+    
+    // Adiciona a função para regenerar obstáculos ao array
+    obstacles.createNewObstacle = createNewObstacle;
+    
     return obstacles;
-}
-
-// Verifica se já existe um obstáculo na posição
-function isObstacleAtPosition(obstacles, x, z) {
-    return obstacles.some(obs => obs.x === x && obs.z === z);
-}
-
-// Verifica se a cobra está na posição
-function isSnakeAtPosition(snakeBoard, x, z) {
-    return snakeBoard.some(segment => segment.x === x && segment.z === z);
 }
 
 // Verifica se a posição está muito próxima da cabeça da cobra
@@ -85,29 +114,99 @@ function isPositionNearSnakeHead(head, x, z, distance) {
 
 // Verifica colisão entre a cobra e os obstáculos
 export function checkObstacleCollision(obstacles, x, z) {
-    return obstacles.some(obstacle => obstacle.boardPosition.x === x && obstacle.boardPosition.z === z);
+    return obstacles.some(obstacle => {
+        if (obstacle.boardPosition && !obstacle.isFading) {
+            return obstacle.boardPosition.x === x && obstacle.boardPosition.z === z;
+        }
+        return false;
+    });
 }
 
 // Remove os obstáculos da cena
 export function removeObstacles(scene, obstacles) {
-    obstacles.forEach(obstacle => scene.remove(obstacle));
+    obstacles.forEach(obstacle => {
+        if (obstacle && typeof obstacle === 'object') {
+            scene.remove(obstacle);
+        }
+    });
 }
 
-// Anima os obstáculos (pequena oscilação para cima e para baixo)
+// Gerencia o tempo de vida dos obstáculos e regenera quando necessário
+export function updateObstacles(scene, obstacles, snake, snakeBoard, hitboxes) {
+    if (!obstacles || obstacles.length === 0 || !obstacles.createNewObstacle) return;
+    
+    const currentTime = Date.now();
+    let obstaclesRemoved = 0;
+    
+    // Atualiza cada obstáculo
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obstacle = obstacles[i];
+        if (!obstacle || !obstacle.creationTime) continue;
+        
+        const age = currentTime - obstacle.creationTime;
+        
+        // Se o obstáculo está pronto para desaparecer
+        if (age >= OBSTACLE_LIFETIME && !obstacle.isFading) {
+            obstacle.isFading = true;
+            obstacle.fadeStartTime = currentTime;
+        }
+        
+        // Se o obstáculo está desaparecendo
+        if (obstacle.isFading) {
+            const fadeAge = currentTime - obstacle.fadeStartTime;
+            const fadeProgress = Math.min(fadeAge / OBSTACLE_FADE_TIME, 1);
+            
+            // Aplica efeito de transparência
+            setObstacleOpacity(obstacle, 1 - fadeProgress);
+            
+            // Remove o obstáculo quando terminar de desaparecer
+            if (fadeProgress >= 1) {
+                scene.remove(obstacle);
+                obstacles.splice(i, 1);
+                obstaclesRemoved++;
+            }
+        }
+    }
+    
+    // Cria novos obstáculos para substituir os removidos
+    for (let i = 0; i < obstaclesRemoved; i++) {
+        const newObstacle = obstacles.createNewObstacle();
+        if (newObstacle) {
+            obstacles.push(newObstacle);
+        }
+    }
+}
+
+// Define a opacidade de um obstáculo (árvore ou pedra)
+function setObstacleOpacity(obstacle, opacity) {
+    if (obstacle.isTree) {
+        // Para árvores (grupos com dois objetos: tronco e topo)
+        obstacle.children.forEach(child => {
+            if (child.material) {
+                child.material.transparent = opacity < 1;
+                child.material.opacity = opacity;
+            }
+        });
+    } else {
+        // Para pedras (mesh único)
+        if (obstacle.material) {
+            obstacle.material.transparent = opacity < 1;
+            obstacle.material.opacity = opacity;
+        }
+    }
+}
+
+// Anima os obstáculos - apenas rotação mínima nas pedras
 export function animateObstacles(obstacles, time) {
     if (!obstacles || obstacles.length === 0) return;
     
     obstacles.forEach(obstacle => {
-        if (obstacle.initialY !== undefined) {
-            const floatHeight = 0.2; // Altura da flutuação
-            const floatSpeed = 0.001; // Velocidade da animação
-            
-            // Calcula a nova posição Y com oscilação senoidal
-            const newY = obstacle.initialY + Math.sin(time * floatSpeed + obstacle.animPhase) * floatHeight;
-            obstacle.position.y = newY;
-            
-            // Adiciona uma pequena rotação
-            obstacle.rotation.y += 0.005;
+        // Ignora objetos sem propriedades específicas (como a função createNewObstacle)
+        if (!obstacle || typeof obstacle !== 'object' || !obstacle.boardPosition) return;
+        
+        // Apenas as pedras (não grupos/árvores) recebem rotação mínima
+        if (!obstacle.isTree) {
+            obstacle.rotation.y += 0.002;
         }
     });
 }

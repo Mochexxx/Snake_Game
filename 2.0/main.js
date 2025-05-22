@@ -428,12 +428,10 @@ function startGame() {
         if (typeof createRandomBarriers === 'function') {
             createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
         }
-    }
-    
-    // Criar obstáculos se o modo for "obstacles"
-    if (gameMode === 'obstacles') {
-        obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 10); // 10 é o número de obstáculos
-    }
+    }        // Criar obstáculos se o modo for "obstacles"
+        if (gameMode === 'obstacles') {
+            obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos
+        }
     
     // Configurar modo campanha
     if (gameMode === 'campaign') {
@@ -588,12 +586,12 @@ function resetGame() {
 
 // Animação
 function animate(time) {
-    requestAnimationFrame(animate);
-      // Anima os obstáculos mesmo se o jogo estiver pausado
+    requestAnimationFrame(animate);    // Anima os obstáculos mesmo se o jogo estiver pausado
     if (gameMode === 'obstacles' && obstacles.length > 0) {
-        // Importa a função de animação dos obstáculos
+        // Importa e executa as funções de animação e atualização dos obstáculos
         import('./obstacles.js').then(module => {
             module.animateObstacles(obstacles, time);
+            module.updateObstacles(scene, obstacles, snake, snakeBoard, hitboxes);
         });
     }
     
