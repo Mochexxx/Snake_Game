@@ -1,6 +1,8 @@
 // theme-manager.js
 // Handles theme changes in the game
 
+import { addTransitionClass } from './transition-helper.js';
+
 // Theme color definitions
 const themes = {
     green: {
@@ -20,6 +22,14 @@ const themes = {
             middlebarrier: 'assets/Gamemodes/middlebarrier_verde.png',
             obstacles: 'assets/Gamemodes/obstacles_verde.png',
             campaign: 'assets/Gamemodes/campaign_verde.png'
+        },
+        buttons: {
+            play: 'assets/Buttons/play_verde.png',
+            restart: 'assets/Buttons/restart_verde.png',
+            resume: 'assets/Buttons/resume_verde.png',
+            back: 'assets/Buttons/back_verde.png',
+            home: 'assets/Buttons/home_verde.png',
+            settings: 'assets/Buttons/settings_verde.png'
         }
     },
     purple: {
@@ -39,6 +49,14 @@ const themes = {
             middlebarrier: 'assets/Gamemodes/middlebarrier_roxo.png',
             obstacles: 'assets/Gamemodes/obstacles_roxo.png',
             campaign: 'assets/Gamemodes/campaign_roxo.png'
+        },
+        buttons: {
+            play: 'assets/Buttons/play_roxo.png',
+            restart: 'assets/Buttons/restart_roxo.png',
+            resume: 'assets/Buttons/resume_roxo.png',
+            back: 'assets/Buttons/back_roxo.png',
+            home: 'assets/Buttons/home_roxo.png',
+            settings: 'assets/Buttons/settings_roxo.png'
         }
     },
     orange: {
@@ -58,6 +76,14 @@ const themes = {
             middlebarrier: 'assets/Gamemodes/middlebarrier_laranja.png',
             obstacles: 'assets/Gamemodes/obstacles_laranja.png',
             campaign: 'assets/Gamemodes/campaign_laranja.png'
+        },
+        buttons: {
+            play: 'assets/Buttons/play_laranja.png',
+            restart: 'assets/Buttons/restart_laranja.png',
+            resume: 'assets/Buttons/resume_laranja.png',
+            back: 'assets/Buttons/back_laranja.png',
+            home: 'assets/Buttons/home_laranja.png',
+            settings: 'assets/Buttons/settings_laranja.png'
         }
     }
 };
@@ -73,6 +99,25 @@ export function initTheme() {
     }
     applyTheme(currentTheme);
     updateThemeButtonsState();
+    
+    // Set up debug toggle event listener
+    const debugToggle = document.getElementById('debugModeToggle');
+    if (debugToggle) {
+        debugToggle.addEventListener('change', function() {
+            const container = document.getElementById('debugToggleContainer');
+            if (this.checked) {
+                container.classList.add('active');
+                // Get current theme
+                const theme = themes[currentTheme];
+                container.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.6)`;
+            } else {
+                container.classList.remove('active');
+                // Get current theme
+                const theme = themes[currentTheme];
+                container.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.2)`;
+            }
+        });
+    }
 }
 
 // Apply the selected theme
@@ -81,6 +126,9 @@ export function applyTheme(themeName) {
         console.error(`Theme '${themeName}' not found.`);
         return;
     }
+    
+    // Start transition effect
+    addTransitionClass('theme-transitioning');
     
     const theme = themes[themeName];
     currentTheme = themeName;
@@ -95,36 +143,94 @@ export function applyTheme(themeName) {
       // Update game mode buttons
     document.querySelector('#infinityButton').style.backgroundImage = `url('${theme.gamemodes.infinity}')`;
     document.querySelector('#campaignButton').style.backgroundImage = `url('${theme.gamemodes.campaign}')`;
-    
-    // Update mode selection buttons
+      // Update mode selection buttons
     document.querySelector('#modeClassic').style.backgroundImage = `url('${theme.gamemodes.casual}')`;
     document.querySelector('#modeBarriers').style.backgroundImage = `url('${theme.gamemodes.barrier}')`;
     document.querySelector('#modeRandomBarriers').style.backgroundImage = `url('${theme.gamemodes.middlebarrier}')`;
-    document.querySelector('#modeObstacles').style.backgroundImage = `url('${theme.gamemodes.obstacles}')`;
+    document.querySelector('#modeObstacles').style.backgroundImage = `url('${theme.gamemodes.obstacles}')`;    // Update action buttons with themed images
+    const buttonSelectors = {
+        '#playButton': theme.buttons.play,
+        '#startMenuButton': theme.buttons.play,
+        '#playAgainButton': theme.buttons.restart,
+        '#gameModeBackButton': theme.buttons.back,
+        '#startScreenBackButton': theme.buttons.back,
+        '#endScreenBackButton': theme.buttons.home,
+        '#optionsBackButton': theme.buttons.back,
+        '#optionsMenuButton': theme.buttons.settings,
+        '#campaignNextLevelBtn': theme.buttons.play,
+        '#campaignMenuBtn': theme.buttons.home,
+        '#pauseResumeButton': theme.buttons.resume,
+        '#pauseMenuButton': theme.buttons.home,
+        '#pauseRestartButton': theme.buttons.restart
+    };
     
-    // Update button colors
-    const buttons = document.querySelectorAll('#gameModeBackButton, #startScreenBackButton, #endScreenBackButton, #optionsBackButton, #optionsMenuButton');
-    buttons.forEach(button => {
-        button.style.backgroundColor = theme.primary;
-        button.style.borderColor = theme.secondary;
-    });
+    // Update all buttons with themed images
+    for (const [selector, imagePath] of Object.entries(buttonSelectors)) {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.style.backgroundImage = `url('${imagePath}')`;
+        }
+    }
     
-    // Update hover effects in CSS
+    // Não precisamos mais atualizar cores de fundo, já que os botões são imagens    // Update hover effects in CSS for buttons and modes
     const style = document.createElement('style');
     style.innerHTML = `
-        #gameModeBackButton:hover, #startScreenBackButton:hover, #endScreenBackButton:hover, #optionsBackButton:hover, #optionsMenuButton:hover {
-            background-color: ${theme.secondary} !important;
+        .btn-image:hover, #playButton:hover, #playAgainButton:hover, #startMenuButton:hover, 
+        #optionsMenuButton:hover, #infinityButton:hover, #campaignButton:hover, 
+        #gameModeBackButton:hover, #startScreenBackButton:hover, 
+        #endScreenBackButton:hover, #optionsBackButton:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 10px ${theme.shadow} !important;
+            filter: brightness(1.1);
+            box-shadow: 0 0 10px ${theme.shadow};
+        }
+        
+        #modeSelect button {
+            border: 2px solid ${theme.primary};
         }
         
         #modeSelect button.active {
             background-color: ${theme.active} !important;
             border-color: ${theme.highlight} !important;
+            box-shadow: 0 0 10px ${theme.shadow};
         }
         
         #modeSelect button:hover {
             border-color: ${theme.highlight} !important;
+            box-shadow: 0 0 10px ${theme.shadow};
+            transform: scale(1.05);
+        }
+        
+        .theme-btn.active-theme {
+            border: 3px solid white !important;
+            box-shadow: 0 0 15px ${theme.highlight};
+        }
+        
+        .theme-btn:hover {
+            box-shadow: 0 0 12px ${theme.highlight};
+        }
+        
+        .switch input:checked + span {
+            background-color: ${theme.primary};
+        }
+        
+        .switch input:focus + span {
+            box-shadow: 0 0 1px ${theme.primary};
+        }
+        
+        #debugToggleContainer {
+            transition: all 0.3s ease;
+        }
+          #debugToggleContainer.active {
+            background-color: ${theme.active} !important;
+        }
+        
+        #scoreBoard {
+            border: 1px solid ${theme.primary};
+            box-shadow: 0 0 10px ${theme.shadow};
+        }
+        
+        #score {
+            color: ${theme.highlight};
         }
     `;
     
@@ -137,9 +243,30 @@ export function applyTheme(themeName) {
     // Add the new styles
     style.id = 'theme-style';
     document.head.appendChild(style);
+      // Update debug toggle container colors
+    const debugToggleContainer = document.getElementById('debugToggleContainer');
+    if (debugToggleContainer) {
+        debugToggleContainer.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.2)`;
+        if (debugToggleContainer.classList.contains('active')) {
+            debugToggleContainer.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.6)`;
+        }
+    }
     
     // Update theme buttons state
     updateThemeButtonsState();
+}
+
+// Helper function to convert hex to rgb
+function hexToRgb(hex) {
+    // Remove the # if present
+    hex = hex.replace('#', '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return `${r}, ${g}, ${b}`;
 }
 
 // Set up theme button event listeners
