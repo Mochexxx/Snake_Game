@@ -56,34 +56,29 @@ const modeClassic = document.getElementById('modeClassic');
 const modeBarriers = document.getElementById('modeBarriers');
 const modeRandomBarriers = document.getElementById('modeRandomBarriers');
 const modeObstacles = document.getElementById('modeObstacles');
-const modeCampaign = document.getElementById('modeCampaign'); // Novo botão para modo campanha
 const debugModeToggle = document.getElementById('debugModeToggle'); // Checkbox para ativar/desativar debug
 
 function selectMode(mode) {    // Verifica se houve mudança no modo
-    const previousMode = gameMode;
-    gameMode = mode;
+    const previousMode = gameMode;    gameMode = mode;
     // Garantir que o botão de jogar esteja visível
     playButton.style.display = 'block';
     // Remove classe 'active' de todos os botões
-    [modeClassic, modeBarriers, modeRandomBarriers, modeObstacles, modeCampaign].forEach(btn => {
+    [modeClassic, modeBarriers, modeRandomBarriers, modeObstacles].forEach(btn => {
         if (btn) btn.classList.remove('active');
-    });
-    // Ajusta o texto do modo e destaque visual
+    });    // Ajusta o texto do modo e destaque visual
     let modeText = '';
     if (mode === 'classic') {
         modeClassic.classList.add('active');
-        modeText = 'Classic (Teleport)';
+        modeText = 'Teleporte';
     } else if (mode === 'barriers') {
         modeBarriers.classList.add('active');
-        modeText = 'Barriers';
+        modeText = 'Barreiras';
     } else if (mode === 'randomBarriers') {
         if (modeRandomBarriers) modeRandomBarriers.classList.add('active');
-        modeText = 'Random Barriers';
-    } else if (mode === 'obstacles') {
+        modeText = 'Labirinto';    } else if (mode === 'obstacles') {
         modeObstacles.classList.add('active');
-        modeText = 'Obstacles';
+        modeText = 'Obstáculos';
     } else if (mode === 'campaign') {
-        if (modeCampaign) modeCampaign.classList.add('active');
         const levelInfo = getLevelInfo();
         modeText = `Campaign - Level ${levelInfo.level}: ${levelInfo.name}`;
     }
@@ -123,32 +118,10 @@ modeObstacles.addEventListener('click', () => {
     }
 });
 
-// Adiciona evento para o novo botão de modo campanha
-if (modeCampaign) {        modeCampaign.addEventListener('click', () => {
-            // Carrega o progresso da campanha para ter dados atualizados
-            loadCampaignProgress();
-              // Mostra o menu de campanha em vez de selecionar diretamente o modo
-            showCampaignMenu(levelNumber => {
-                // Callback chamado quando um nível é selecionado
-                console.log(`Nível selecionado: ${levelNumber}`);
-                
-                gameMode = 'campaign'; // Define o modo de jogo como campanha
-                
-                // Define o nível atual baseado na seleção do usuário
-                const success = setCurrentLevel(levelNumber);
-                console.log(`Nível definido: ${levelNumber}, sucesso: ${success}, nível atual: ${getCurrentLevel()}`);
-                
-                // Inicia o jogo diretamente
-                document.getElementById('startScreen').style.display = 'none';
-                gameRunning = true;
-                startGame();
-            });
-        });
-}
-
 window.onload = function() {
     document.getElementById('mainMenu').style.display = 'flex';
     document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameModeMenu').style.display = 'none';
     
     // Inicializa o modo debug se necessário
     initDebugMode();
@@ -156,12 +129,44 @@ window.onload = function() {
 
 document.getElementById('startMenuButton').addEventListener('click', function () {
     document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('gameModeMenu').style.display = 'flex';
+});
+
+// Game Mode Menu buttons
+document.getElementById('infinityButton').addEventListener('click', function () {
+    document.getElementById('gameModeMenu').style.display = 'none';
     document.getElementById('startScreen').style.display = 'flex';
     
     // Sincronizar o estado do checkbox com o valor atual do modo debug
     if (debugModeToggle) {
         debugModeToggle.checked = debugMode;
     }
+});
+
+document.getElementById('campaignButton').addEventListener('click', function () {
+    document.getElementById('gameModeMenu').style.display = 'none';
+    
+    // Carrega o progresso da campanha
+    loadCampaignProgress();
+    
+    // Mostra o menu de campanha diretamente
+    showCampaignMenu(levelNumber => {
+        gameMode = 'campaign';
+        const success = setCurrentLevel(levelNumber);
+        gameRunning = true;
+        startGame();
+    });
+});
+
+// Back buttons
+document.getElementById('gameModeBackButton').addEventListener('click', function () {
+    document.getElementById('gameModeMenu').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'flex';
+});
+
+document.getElementById('startScreenBackButton').addEventListener('click', function () {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameModeMenu').style.display = 'flex';
 });
 
 // Evento para alternar o modo debug a partir do checkbox
@@ -368,17 +373,16 @@ function startGame() {
     obstacles = [];
     barriers = [];
     hitboxVisuals = [];
-    
-    // Atualiza a interface
+      // Atualiza a interface
     document.getElementById('score').textContent = 'Score: 0';
     document.getElementById('highscore').textContent = 'Highscore: ' + highscore;
     
     // Atualiza o texto do modo
     let modeText = '';
-    if (gameMode === 'classic') modeText = 'Classic (Teleport)';
-    else if (gameMode === 'barriers') modeText = 'Barriers';
-    else if (gameMode === 'randomBarriers') modeText = 'Random Barriers';
-    else if (gameMode === 'obstacles') modeText = 'Obstacles';
+    if (gameMode === 'classic') modeText = 'Teleporte';
+    else if (gameMode === 'barriers') modeText = 'Barreiras';
+    else if (gameMode === 'randomBarriers') modeText = 'Labirinto';
+    else if (gameMode === 'obstacles') modeText = 'Obstáculos';
     document.getElementById('currentMode').textContent = 'Mode: ' + modeText;
     
     // Remove o renderer antigo se existir
@@ -535,11 +539,46 @@ document.getElementById('playAgainButton').addEventListener('click', function ()
         showTutorial(gameMode, () => {
             isPaused = false;
             tutorialsShown[gameMode] = true;
-        });
-    } else {
+        });    } else {
         isPaused = false;
     }
 });
+
+// Botão para voltar ao menu principal da tela de fim de jogo
+document.getElementById('endScreenBackButton').addEventListener('click', function () {
+    document.getElementById('endScreen').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'flex';
+    resetGame();
+});
+
+// Função para resetar o jogo completamente
+function resetGame() {
+    score = 0;
+    gameRunning = false;
+    isPaused = true;
+    snake = [];
+    obstacles = [];
+    barriers = [];
+    hitboxVisuals = [];
+    applesCollected = 0;
+    moveInterval = 200; // Reset da velocidade do jogo
+    
+    // Se existir uma campanha em andamento, resetá-la
+    if (gameMode === 'campaign') {
+        resetCampaign();
+    }
+    
+    // Remove o renderer antigo se existir
+    if (renderer) {
+        document.body.removeChild(renderer.domElement);
+    }
+    
+    // Remove a informação de campanha se existir
+    const campaignInfo = document.getElementById('campaign-info');
+    if (campaignInfo) {
+        document.body.removeChild(campaignInfo);
+    }
+}
 
 // Animação
 function animate(time) {

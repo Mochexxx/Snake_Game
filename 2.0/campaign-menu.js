@@ -341,32 +341,37 @@ export function showCampaignMenu(startLevelCallback) {
     buttonsContainer.style.justifyContent = 'center';
     buttonsContainer.style.gap = '15px';
     buttonsContainer.style.marginTop = '30px';
-    
-    // Botão Voltar
+      // Botão Voltar
     const backButton = document.createElement('button');
-    backButton.textContent = 'Voltar ao Menu';
+    backButton.textContent = 'Voltar';
     backButton.style.padding = '10px 20px';
-    backButton.style.backgroundColor = '#e74c3c';
+    backButton.style.backgroundColor = '#4e8d77';
     backButton.style.color = '#fff';
-    backButton.style.border = 'none';
-    backButton.style.borderRadius = '5px';
+    backButton.style.border = '2px solid #65b798';
+    backButton.style.borderRadius = '10px';
+    backButton.style.width = '120px';
+    backButton.style.height = '40px';
     backButton.style.cursor = 'pointer';
     backButton.style.fontSize = '16px';
-    backButton.style.transition = 'background-color 0.2s';
+    backButton.style.fontWeight = 'bold';
+    backButton.style.transition = 'all 0.2s';
     
     backButton.addEventListener('mouseover', () => {
-        backButton.style.backgroundColor = '#c0392b';
+        backButton.style.backgroundColor = '#65b798';
+        backButton.style.transform = 'scale(1.05)';
+        backButton.style.boxShadow = '0 0 10px rgba(101, 183, 152, 0.5)';
     });
     
     backButton.addEventListener('mouseout', () => {
-        backButton.style.backgroundColor = '#e74c3c';
-    });
-      backButton.addEventListener('click', () => {
+        backButton.style.backgroundColor = '#4e8d77';
+        backButton.style.transform = 'scale(1)';
+        backButton.style.boxShadow = 'none';
+    });backButton.addEventListener('click', () => {
         // Fecha o menu e volta para a tela de seleção de modo
         document.body.removeChild(overlay);
-        // Se o jogo não estiver em execução, reexibe a tela de seleção de modo
+        // Mostra o menu de modos de jogo
         if (!window.gameRunning) {
-            document.getElementById('startScreen').style.display = 'flex';
+            document.getElementById('gameModeMenu').style.display = 'flex';
         }
     });
     buttonsContainer.appendChild(backButton);
