@@ -52,7 +52,7 @@ export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) 
         if (isTree) {
             // Cria uma árvore como obstáculo
             obstacle = createTreeModel();
-            
+         
             // Ajusta a escala para ficar maior
             const scale = 0.7 + Math.random() * 0.3;
             obstacle.scale.set(scale, scale, scale);

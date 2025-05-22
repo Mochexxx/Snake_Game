@@ -1,6 +1,7 @@
 // scene.js
 // Responsável por criar e configurar a cena, câmera, luzes e chão
 
+import * as THREE from 'three';
 import { createTreeModel, createRockModel, getRandomTreePosition, getRandomRockPosition } from './models.js';
 
 // Cores fixas para a cena

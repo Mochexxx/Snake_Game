@@ -250,6 +250,15 @@
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
         }
     </style>
+    <!-- import map for bare module specifiers -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+          "three/": "https://cdn.jsdelivr.net/npm/three@0.128.0/"
+        }
+      }
+    </script>
 </head>
 <body>    <!-- Tela de menu principal -->
     <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:url('assets/images.png');background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
@@ -361,7 +370,6 @@
         <span id="currentMode">Mode: Classic</span>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script type="module" src="main.js"></script>
     <!-- <script src="main.js"></script> -->
 </body>

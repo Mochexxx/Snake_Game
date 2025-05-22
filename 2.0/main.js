@@ -1,3 +1,5 @@
+
+import * as THREE from 'three'; // Importa o módulo three
 // main.js
 import * as Scene from './scene.js';
 import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
@@ -25,6 +27,8 @@ import {
     getCurrentLevel
 } from './campaign-menu.js';
 import { initTheme, setupThemeButtons } from './theme-manager.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { TextureLoader } from 'three';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -571,6 +575,10 @@ function resetGame() {
     }
 }
 
+// Load snake texture
+const textureLoader = new TextureLoader();
+const snakeTexture = textureLoader.load('assets/textures/snake_texture.png');
+
 // Animação
 function animate(time) {
     requestAnimationFrame(animate);    // Anima os obstáculos mesmo se o jogo estiver pausado
@@ -646,16 +654,15 @@ function animate(time) {
                 // Obtém as coordenadas 3D corretas para o novo segmento
                 const { centerX, centerZ } = hitboxes[validX][validZ];
                   // Materiais e geometria consistentes para todos os segmentos
-                const segmentMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x00ff00, 
+                const segmentMaterial = new THREE.MeshStandardMaterial({
+                    map: snakeTexture,
                     roughness: 0.5,
-                    metalness: 0.2,
-                    flatShading: false
+                    metalness: 0.2
                 });
                   // Cria um novo segmento visual com geometria e material consistentes
                 const segmentSize = 1.8; // Igual ao valor usado em Snake.js
                 const newSegment = new THREE.Mesh(
-                    new THREE.BoxGeometry(segmentSize, segmentSize, segmentSize),
+                    new RoundedBoxGeometry(segmentSize, segmentSize, segmentSize, 8, 0.3),
                     segmentMaterial
                 );
                 
@@ -692,7 +699,7 @@ function animate(time) {
                   // Verifica se o jogo foi completado (tabuleiro quase cheio)
                 if (apple.userData && apple.userData.gameCompleted) {
                     // Mostra uma mensagem de vitória
-                    console.log("PARABÉNS! Você preencheu o tabuleiro!");
+                    console.log("PARABÉNS! Você preencheu quase todo o tabuleiro!");
                     alert("PARABÉNS! Você preencheu quase todo o tabuleiro e venceu o jogo!");
                     endGame(true); // Encerra o jogo com vitória
                     return;

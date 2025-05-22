@@ -1,46 +1,71 @@
+import * as THREE from 'three';
 import { getBoardCellCenter, generateBoardHitboxes } from './scene.js';
+import { BoxGeometry, MeshStandardMaterial } from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { SphereGeometry } from 'three';
+import { TextureLoader } from 'three';
 
 // Snake.js
 // Responsável por criar e controlar a cobra
 
+// Load snake texture
+const textureLoader = new TextureLoader();
+const snakeTexture = textureLoader.load('assets/textures/snake_texture.png');
+
+// Replace materials to use texture
+const HEAD_MATERIAL = new MeshStandardMaterial({ map: snakeTexture });
+const SEGMENT_MATERIAL = new MeshStandardMaterial({ map: snakeTexture });
+
 export function createSnake(scene) {
     const snake = [];
     const cubeSize = 1.8; // Slightly smaller to create visual separation between segments
-    // Material para os segmentos da cobra (verde)
-    const segmentMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x00ff00,
-        roughness: 0.5,
-        metalness: 0.2,
-        flatShading: false
-    });
     
-    // Material para a cabeça da cobra (vermelho)
-    const headMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xff0000, // Red color for head
-        roughness: 0.5,
-        metalness: 0.2,
-        flatShading: false
-    });
     const hitboxes = generateBoardHitboxes();    // Começa no centro do tabuleiro (matriz 9,9) para 20x20
     const startX = 9;
     const startZ = 9;
     // Guarda as coordenadas do tabuleiro para cada segmento
     const snakeBoard = [];    // Criação da cabeça da cobra (cubo vermelho)
     // Primeiro criamos o cubo principal da cabeça
-    const headGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-    const head = new THREE.Mesh(headGeometry, headMaterial);
+    const headGeometry = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 8, 0.3);
+    const headMaterialInstance = HEAD_MATERIAL.clone();
+    const head = new THREE.Mesh(headGeometry, headMaterialInstance);
     
     // Posicionar a cabeça no tabuleiro
     const { centerX: cx, centerZ: cz } = hitboxes[startX][startZ];
     head.position.set(cx, 1, cz);
     scene.add(head);
+
+    // add eyes and mouth aesthetic
+    const leftEye = new THREE.Mesh(
+        new SphereGeometry(0.5, 8, 8),
+        new MeshStandardMaterial({ color: 0xffffff })
+    );
+    leftEye.scale.set(0.5, 0.5, 0.5);
+    leftEye.position.set(cubeSize*0.25, cubeSize*0.25, cubeSize*0.5);
+    const leftEyeHole = new THREE.Mesh(
+        new SphereGeometry(0.35, 8, 8),
+        new MeshStandardMaterial({ color: 0x333333 })
+    );
+    leftEyeHole.scale.set(1, 0.6, 0.6);
+    leftEyeHole.position.set(0.1, 0, 0);
+    leftEye.add(leftEyeHole);
+    const rightEye = leftEye.clone();
+    rightEye.position.x = -leftEye.position.x;
+    rightEye.rotation.y = Math.PI;
+    const mouth = new THREE.Mesh(
+        new RoundedBoxGeometry(cubeSize * 0.8, cubeSize * 0.2, cubeSize * 0.4, 5, 0.05),
+        new MeshStandardMaterial({ color: 0x550000 })
+    );
+    mouth.rotation.x = -Math.PI * 0.1;
+    mouth.position.set(0, -cubeSize * 0.2, cubeSize * 0.6);
+    head.add(leftEye, rightEye, mouth);
+
     snake.push(head);
     snakeBoard.push({ x: startX, z: startZ });    // Corpo inicial para a esquerda
     for (let i = 1; i < 5; i++) {
-        const segment = new THREE.Mesh(
-            new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize),
-            segmentMaterial
-        );
+        const segmentGeom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 8, 0.3);
+        const segmentMaterialInstance = SEGMENT_MATERIAL.clone();
+        const segment = new THREE.Mesh(segmentGeom, segmentMaterialInstance);
         const { centerX: bx, centerZ: bz } = hitboxes[startX - i][startZ];
         segment.position.set(bx, 1, bz);
         scene.add(segment);
@@ -222,7 +247,7 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
         const { centerX, centerZ } = hitboxes[x][z];
         
         // Posiciona o segmento da cobra exatamente no centro da célula
-        // Aunque sean visualmente más pequeños, se mantienen centrados en las celdas
+        // Aunque sean visualmente mais pequenos, se mantienen centrados en las celdas
         snake[i].position.set(centerX, 1, centerZ);
     }    // Atualiza rotação visual da cabeça com base na direção do movimento
     // Usando Math.atan2 para obter o ângulo correto baseado na direção atual
