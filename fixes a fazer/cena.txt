@@ -1,0 +1,4 @@
+// Cria uma cena 3D com Three.js inspirada num mundo low poly em tons de verde
+ e aplica um background suave em tons de azul-esverdeado
+// Não adiciona obstáculos, apenas o plano e o fundo visual
+// Usa câmera em perspectiva num ângulo isométrico e luz ambiente suave

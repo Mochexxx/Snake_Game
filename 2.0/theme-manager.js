@@ -13,9 +13,9 @@ const themes = {
             mainmenu: 'assets/Titlecards/mainmenu_verde.png',
             gamemodes: 'assets/Titlecards/gamemodes_verde.png',
             options: 'assets/Titlecards/options_verde.png'
-        },
-        gamemodes: {
+        },        gamemodes: {
             casual: 'assets/Gamemodes/casual_verde.png',
+            infinity: 'assets/Gamemodes/infinity_verde.png',
             barrier: 'assets/Gamemodes/barrier_verde.png',
             middlebarrier: 'assets/Gamemodes/middlebarrier_verde.png',
             obstacles: 'assets/Gamemodes/obstacles_verde.png',
@@ -32,9 +32,9 @@ const themes = {
             mainmenu: 'assets/Titlecards/mainmenu_roxo.png',
             gamemodes: 'assets/Titlecards/gamemodes_roxo.png',
             options: 'assets/Titlecards/options_roxo.png'
-        },
-        gamemodes: {
+        },        gamemodes: {
             casual: 'assets/Gamemodes/casual_roxo.png',
+            infinity: 'assets/Gamemodes/infinity_roxo.png',
             barrier: 'assets/Gamemodes/barrier_roxo.png',
             middlebarrier: 'assets/Gamemodes/middlebarrier_roxo.png',
             obstacles: 'assets/Gamemodes/obstacles_roxo.png',
@@ -51,9 +51,9 @@ const themes = {
             mainmenu: 'assets/Titlecards/mainmenu_laranja.png',
             gamemodes: 'assets/Titlecards/gamemodes_laranja.png',
             options: 'assets/Titlecards/options_laranja.png'
-        },
-        gamemodes: {
+        },        gamemodes: {
             casual: 'assets/Gamemodes/casual_laranja.png',
+            infinity: 'assets/Gamemodes/infinity_laranja.png',
             barrier: 'assets/Gamemodes/barrier_laranja.png',
             middlebarrier: 'assets/Gamemodes/middlebarrier_laranja.png',
             obstacles: 'assets/Gamemodes/obstacles_laranja.png',
@@ -92,9 +92,8 @@ export function applyTheme(themeName) {
     document.querySelector('#title[style*="mainmenu_"]').style.backgroundImage = `url('${theme.titlecards.mainmenu}')`;
     document.querySelector('#gameModeTitle').style.backgroundImage = `url('${theme.titlecards.gamemodes}')`;
     document.querySelector('#optionsTitle').style.backgroundImage = `url('${theme.titlecards.options}')`;
-    
-    // Update game mode buttons
-    document.querySelector('#infinityButton').style.backgroundImage = `url('${theme.gamemodes.casual}')`;
+      // Update game mode buttons
+    document.querySelector('#infinityButton').style.backgroundImage = `url('${theme.gamemodes.infinity}')`;
     document.querySelector('#campaignButton').style.backgroundImage = `url('${theme.gamemodes.campaign}')`;
     
     // Update mode selection buttons

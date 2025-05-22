@@ -87,20 +87,28 @@
         #level-overlay, #level-complete-overlay, #campaign-complete-overlay {
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
         }
-        
-        /* Estilos para botões de tema */
+          /* Estilos para botões de tema */
         .theme-btn {
             transition: all 0.3s ease;
+            padding: 0;
         }
         
         .theme-btn:hover {
             transform: scale(1.1);
         }
         
+        .theme-btn img {
+            transition: all 0.3s ease;
+        }
+        
+        .theme-btn:hover img {
+            transform: scale(1.05);
+        }
+        
         .theme-btn.active-theme {
             border: 3px solid white !important;
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-        }        /* Estilos para botões de voltar */
+        }/* Estilos para botões de voltar */
         #gameModeBackButton:hover, #startScreenBackButton:hover, #endScreenBackButton:hover, #optionsBackButton:hover {
             background-color: #65b798;
             transform: scale(1.05);
@@ -117,7 +125,7 @@
     </div><!-- Tela de modos de jogo -->    <div id="gameModeMenu" style="position:absolute;width:100%;height:100%;background-image:url('assets/images.png');background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="gameModeTitle" style="background-image:url('assets/Titlecards/gamemodes_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:50px;"></div>
         <div style="display:flex;flex-direction:row;gap:40px;justify-content:center;">
-            <button id="infinityButton" style="background-image:url('assets/Gamemodes/casual_verde.png');background-size:contain;background-repeat:no-repeat;background-position:center;background-color:transparent;width:200px;height:100px;border:none;cursor:pointer;color:transparent;"><!--Infinity--></button>
+            <button id="infinityButton" style="background-image:url('assets/Gamemodes/infinity_verde.png');background-size:contain;background-repeat:no-repeat;background-position:center;background-color:transparent;width:200px;height:100px;border:none;cursor:pointer;color:transparent;"><!--Infinity--></button>
             <button id="campaignButton" style="background-image:url('assets/Gamemodes/campaign_verde.png');background-size:contain;background-repeat:no-repeat;background-position:center;background-color:transparent;width:200px;height:100px;border:none;cursor:pointer;color:transparent;"><!--Campaign--></button>
         </div>
         <button id="gameModeBackButton" style="background-color:#4e8d77;color:white;border:2px solid #65b798;border-radius:10px;width:120px;height:40px;font-size:16px;cursor:pointer;margin-top:40px;font-weight:bold;transition:all 0.2s;">Voltar</button>
@@ -194,14 +202,19 @@
                     <span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:34px;"></span>
                 </label>
             </div>
-            
-            <!-- Seleção de tema de cores -->
+              <!-- Seleção de tema de cores -->
             <div style="margin-top:25px;">
                 <h3 style="color:white;text-align:center;margin-top:0;margin-bottom:15px;">Theme Color</h3>
                 <div style="display:flex;justify-content:center;gap:20px;">
-                    <button id="greenThemeBtn" class="theme-btn active-theme" style="width:80px;height:80px;background-image:url('assets/butoes/palette-green.png');background-size:contain;background-repeat:no-repeat;background-position:center;border:3px solid transparent;border-radius:50%;cursor:pointer;background-color:transparent;"></button>
-                    <button id="purpleThemeBtn" class="theme-btn" style="width:80px;height:80px;background-image:url('assets/butoes/palette-lilac.png');background-size:contain;background-repeat:no-repeat;background-position:center;border:3px solid transparent;border-radius:50%;cursor:pointer;background-color:transparent;"></button>
-                    <button id="orangeThemeBtn" class="theme-btn" style="width:80px;height:80px;background-image:url('assets/butoes/palette-orange.png');background-size:contain;background-repeat:no-repeat;background-position:center;border:3px solid transparent;border-radius:50%;cursor:pointer;background-color:transparent;"></button>
+                    <button id="greenThemeBtn" class="theme-btn active-theme" style="width:80px;height:80px;border:3px solid transparent;border-radius:50%;cursor:pointer;background-color:transparent;overflow:hidden;">
+                        <img src="assets/butoes/palette-green.png" alt="Green Theme" style="width:100%;height:100%;object-fit:contain;">
+                    </button>
+                    <button id="purpleThemeBtn" class="theme-btn" style="width:80px;height:80px;border:3px solid transparent;border-radius:50%;cursor:pointer;background-color:transparent;overflow:hidden;">
+                        <img src="assets/butoes/palette-lilac.png" alt="Purple Theme" style="width:100%;height:100%;object-fit:contain;">
+                    </button>
+                    <button id="orangeThemeBtn" class="theme-btn" style="width:80px;height:80px;border:3px solid transparent;border-radius:50%;cursor:pointer;background-color:transparent;overflow:hidden;">
+                        <img src="assets/butoes/palette-orange.png" alt="Orange Theme" style="width:100%;height:100%;object-fit:contain;">
+                    </button>
                 </div>
             </div>
         </div>
