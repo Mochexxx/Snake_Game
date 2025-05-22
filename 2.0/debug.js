@@ -40,24 +40,12 @@ export function toggleDebugMode(debugEnabled) {
         // Adiciona notificação visual de debug ativo
         showDebugNotification(true);
         
-        // Atualiza o checkbox do menu principal se existir
-        const debugToggle = document.getElementById('debugModeToggle');
-        if (debugToggle) {
-            debugToggle.checked = true;
-        }
-        
         // Salva o estado no localStorage
         localStorage.setItem('debugMode', 'true');
     } else {
         console.log("Debug mode: OFF");
         // Remove notificação visual de debug ativo
         showDebugNotification(false);
-        
-        // Atualiza o checkbox do menu principal se existir
-        const debugToggle = document.getElementById('debugModeToggle');
-        if (debugToggle) {
-            debugToggle.checked = false;
-        }
         
         // Salva o estado no localStorage
         localStorage.setItem('debugMode', 'false');

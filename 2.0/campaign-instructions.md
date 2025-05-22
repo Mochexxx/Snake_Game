@@ -23,9 +23,8 @@ O modo debug é uma ferramenta de desenvolvimento e teste que permite:
 - O botão de debug no menu da campanha permite ativar/desativar facilmente
 
 #### Como ativar o modo Debug:
-1. **Na tela inicial**: Marque a caixa de seleção "🐞 Modo Debug" antes de iniciar o jogo
-2. **Durante o jogo**: Pressione a tecla F3 ou B para ativar/desativar
-3. **No menu da campanha**: Use o botão "🐞 Ativar/Desativar Modo Debug"
+1. **Durante o jogo**: Pressione a tecla F3 ou B para ativar/desativar
+2. **No menu da campanha**: Use o botão "🐞 Ativar/Desativar Modo Debug"
 
 *Nota: Este modo destina-se a testes e desenvolvimento. Usar o modo debug não afeta seu progresso normal de jogo, mas permite jogar níveis avançados antes de desbloqueá-los naturalmente.*
 

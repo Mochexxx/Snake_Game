@@ -99,25 +99,6 @@ export function initTheme() {
     }
     applyTheme(currentTheme);
     updateThemeButtonsState();
-    
-    // Set up debug toggle event listener
-    const debugToggle = document.getElementById('debugModeToggle');
-    if (debugToggle) {
-        debugToggle.addEventListener('change', function() {
-            const container = document.getElementById('debugToggleContainer');
-            if (this.checked) {
-                container.classList.add('active');
-                // Get current theme
-                const theme = themes[currentTheme];
-                container.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.6)`;
-            } else {
-                container.classList.remove('active');
-                // Get current theme
-                const theme = themes[currentTheme];
-                container.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.2)`;
-            }
-        });
-    }
 }
 
 // Apply the selected theme
@@ -212,16 +193,8 @@ export function applyTheme(themeName) {
         .switch input:checked + span {
             background-color: ${theme.primary};
         }
-        
-        .switch input:focus + span {
+          .switch input:focus + span {
             box-shadow: 0 0 1px ${theme.primary};
-        }
-        
-        #debugToggleContainer {
-            transition: all 0.3s ease;
-        }
-          #debugToggleContainer.active {
-            background-color: ${theme.active} !important;
         }
         
         #scoreBoard {
@@ -239,18 +212,9 @@ export function applyTheme(themeName) {
     if (oldStyle) {
         oldStyle.remove();
     }
-    
-    // Add the new styles
+      // Add the new styles
     style.id = 'theme-style';
     document.head.appendChild(style);
-      // Update debug toggle container colors
-    const debugToggleContainer = document.getElementById('debugToggleContainer');
-    if (debugToggleContainer) {
-        debugToggleContainer.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.2)`;
-        if (debugToggleContainer.classList.contains('active')) {
-            debugToggleContainer.style.backgroundColor = `rgba(${hexToRgb(theme.primary)}, 0.6)`;
-        }
-    }
     
     // Update theme buttons state
     updateThemeButtonsState();

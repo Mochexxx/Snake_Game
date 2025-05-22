@@ -49,11 +49,10 @@ export function showTutorial(gameMode, onCloseTutorial) {
     }
     
     tutorialContent += `
-            </ul>
-            <p><strong>Outros controles:</strong></p>
+            </ul>            <p><strong>Outros controles:</strong></p>
             <ul>
                 <li>P ou Espaço: pausar/retomar o jogo</li>
-                <li>B: mostrar/esconder hitboxes (modo de debug)</li>
+                <li>B: ativar/desativar modo de debug</li>
     `;
       // Adiciona instruções específicas para o modo campanha
     if (gameMode === 'campaign') {
@@ -70,7 +69,6 @@ export function showTutorial(gameMode, onCloseTutorial) {
             </ul>            <p><strong>🐞 Modo Debug:</strong></p>
             <ul>
                 <li>Ative o modo debug pressionando F3 ou usando a tecla B</li>
-                <li>Você também pode ativar o modo debug na tela inicial, usando a caixa de seleção</li>
                 <li>Em modo debug, todos os níveis da campanha estão desbloqueados</li>
                 <li>Os níveis desbloqueados por debug têm uma borda roxa</li>
                 <li>Você também pode ativar/desativar o debug no menu de níveis</li>

@@ -57,7 +57,6 @@ const modeClassic = document.getElementById('modeClassic');
 const modeBarriers = document.getElementById('modeBarriers');
 const modeRandomBarriers = document.getElementById('modeRandomBarriers');
 const modeObstacles = document.getElementById('modeObstacles');
-const debugModeToggle = document.getElementById('debugModeToggle'); // Checkbox para ativar/desativar debug
 
 function selectMode(mode) {    // Verifica se houve mudança no modo
     const previousMode = gameMode;    gameMode = mode;
@@ -141,11 +140,6 @@ document.getElementById('startMenuButton').addEventListener('click', function ()
 document.getElementById('infinityButton').addEventListener('click', function () {
     document.getElementById('gameModeMenu').style.display = 'none';
     document.getElementById('startScreen').style.display = 'flex';
-    
-    // Sincronizar o estado do checkbox com o valor atual do modo debug
-    if (debugModeToggle) {
-        debugModeToggle.checked = debugMode;
-    }
 });
 
 document.getElementById('campaignButton').addEventListener('click', function () {
@@ -175,32 +169,13 @@ document.getElementById('startScreenBackButton').addEventListener('click', funct
 });
 
 // Evento para alternar o modo debug a partir do checkbox
-if (debugModeToggle) {
-    debugModeToggle.addEventListener('change', function() {
-        debugMode = this.checked;
-        toggleDebugMode(debugMode);
-        console.log(`Modo debug ${debugMode ? 'ATIVADO' : 'DESATIVADO'} a partir do menu inicial`);
-    });
-}
+// Removido - agora só funciona com a tecla B
 
 // Inicializa o modo debug com base nas configurações salvas
 function initDebugMode() {
     // Se o modo debug estiver ativo, mostrar a notificação
     if (debugMode) {
         toggleDebugMode(true);
-    }
-      // Sincronizar o checkbox de debug com o valor atual
-    const debugToggle = document.getElementById('debugModeToggle');
-    if (debugToggle) {
-        debugToggle.checked = debugMode;
-        
-        // Atualizar o estilo do container do debug toggle
-        const debugToggleContainer = document.getElementById('debugToggleContainer');
-        if (debugToggleContainer) {
-            debugToggleContainer.style.backgroundColor = debugMode ? 
-                'rgba(155, 89, 182, 0.6)' : 
-                'rgba(155, 89, 182, 0.2)';
-        }
     }
 }
 
@@ -321,7 +296,7 @@ function setupControls() {
                     debugCollisions(scene, snakeBoard, hitboxes);
                     console.log("Matriz da cobra:", JSON.stringify(snakeBoard));
                     console.log("Posição da cabeça:", snakeHead.position);
-                }                break;              case 'b': // Tecla B para ativar/desativar modo debug
+                }                break;            case 'b': // Tecla B para ativar/desativar modo debug
             case 'f3': // Tecla F3 como alternativa para ativar/desativar modo debug (mais comum em jogos)
                 // Impede comportamento padrão e execução duplicada
                 event.preventDefault();
@@ -332,18 +307,10 @@ function setupControls() {
                     break;
                 }
                 
-                // Apenas altera o modo debug se não estiver em transição
-                if (!window.debugToggleInProgress) {
-                    window.debugToggleInProgress = true;
-                    debugMode = !debugMode;
-                    toggleDebugMode(debugMode);
-                    console.log(`Debug mode toggled to: ${debugMode}`);
-                    
-                    // Limpa a flag após um pequeno atraso para evitar múltiplas chamadas
-                    setTimeout(() => {
-                        window.debugToggleInProgress = false;
-                    }, 300);
-                }
+                // Altera o modo debug instantaneamente
+                debugMode = !debugMode;
+                toggleDebugMode(debugMode);
+                console.log(`Debug mode toggled to: ${debugMode}`);
                 break;
             case 'p': // Tecla P como alternativa para pausar
                 if (gameRunning) {
