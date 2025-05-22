@@ -130,10 +130,6 @@ window.onload = function() {
     
     // Carrega as configurações de opções
     loadOptionsSettings();
-    
-    // Inicializa o sistema de temas
-    initTheme();
-    setupThemeButtons();
 };
 
 document.getElementById('startMenuButton').addEventListener('click', function () {
@@ -409,6 +405,7 @@ function startGame() {
     // Adiciona elementos na cena
     Scene.addLights(scene);
     Scene.addBoard(scene);
+    Scene.addLowPolyDecorations(scene);
     
     // Gera a matriz de hitboxes para o tabuleiro
     hitboxes = Scene.generateBoardHitboxes();
@@ -1157,7 +1154,4 @@ loadOptionsSettings();
 initTheme();
 
 // Configura os botões de tema
-setupThemeButtons(() => {
-    // Callback para reiniciar o jogo ao mudar o tema
-    resetGame();
-});
+setupThemeButtons();
