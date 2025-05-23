@@ -374,7 +374,10 @@ function startGame() {
     
     // Remove o renderer antigo se existir
     if (renderer) {
-        document.body.removeChild(renderer.domElement);
+        // Only remove if renderer.domElement is actually a child of document.body
+        if (renderer.domElement && renderer.domElement.parentNode === document.body) {
+            document.body.removeChild(renderer.domElement);
+        }
     }
 
     // Cria a nova cena
@@ -642,6 +645,12 @@ function animate(time) {
         }
     }
         
+    // Guard: Only move snake if snake, snakeHead, and snakeBoard are valid
+    if (!snake || !Array.isArray(snake) || snake.length === 0 || !snakeHead || !snakeBoard || !Array.isArray(snakeBoard) || snakeBoard.length === 0) {
+        renderer.render(scene, camera);
+        return;
+    }
+    
     if (time - lastMoveTime > moveInterval) {
         // Aplica a próxima direção, se existir, antes de mover a cobra
         if (nextDirection) {

@@ -83,9 +83,10 @@ export function showTutorial(gameMode, onCloseTutorial) {
     // Adicionando conteúdo específico para cada modo de jogo
     if (gameMode === 'classic') {
         tutorialContent += `
-            <p><strong>Modo Clássico:</strong></p>
+            <p><strong>Modo Casual:</strong></p>
             <ul>
-                <li>Ao atingir os limites do tabuleiro, você teleporta para o lado oposto</li>
+                <li>O modo clássico do Snake.</li>
+                <li>Ao atingir os limites do tabuleiro, você teleporta para o lado oposto.</li>
                 <li>Cuidado para não colidir com seu próprio corpo!</li>
             </ul>
         `;
@@ -93,18 +94,28 @@ export function showTutorial(gameMode, onCloseTutorial) {
         tutorialContent += `
             <p><strong>Modo Barreiras:</strong></p>
             <ul>
-                <li>Há barreiras nos limites do tabuleiro</li>
-                <li>Colidir com uma barreira resulta em fim de jogo</li>
-                <li>Evite as barreiras e seu próprio corpo</li>
+                <li>Existem barreiras fixas nas bordas do tabuleiro.</li>
+                <li>Colidir com uma barreira resulta em fim de jogo.</li>
+                <li>Planeje seus movimentos para evitar as barreiras e seu próprio corpo.</li>
+            </ul>
+        `;
+    } else if (gameMode === 'randomBarriers') {
+        tutorialContent += `
+            <p><strong>Modo Labirinto:</strong></p>
+            <ul>
+                <li>Barreiras aleatórias criam um labirinto diferente a cada partida.</li>
+                <li>Colidir com uma barreira resulta em fim de jogo.</li>
+                <li>Encontre o melhor caminho para coletar as maçãs!</li>
             </ul>
         `;
     } else if (gameMode === 'obstacles') {
         tutorialContent += `
             <p><strong>Modo Obstáculos:</strong></p>
             <ul>
-                <li>Há obstáculos móveis pelo tabuleiro</li>
-                <li>Os obstáculos se movem aleatoriamente</li>
-                <li>Colidir com um obstáculo resulta em fim de jogo</li>
+                <li>Obstáculos móveis aparecem pelo tabuleiro.</li>
+                <li>Os obstáculos se movem aleatoriamente.</li>
+                <li>Colidir com um obstáculo resulta em fim de jogo.</li>
+                <li>Fique atento ao movimento dos obstáculos!</li>
             </ul>
         `;
     }
