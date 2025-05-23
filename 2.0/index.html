@@ -251,8 +251,15 @@
         }
     </style>
 </head>
-<body>    <!-- Tela de menu principal -->
-    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+<body>
+    <!-- Tela de pré-menu -->
+    <div id="preMainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:4;">
+        <div id="preMenuTitle" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-repeat:no-repeat;width:400px;height:150px;margin-bottom:50px;"></div>
+        <button id="enterMainMenuButton" class="btn-image" style="width:220px;height:90px;background-image:url('assets/Buttons/start_verde.png');">Entrar</button>
+    </div>
+
+    <!-- Tela de menu principal -->
+    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="title" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:60px;"></div>
         
         <div style="display:flex;flex-direction:column;align-items:center;gap:30px;">
@@ -370,6 +377,7 @@
     }
     </script>
     <script type="module" src="main.js"></script>
+    <script type="module" src="premenu.js"></script>
     <!-- <script src="main.js"></script> -->
 </body>
 </html>

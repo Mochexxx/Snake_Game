@@ -1,4 +1,3 @@
-
 import * as THREE from 'three'; // Importa o módulo three
 // main.js
 import * as Scene from './scene.js';
@@ -123,10 +122,19 @@ modeObstacles.addEventListener('click', () => {
 });
 
 window.onload = function() {
-    document.getElementById('mainMenu').style.display = 'flex';
+    // document.getElementById('mainMenu').style.display = 'flex'; // This will be handled by premenu.js
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameModeMenu').style.display = 'none';
     document.getElementById('optionsMenu').style.display = 'none';
+    
+    // Handle preMainMenu to mainMenu transition
+    const enterMainMenuButton = document.getElementById('enterMainMenuButton');
+    if (enterMainMenuButton) {
+        enterMainMenuButton.addEventListener('click', function() {
+            document.getElementById('preMainMenu').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'flex';
+        });
+    }
     
     // Inicializa o modo debug se necessário
     initDebugMode();
