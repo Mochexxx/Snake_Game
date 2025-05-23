@@ -1,6 +1,6 @@
 // campaign.js
 // Responsável por gerenciar o modo campanha com níveis progressivos
-
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 import { getBoardCellCenter } from './scene.js';
 import { createBarriers, removeBarriers } from './barriers.js';
 
