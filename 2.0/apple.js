@@ -4,7 +4,9 @@ import { getBoardCellCenter, generateBoardHitboxes } from './scene.js';
 // apple.js
 // Responsável por criar e posicionar a maçã
 
-export function createApple(scene, snake, isAppleOnSnake, snakeBoard, hitboxes, obstacles = []) {
+// Função para criar uma nova maçã
+// Modificado para aceitar 'barriers' e evitar colisões
+export function createApple(scene, snake, isAppleOnSnake, snakeBoard, hitboxes, obstacles = [], barriers = []) {
     // Geometria e material para a maçã
     const appleGeometry = new THREE.SphereGeometry(1, 16, 16);
     const appleMaterial = new THREE.MeshStandardMaterial({ 
@@ -42,7 +44,7 @@ export function createApple(scene, snake, isAppleOnSnake, snakeBoard, hitboxes, 
         if (attempts >= maxAttempts) {
             console.warn("Máximo de tentativas atingido para posicionar a maçã. Usando método alternativo.");
             // Método alternativo: verifica o tabuleiro de forma sistemática
-            const availablePositions = findAvailablePositions(snakeBoard, obstacles);
+            const availablePositions = findAvailablePositions(snakeBoard, obstacles, barriers); // Passa barriers
             if (availablePositions.length > 0) {
                 // Escolhe uma posição aleatória entre as disponíveis
                 const randomIndex = Math.floor(Math.random() * availablePositions.length);
@@ -58,7 +60,19 @@ export function createApple(scene, snake, isAppleOnSnake, snakeBoard, hitboxes, 
             break;
         }
     } while (isAppleOnSnake(snake, x, z, snakeBoard) || 
-             obstacles.some(obs => obs.boardPosition.x === x && obs.boardPosition.z === z));
+             obstacles.some(obs => obs.boardPosition.x === x && obs.boardPosition.z === z) ||
+             barriers.some(barrier => { // Adiciona verificação de colisão com barreiras
+                 if (barrier.type === 'complex' && barrier.boardPosition) {
+                     return barrier.boardPosition.x === x && barrier.boardPosition.z === z;
+                 }
+                 if (barrier.type === 'boundary' && barrier.boardPositions) {
+                     return barrier.boardPositions.some(pos => pos.x === x && pos.z === z);
+                 }
+                 if (barrier.type === 'random-piece' && barrier.boardPositions) {
+                    return barrier.boardPositions.some(pos => pos.x === x && pos.z === z);
+                }
+                 return false;
+             }));
 
     // Garante que as coordenadas estejam dentro dos limites do tabuleiro
     x = Math.max(0, Math.min(19, x));
@@ -106,24 +120,31 @@ function animateApple(apple) {
     };
 }
 
-// Função para encontrar posições disponíveis no tabuleiro (que não colidem com a cobra)
-function findAvailablePositions(snakeBoard, obstacles) {
-    const availablePositions = [];
-    
-    // Verifica cada posição do tabuleiro 20x20
-    for (let x = 0; x < 20; x++) {
-        for (let z = 0; z < 20; z++) {
-            // Verifica se a posição atual está ocupada pela cobra
-            const isOccupied = snakeBoard.some(segment => segment.x === x && segment.z === z);
-            // Verifica se a posição atual está ocupada por um obstáculo
-            const isObstacle = obstacles.some(obs => obs.boardPosition.x === x && obs.boardPosition.z === z);
-            
-            // Se não estiver ocupada, adiciona às posições disponíveis
-            if (!isOccupied && !isObstacle) {
-                availablePositions.push({ x, z });
+// Função para encontrar posições disponíveis no tabuleiro
+// Modificado para aceitar 'barriers' e evitar colisões
+function findAvailablePositions(snakeBoard, obstacles = [], barriers = []) {
+    const available = [];
+    for (let i = 0; i < 20; i++) {
+        for (let j = 0; j < 20; j++) {
+            const isOnSnake = snakeBoard.some(seg => seg.x === i && seg.z === j);
+            const isOnObstacle = obstacles.some(obs => obs.boardPosition.x === i && obs.boardPosition.z === j);
+            const isOnBarrier = barriers.some(barrier => { // Adiciona verificação de colisão com barreiras
+                if (barrier.type === 'complex' && barrier.boardPosition) {
+                    return barrier.boardPosition.x === i && barrier.boardPosition.z === j;
+                }
+                if (barrier.type === 'boundary' && barrier.boardPositions) {
+                    return barrier.boardPositions.some(pos => pos.x === i && pos.z === j);
+                }
+                if (barrier.type === 'random-piece' && barrier.boardPositions) {
+                    return barrier.boardPositions.some(pos => pos.x === i && pos.z === j);
+                }
+                return false;
+            });
+
+            if (!isOnSnake && !isOnObstacle && !isOnBarrier) {
+                available.push({ x: i, z: j });
             }
         }
     }
-    
-    return availablePositions;
+    return available;
 }

@@ -395,7 +395,7 @@ function startGame() {
     snakeHead = snakeObj.snakeHead;
     snakeDirection = snakeObj.snakeDirection;
     snakeBoard = snakeObj.snakeBoard;    // Criar maçã
-    apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
+    apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes, obstacles, barriers);
     
     // Criar barreiras se o modo for "barriers"
     if (gameMode === 'barriers') {
@@ -703,7 +703,7 @@ function animate(time) {
                 let spawnFailed = false;
                 
                 // Cria uma nova maçã usando a função createApple
-                apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
+                apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes, obstacles, barriers);
                   // Verifica se o jogo foi completado (tabuleiro quase cheio)
                 if (apple.userData && apple.userData.gameCompleted) {
                     // Mostra uma mensagem de vitória
@@ -804,7 +804,7 @@ function animate(time) {
                         }
                         
                         // Tenta uma nova posição aleatória
-                        apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes);
+                        apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes, obstacles, barriers);
                         appleX = Math.round((apple.position.x - 1) / 2);
                         appleZ = Math.round((apple.position.z - 1) / 2);
                     }
