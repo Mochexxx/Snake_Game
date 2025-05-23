@@ -43,6 +43,11 @@ let score = 0;
 let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
 let gameMode = 'classic'; // classic, barriers, obstacles, campaign
 let hitboxes;
+
+// Smooth animation variables
+let snakeTargetPositions = []; // Target positions for each snake segment
+let snakeStartPositions = []; // Starting positions for interpolation
+let animationProgress = 0; // Progress of current animation (0 to 1)
 // Carrega o estado do modo debug do localStorage
 export let debugMode = localStorage.getItem('debugMode') === 'true'; // Flag para ativar/desativar o modo de debug
 let applesCollected = 0; // Contador de maçãs para o modo campanha
@@ -411,14 +416,15 @@ function startGame() {
     Scene.addLowPolyDecorations(scene);
     
     // Gera a matriz de hitboxes para o tabuleiro
-    hitboxes = Scene.generateBoardHitboxes();
-
-    // Cria a cobra
+    hitboxes = Scene.generateBoardHitboxes();    // Cria a cobra
     const snakeObj = createSnake(scene);
     snake = snakeObj.snake;
     snakeHead = snakeObj.snakeHead;
     snakeDirection = snakeObj.snakeDirection;
-    snakeBoard = snakeObj.snakeBoard;    // Criar maçã
+    snakeBoard = snakeObj.snakeBoard;
+    
+    // Initialize smooth animation positions
+    initializeSnakeAnimationPositions();// Criar maçã
     apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes, obstacles, barriers);
     
     // Criar barreiras se o modo for "barriers"
@@ -633,6 +639,72 @@ function resetGame() {
 const textureLoader = new TextureLoader();
 const snakeTexture = textureLoader.load('assets/textures/snake_texture.png');
 
+// Initialize smooth animation positions
+function initializeSnakeAnimationPositions() {
+    snakeTargetPositions = [];
+    snakeStartPositions = [];
+    
+    for (let i = 0; i < snake.length; i++) {
+        const currentPos = snake[i].position.clone();
+        snakeTargetPositions.push(currentPos.clone());
+        snakeStartPositions.push(currentPos.clone());
+    }
+    animationProgress = 1; // Start with no animation needed
+}
+
+// Update target positions when snake moves
+function updateSnakeTargetPositions() {
+    // Ensure animation arrays match snake length
+    while (snakeTargetPositions.length < snake.length) {
+        const lastPos = snake[snakeTargetPositions.length].position.clone();
+        snakeTargetPositions.push(lastPos.clone());
+        snakeStartPositions.push(lastPos.clone());
+    }
+    
+    // Store current positions as start positions for interpolation
+    for (let i = 0; i < snake.length && i < snakeBoard.length; i++) {
+        if (snake[i] && snakeTargetPositions[i]) {
+            snakeStartPositions[i] = snake[i].position.clone();
+            
+            // Set new target position based on snakeBoard
+            const { x, z } = snakeBoard[i];
+            const { centerX, centerZ } = hitboxes[x][z];
+            snakeTargetPositions[i].set(centerX, 1, centerZ);
+        }
+    }
+    animationProgress = 0; // Reset animation progress
+}
+
+// Smooth interpolation function with easing
+function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+// Update snake visual positions with smooth interpolation
+function updateSnakeVisualPositions(time) {
+    if (animationProgress >= 1) return; // No animation needed
+    
+    // Calculate animation progress based on time and moveInterval
+    const timeSinceLastMove = time - lastMoveTime;
+    const rawProgress = Math.min(timeSinceLastMove / moveInterval, 1);
+    
+    // Apply easing for smoother movement
+    const easedProgress = easeInOutQuad(rawProgress);
+    
+    // Interpolate positions for all snake segments
+    for (let i = 0; i < snake.length && i < snakeTargetPositions.length; i++) {
+        if (snake[i] && snakeStartPositions[i] && snakeTargetPositions[i]) {
+            const startPos = snakeStartPositions[i];
+            const targetPos = snakeTargetPositions[i];
+            
+            // Interpolate between start and target positions
+            snake[i].position.lerpVectors(startPos, targetPos, easedProgress);
+        }
+    }
+    
+    animationProgress = rawProgress;
+}
+
 // Animação
 function animate(time) {
     requestAnimationFrame(animate);    // Anima os obstáculos mesmo se o jogo estiver pausado
@@ -728,10 +800,14 @@ function animate(time) {
                 
                 // Define a posição correta no espaço 3D
                 newSegment.position.set(centerX, 1, centerZ);
-                
-                // Adiciona o segmento à cena e ao array de segmentos
+                  // Adiciona o segmento à cena e ao array de segmentos
                 snake.push(newSegment);
                 scene.add(newSegment);
+                
+                // Add animation positions for the new segment
+                const newSegmentPos = newSegment.position.clone();
+                snakeTargetPositions.push(newSegmentPos.clone());
+                snakeStartPositions.push(newSegmentPos.clone());
                 
                 // Só depois que garantimos que o objeto visual foi criado, atualizamos a matriz
                 // Adiciona a posição à matriz do tabuleiro com coordenadas validadas
@@ -947,10 +1023,15 @@ function animate(time) {
             },snakeBoard,
             hitboxes,
             obstacles,
-            barriers
-        );
-        lastMoveTime = time;
+            barriers        );
+        
+        // Update animation target positions after snake movement
+        updateSnakeTargetPositions();
+          lastMoveTime = time;
     }
+    
+    // Update smooth snake animation
+    updateSnakeVisualPositions(time);
     
     renderer.render(scene, camera);
 }

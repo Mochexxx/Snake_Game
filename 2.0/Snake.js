@@ -13,8 +13,16 @@ const textureLoader = new TextureLoader();
 const snakeTexture = textureLoader.load('assets/textures/snake_texture.png');
 
 // Replace materials to use texture
-const HEAD_MATERIAL = new MeshStandardMaterial({ map: snakeTexture });
-const SEGMENT_MATERIAL = new MeshStandardMaterial({ map: snakeTexture });
+const HEAD_MATERIAL = new MeshStandardMaterial({ 
+    map: snakeTexture,
+    roughness: 0.5,
+    metalness: 0.2 
+});
+const SEGMENT_MATERIAL = new MeshStandardMaterial({ 
+    map: snakeTexture,
+    roughness: 0.5,
+    metalness: 0.2 
+});
 
 export function createSnake(scene) {
     const snake = [];
