@@ -53,6 +53,7 @@ const tutorialsShown = {
     'obstacles': false,
     'campaign': false
 };
+let currentCampaignLevelInfoShown = false; // ADDED: Tracks if level info overlay shown for current attempt
 
 // Mode selection logic
 const playButton = document.getElementById('playButton');
@@ -164,8 +165,11 @@ document.getElementById('campaignButton').addEventListener('click', function () 
     showCampaignMenu(levelNumber => {
         gameMode = 'campaign';
         const success = setCurrentLevel(levelNumber);
+        tutorialsShown['campaign'] = false; // Reset tutorial flag for new level selection
+        currentCampaignLevelInfoShown = false; // ADDED: Reset level info flag
         gameRunning = true;
         startGame();
+        // startGame will now handle showing popups and pausing
     });
 });
 
@@ -197,22 +201,18 @@ playButton.addEventListener('click', function () {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('scoreBoard').style.display = 'block'; // Make sure the scoreboard is visible
     gameRunning = true;
-    startGame();
-    
-    // Mantém o jogo pausado enquanto o tutorial é exibido
-    isPaused = true;
-    
-    // Exibe o tutorial apenas se ainda não foi mostrado nesta sessão para este modo
-    if (!tutorialsShown[gameMode]) {
+    startGame(); // startGame will set isPaused correctly based on popups shown
+
+    // For non-campaign modes, show tutorial if needed
+    if (gameMode !== 'campaign' && !tutorialsShown[gameMode]) {
+        isPaused = true; // Pause for non-campaign tutorial
         showTutorial(gameMode, () => {
-            // Callback chamado quando o tutorial é fechado
             isPaused = false;
             tutorialsShown[gameMode] = true;
         });
-    } else {
-        // Se o tutorial já foi exibido, inicie o jogo imediatamente
-        isPaused = false;
     }
+    // If campaign, startGame handled isPaused and popups.
+    // If non-campaign and no tutorial, startGame left isPaused as false (or as it was).
 });
 
 // Variável para armazenar a próxima direção (para melhorar responsividade)
@@ -335,9 +335,11 @@ function setupControls() {
                     showCampaignMenu(levelNumber => {
                         // Callback chamado quando um nível é selecionado
                         setCurrentLevel(levelNumber);
+                        tutorialsShown['campaign'] = false; // Reset tutorial flag for new level selection
+                        currentCampaignLevelInfoShown = false; // ADDED: Reset level info flag
                         // Reinicia o jogo para o nível selecionado
-                        startNextCampaignLevel();
-                        isPaused = false; // Retoma o jogo
+                        startNextCampaignLevel(); // This should call startGame or similar logic
+                        // startGame (or equivalent in startNextCampaignLevel) will handle popups and pausing
                     });
                 }
                 break;
@@ -352,11 +354,12 @@ function setupControls() {
 
 // Função para iniciar o jogo
 function startGame() {
-    score = 0;
-    snake = [];
+    score = 0;    snake = [];
+    snakeBoard = [];
     obstacles = [];
     barriers = [];
     hitboxVisuals = [];
+    isPaused = false; // Default to not paused; popups will set it true if they show.
       // Atualiza a interface
     document.getElementById('score').textContent = 'Score: 0';
     document.getElementById('highscore').textContent = 'Highscore: ' + highscore;
@@ -450,19 +453,38 @@ function startGame() {
         document.getElementById('highscore').textContent = `Highscore: ${highscore}`;
         
         // Adiciona informação sobre o menu de campanha
-        const campaignInfo = document.createElement('div');
-        campaignInfo.id = 'campaign-info';
-        campaignInfo.textContent = 'Pressione M para acessar o menu de níveis';
-        campaignInfo.style.position = 'absolute';
-        campaignInfo.style.bottom = '10px';
-        campaignInfo.style.left = '10px';
-        campaignInfo.style.color = 'white';
-        campaignInfo.style.fontSize = '14px';
-        campaignInfo.style.opacity = '0.7';
-        document.body.appendChild(campaignInfo);
+        const campaignInfoDiv = document.getElementById('campaign-info') || document.createElement('div');
+        campaignInfoDiv.id = 'campaign-info';
+        campaignInfoDiv.textContent = 'Pressione M para acessar o menu de níveis';
+        if (!document.getElementById('campaign-info')) { // Append only if not already there
+            campaignInfoDiv.style.position = 'absolute';
+            campaignInfoDiv.style.bottom = '10px';
+            campaignInfoDiv.style.left = '10px';
+            campaignInfoDiv.style.color = 'white';
+            campaignInfoDiv.style.fontSize = '14px';
+            campaignInfoDiv.style.opacity = '0.7';
+            document.body.appendChild(campaignInfoDiv);
+        }
         
-        // Mostrar informações do nível na overlay
-        showCampaignLevelInfo(levelInfo);
+        // Mostrar informações do nível na overlay (Level Info) and then Tutorial
+        if (!currentCampaignLevelInfoShown) {
+            isPaused = true; // Pause for Level Info
+            showCampaignLevelInfo(levelInfo, () => { // Callback when "Começar Nível" is clicked
+                currentCampaignLevelInfoShown = true;
+                if (!tutorialsShown['campaign']) {
+                    // isPaused is still true
+                    showTutorial('campaign', () => { // Callback when tutorial is closed
+                        tutorialsShown['campaign'] = true;
+                        isPaused = false; // Unpause after tutorial
+                    });
+                } else {
+                    isPaused = false; // Unpause if tutorial was already shown
+                }
+            });
+        } else {
+            // Level info already shown (restart), tutorial should also be shown. Game runs.
+            // isPaused remains false (from start of startGame)
+        }
     }
       // Configura controles e inicia a animação
     setupControls();
@@ -534,11 +556,11 @@ document.getElementById('playAgainButton').addEventListener('click', function ()
     document.getElementById('endScreen').style.display = 'none';
     document.getElementById('scoreBoard').style.display = 'block';
     gameRunning = true;
-    startGame();
-    
-    // Se o tutorial para este modo ainda não foi mostrado, exibe-o
-    if (!tutorialsShown[gameMode]) {
-        isPaused = true;
+    startGame(); // startGame will handle campaign popups correctly (skip them) and set isPaused.
+
+    // For non-campaign modes, show tutorial if needed
+    if (gameMode !== 'campaign' && !tutorialsShown[gameMode]) {
+        isPaused = true; // Pause for non-campaign tutorial
         showTutorial(gameMode, () => {
             isPaused = false;
             tutorialsShown[gameMode] = true;
@@ -904,11 +926,11 @@ function animate(time) {
 }
 
 // Função para mostrar informações do nível na overlay
-function showCampaignLevelInfo(levelInfo) {
+function showCampaignLevelInfo(levelInfo, callback) {
     // Verifica se já existe uma overlay de nível e remove
     const existingOverlay = document.getElementById('level-overlay');
-    if (existingOverlay) {
-        document.body.removeChild(existingOverlay);
+    if (existingOverlay && existingOverlay.parentNode) {
+        existingOverlay.parentNode.removeChild(existingOverlay);
     }
     
     // Cria o elemento de overlay
@@ -945,10 +967,12 @@ function showCampaignLevelInfo(levelInfo) {
     // Configura o evento de clique para o botão de início
     document.getElementById('start-level-button').addEventListener('click', function() {
         // Remove a overlay
-        document.body.removeChild(overlay);
-        
-        // Inicia o jogo
+        const overlayToRemove = document.getElementById('level-overlay');
+        if (overlayToRemove && overlayToRemove.parentNode) {
+            overlayToRemove.parentNode.removeChild(overlayToRemove);
+        }
         isPaused = false;
+        if (callback) callback();
     });
 }
 
