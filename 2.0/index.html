@@ -137,13 +137,23 @@
             border-color: #8ee4af !important;
             box-shadow: 0 0 15px rgba(92, 219, 149, 0.7);
         }
-        
-        /* Toggle switch styling */
+          /* Toggle switch styling */
         .switch {
             position: relative;
             display: inline-block;
             width: 60px;
             height: 34px;
+        }
+        
+        /* Estilo para o menu de ESC */
+        #escMenu button {
+            transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        #escMenu button:hover {
+            transform: scale(1.1);
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px rgba(92, 219, 149, 0.7);
         }
         
         .switch input {
@@ -383,7 +393,18 @@
     <div id="scoreBoard" style="position:absolute; top:15px; left:15px; background-color:rgba(0,0,0,0.5); padding:10px 15px; border-radius:10px; color:white; font-size:18px; z-index:1; box-shadow:0 0 10px rgba(0,0,0,0.3);">
         <span id="score" style="display:block; margin-bottom:5px; font-weight:bold;">Score: 0</span>
         <span id="highscore" style="display:block; margin-bottom:5px;">Highscore: 0</span>
-        <span id="currentMode">Mode: Classic</span>
+        <span id="currentMode" style="display:block; margin-bottom:5px;">Mode: Classic</span>
+        <span style="display:block; font-size:14px; opacity:0.8;">Press ESC for menu</span>
+    </div>
+    
+    <!-- Menu de Escape (ESC) -->
+    <div id="escMenu" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:2000; flex-direction:column; justify-content:center; align-items:center;">
+        <h2 style="color:white; font-size:36px; margin-bottom:40px;">Pause</h2>
+        <div style="display:flex; flex-direction:column; gap:20px; align-items:center;">
+            <button id="resumeButton" class="btn-image" style="width:150px; height:80px; background-image:url('assets/Buttons/resume_verde.png');">Retomar</button>
+            <button id="resetButton" class="btn-image" style="width:150px; height:80px; background-image:url('assets/Buttons/restart_verde.png');">Reiniciar</button>
+            <button id="mainMenuButton" class="btn-image" style="width:150px; height:80px; background-image:url('assets/Buttons/home_verde.png');">Menu Principal</button>
+        </div>
     </div>
 
     <script type="importmap">

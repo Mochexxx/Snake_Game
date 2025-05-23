@@ -193,10 +193,9 @@ function createTutorialElements(gameMode, onCloseTutorial) {
                 cursor: pointer;
                 border-radius: 5px;
                 font-weight: bold;
-            ">COMEÇAR A JOGAR</button>
-        </div>
-        <p style="margin-top: 10px; font-size: 14px;">Ou pressione qualquer tecla para fechar</p>
-    `;    
+            ">COMEÇAR A JOGAR</button>        </div>
+        <p style="margin-top: 10px; font-size: 14px;">Ou pressione Enter para fechar</p>
+    `;
     tutorialDiv.innerHTML = tutorialContent;
     document.body.appendChild(tutorialDiv);
       console.log('Tutorial div created and added to body');
@@ -263,12 +262,11 @@ function createTutorialElements(gameMode, onCloseTutorial) {
         if (typeof onCloseTutorial === 'function') {
             onCloseTutorial();
         }
-    }
-      // Eventos para fechar o tutorial ao clicar ou pressionar teclas específicas
+    }    // Eventos para fechar o tutorial ao clicar ou pressionar a tecla Enter
     document.addEventListener('click', closeTutorial);
     document.addEventListener('keydown', (event) => {
-        // Fecha o tutorial com teclas específicas: Enter, Espaço, Escape
-        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
+        // Fecha o tutorial apenas com a tecla Enter (espaço e Escape removidos pois causam bugs)
+        if (event.key === 'Enter') {
             closeTutorial();
             event.preventDefault();
         }

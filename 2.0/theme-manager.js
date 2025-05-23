@@ -117,6 +117,17 @@ export function applyTheme(themeName) {
     // Save the selected theme to localStorage
     localStorage.setItem('selectedTheme', themeName);
     
+    // Attempt to update campaign theme if the module is loaded
+    try {
+        import('./campaign-menu.js').then(campaignModule => {
+            if (campaignModule.updateCampaignTheme) {
+                campaignModule.updateCampaignTheme();
+            }
+        }).catch(err => console.log('Campaign module not loaded yet'));
+    } catch (error) {
+        console.log('Could not update campaign theme, continuing with theme update');
+    }
+    
     // Update title card images
     document.querySelector('#title[style*="mainmenu_"]').style.backgroundImage = `url('${theme.titlecards.mainmenu}')`;
     document.querySelector('#gameModeTitle').style.backgroundImage = `url('${theme.titlecards.gamemodes}')`;
@@ -142,7 +153,11 @@ export function applyTheme(themeName) {
         '#campaignMenuBtn': theme.buttons.home,
         '#pauseResumeButton': theme.buttons.resume,
         '#pauseMenuButton': theme.buttons.home,
-        '#pauseRestartButton': theme.buttons.restart
+        '#pauseRestartButton': theme.buttons.restart,
+        // Botões do menu ESC
+        '#resumeButton': theme.buttons.resume,
+        '#resetButton': theme.buttons.restart,
+        '#mainMenuButton': theme.buttons.home
     };
     
     // Update all buttons with themed images
@@ -263,4 +278,19 @@ function updateThemeButtonsState() {
     if (activeButton) {
         activeButton.classList.add('active-theme');
     }
+}
+
+// Get current theme buttons for use in other modules
+export function getCurrentThemeButtons() {
+    return themes[currentTheme].buttons;
+}
+
+// Get current theme gamemodes for use in other modules
+export function getCurrentThemeGamemodes() {
+    return themes[currentTheme].gamemodes;
+}
+
+// Get current theme levels for use in other modules
+export function getCurrentTheme() {
+    return currentTheme;
 }

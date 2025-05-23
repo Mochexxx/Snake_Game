@@ -4,6 +4,7 @@
 import { campaignLevels, resetCampaign, getLevelInfo } from './campaign.js';
 import { debugMode } from './main.js';
 import { toggleDebugMode } from './debug.js';
+import { getCurrentTheme, getCurrentThemeButtons } from './theme-manager.js';
 
 // Estrutura para armazenar o progresso do jogador
 let campaignProgress = {
@@ -168,11 +169,11 @@ export function showCampaignMenu(startLevelCallback) {
         card.style.textAlign = 'center';
         card.style.position = 'relative';
         card.style.transition = 'transform 0.2s, box-shadow 0.2s';
-        card.style.cursor = isUnlocked ? 'pointer' : 'not-allowed';
-
-        // Adiciona o ícone do nível
+        card.style.cursor = isUnlocked ? 'pointer' : 'not-allowed';        // Adiciona o ícone do nível usando o tema atual
         const levelIcon = document.createElement('img');
-        levelIcon.src = `./assets/Levels/${levelNumber}_verde.png`; // Path to level icons
+        const currentTheme = getCurrentTheme();
+        const themeSuffix = currentTheme === 'green' ? 'verde' : currentTheme === 'purple' ? 'roxo' : 'laranja';
+        levelIcon.src = `./assets/Levels/${levelNumber}_${themeSuffix}.png`; // Path to level icons with correct theme
         levelIcon.alt = `Nível ${levelNumber}`;
         levelIcon.style.width = '150px'; // Increased icon width
         levelIcon.style.height = '120px'; // Kept icon height
@@ -270,10 +271,10 @@ export function showCampaignMenu(startLevelCallback) {
     backButton.style.cursor = 'pointer';
     // backButton.style.fontSize = '16px'; // Not needed for image
     // backButton.style.fontWeight = 'bold'; // Not needed for image
-    backButton.style.transition = 'all 0.2s';
-
-    const backButtonIcon = document.createElement('img');
-    backButtonIcon.src = './assets/Buttons/back_verde.png';
+    backButton.style.transition = 'all 0.2s';    const backButtonIcon = document.createElement('img');
+    // Usa o botão de voltar do tema atual
+    const themeButtons = getCurrentThemeButtons();
+    backButtonIcon.src = themeButtons.back;
     backButtonIcon.alt = 'Voltar';
     backButtonIcon.style.width = '120px'; // Set image width (adjust as needed)
     backButtonIcon.style.height = '40px'; // Set image height (adjust as needed)
@@ -336,4 +337,31 @@ export function showCampaignMenu(startLevelCallback) {
     
     // Adiciona o overlay ao body
     document.body.appendChild(overlay);
+}
+
+// Atualiza os ícones de nível e botões de acordo com o tema atual 
+export function updateCampaignTheme() {
+    // Encontre todos os ícones de nível existentes e atualize-os
+    const levelIcons = document.querySelectorAll('.level-card img');
+    if (levelIcons.length > 0) {
+        const currentTheme = getCurrentTheme();
+        const themeSuffix = currentTheme === 'green' ? 'verde' : currentTheme === 'purple' ? 'roxo' : 'laranja';
+        
+        levelIcons.forEach(icon => {
+            // Extrai o número do nível da fonte atual
+            const currentSrc = icon.src;
+            const levelMatch = currentSrc.match(/(\d+)_(verde|roxo|laranja)\.png/);
+            if (levelMatch && levelMatch[1]) {
+                const levelNumber = levelMatch[1];
+                icon.src = `./assets/Levels/${levelNumber}_${themeSuffix}.png`;
+            }
+        });
+        
+        // Atualize o botão de voltar se estiver presente
+        const backButton = document.querySelector('button img[alt="Voltar"]');
+        if (backButton) {
+            const themeButtons = getCurrentThemeButtons();
+            backButton.src = themeButtons.back;
+        }
+    }
 }

@@ -301,13 +301,17 @@ function setupControls() {
             case '6':
                 setDirection(1, 0); // Direita
                 break;
-                
-            // Controles adicionais
+                  // Controles adicionais
             case ' ': // Espaço para pausar o jogo
                 if (gameRunning) {
-                    isPaused = !isPaused;
+                    togglePause();
                 }
-                break;            case 'h': // Tecla H para mostrar/esconder hitboxes (modo debug)
+                break;                
+            case 'escape': // ESC para exibir o menu de pause
+                if (gameRunning) {
+                    showEscMenu();
+                }
+                break;case 'h': // Tecla H para mostrar/esconder hitboxes (modo debug)
                 if (debugMode) {
                     toggleHitboxVisualization(scene, hitboxVisuals, hitboxVisuals.length === 0);
                     if (hitboxVisuals.length === 0) {
@@ -338,10 +342,9 @@ function setupControls() {
                 debugMode = !debugMode;
                 toggleDebugMode(debugMode);
                 console.log(`Debug mode toggled to: ${debugMode}`);
-                break;
-            case 'p': // Tecla P como alternativa para pausar
+                break;            case 'p': // Tecla P como alternativa para pausar
                 if (gameRunning) {
-                    isPaused = !isPaused;
+                    togglePause();
                 }
                 break;
             case 'm': // Tecla M para abrir o menu de campanha (apenas no modo campanha)
@@ -1327,3 +1330,52 @@ initTheme();
 
 // Configura os botões de tema
 setupThemeButtons();
+
+// Funções para gerenciar o menu ESC
+function togglePause() {
+    isPaused = !isPaused;
+    
+    // Se pausou o jogo, mostra um indicador visual (opcional)
+    if (isPaused) {
+        console.log("Jogo pausado");
+    } else {
+        console.log("Jogo resumido");
+    }
+}
+
+function showEscMenu() {
+    // Pausa o jogo
+    isPaused = true;
+    
+    // Mostra o menu ESC
+    document.getElementById('escMenu').style.display = 'flex';
+}
+
+function hideEscMenu() {
+    // Esconde o menu ESC
+    document.getElementById('escMenu').style.display = 'none';
+}
+
+// Configurar os botões do menu ESC
+document.getElementById('resumeButton').addEventListener('click', function() {
+    hideEscMenu();
+    isPaused = false;
+});
+
+document.getElementById('resetButton').addEventListener('click', function() {
+    hideEscMenu();
+    // Reseta o jogo mantendo o mesmo modo
+    document.getElementById('endScreen').style.display = 'none';
+    document.getElementById('scoreBoard').style.display = 'block';
+    gameRunning = true;
+    startGame();
+});
+
+document.getElementById('mainMenuButton').addEventListener('click', function() {
+    hideEscMenu();
+    // Volta para o menu principal
+    resetGame();
+    document.getElementById('endScreen').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'flex';
+    document.getElementById('scoreBoard').style.display = 'none';
+});
