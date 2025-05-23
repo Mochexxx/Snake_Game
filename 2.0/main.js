@@ -60,6 +60,15 @@ const tutorialsShown = {
 };
 let currentCampaignLevelInfoShown = false; // ADDED: Tracks if level info overlay shown for current attempt
 
+// Camera animation variables
+let cameraAnimationProgress = 0;
+let cameraStartPosition = null;
+let cameraTargetPosition = null;
+let cameraStartLookAt = null;
+let cameraTargetLookAt = null;
+let cameraAnimationDuration = 3000; // 3 seconds
+let cameraAnimationComplete = false;
+
 // Mode selection logic
 const playButton = document.getElementById('playButton');
 const modeClassic = document.getElementById('modeClassic');
@@ -382,7 +391,10 @@ function startGame() {
     obstacles = [];
     barriers = [];
     hitboxVisuals = [];
-    isPaused = false; // Default to not paused; popups will set it true if they show.
+    isPaused = false; // Default to not paused; camera animation will set it true
+    
+    // Reset camera animation state
+    cameraAnimationComplete = false;
       // Atualiza a interface
     document.getElementById('score').textContent = 'Score: 0';
     document.getElementById('highscore').textContent = 'Highscore: ' + highscore;
@@ -401,14 +413,13 @@ function startGame() {
         if (renderer.domElement && renderer.domElement.parentNode === document.body) {
             document.body.removeChild(renderer.domElement);
         }
-    }
-
-    // Cria a nova cena
+    }    // Cria a nova cena
     scene = Scene.createScene();
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(40, 38, 40); // Vista isométrica, acima e para o lado
-    camera.lookAt(20, 0, 20); // Centro do tabuleiro
+    camera = Scene.createCamera(); // Use the camera from scene.js which starts at snake position
     renderer = Scene.createRenderer();
+    
+    // Start camera animation to move from snake position to final position
+    animateCameraToPosition();
     
     // Adiciona elementos na cena
     Scene.addLights(scene);
@@ -500,15 +511,20 @@ function startGame() {
         if (!currentCampaignLevelInfoShown) {
             isPaused = true; // Pause for Level Info
             showCampaignLevelInfo(levelInfo, () => { // Callback when "Começar Nível" is clicked
-                currentCampaignLevelInfoShown = true;
-                if (!tutorialsShown['campaign']) {
+                currentCampaignLevelInfoShown = true;                if (!tutorialsShown['campaign']) {
                     // isPaused is still true
                     showTutorial('campaign', () => { // Callback when tutorial is closed
                         tutorialsShown['campaign'] = true;
-                        isPaused = false; // Unpause after tutorial
+                        // Only unpause if camera animation is complete
+                        if (cameraAnimationComplete) {
+                            isPaused = false;
+                        }
                     });
                 } else {
-                    isPaused = false; // Unpause if tutorial was already shown
+                    // Tutorial already shown - only unpause if camera animation is complete
+                    if (cameraAnimationComplete) {
+                        isPaused = false;
+                    }
                 }
             });
         } else {
@@ -703,6 +719,67 @@ function updateSnakeVisualPositions(time) {
     }
     
     animationProgress = rawProgress;
+}
+
+// Animate camera from snake position to final viewing position
+function animateCameraToPosition() {
+    // Snake starts at (9,9) in matrix, each cell is 2 units, so position is (19,0,19)
+    const snakeX = 19;
+    const snakeZ = 19;
+    
+    // Start position: at snake head level
+    cameraStartPosition = new THREE.Vector3(snakeX, 3, snakeZ);
+    cameraStartLookAt = new THREE.Vector3(snakeX, 0, snakeZ);
+    
+    // Target position: isometric view
+    cameraTargetPosition = new THREE.Vector3(40, 38, 40);
+    cameraTargetLookAt = new THREE.Vector3(20, 0, 20);
+    
+    // Set initial camera position
+    camera.position.copy(cameraStartPosition);
+    camera.lookAt(cameraStartLookAt.x, cameraStartLookAt.y, cameraStartLookAt.z);
+    
+    cameraAnimationProgress = 0;
+    cameraAnimationComplete = false;
+    
+    // Ensure game is paused during camera animation
+    isPaused = true;
+    
+    // Start the animation
+    const startTime = Date.now();
+    
+    function updateCameraAnimation() {
+        const elapsed = Date.now() - startTime;
+        cameraAnimationProgress = Math.min(elapsed / cameraAnimationDuration, 1);
+        
+        // Use easing function for smooth animation
+        const easedProgress = easeInOutQuad(cameraAnimationProgress);
+        
+        // Interpolate camera position
+        const currentPos = new THREE.Vector3().lerpVectors(cameraStartPosition, cameraTargetPosition, easedProgress);
+        const currentLookAt = new THREE.Vector3().lerpVectors(cameraStartLookAt, cameraTargetLookAt, easedProgress);
+        
+        camera.position.copy(currentPos);
+        camera.lookAt(currentLookAt.x, currentLookAt.y, currentLookAt.z);
+        
+        // Continue animation if not complete
+        if (cameraAnimationProgress < 1) {
+            requestAnimationFrame(updateCameraAnimation);
+        } else {
+            // Animation complete - mark as finished and unpause game
+            cameraAnimationComplete = true;
+            
+            // Only unpause if no other overlays are showing
+            if (!document.getElementById('tutorial-overlay') && 
+                !document.getElementById('level-overlay') && 
+                !document.getElementById('level-complete-overlay') && 
+                !document.getElementById('campaign-complete-overlay')) {
+                isPaused = false;
+            }
+        }
+    }
+    
+    updateCameraAnimation();
 }
 
 // Animação
@@ -1074,15 +1151,17 @@ function showCampaignLevelInfo(levelInfo, callback) {
     
     // Pausa o jogo enquanto mostra o overlay
     isPaused = true;
-    
-    // Configura o evento de clique para o botão de início
+      // Configura o evento de clique para o botão de início
     document.getElementById('start-level-button').addEventListener('click', function() {
         // Remove a overlay
         const overlayToRemove = document.getElementById('level-overlay');
         if (overlayToRemove && overlayToRemove.parentNode) {
             overlayToRemove.parentNode.removeChild(overlayToRemove);
         }
-        isPaused = false;
+        // Only unpause if camera animation is complete
+        if (cameraAnimationComplete) {
+            isPaused = false;
+        }
         if (callback) callback();
     });
 }

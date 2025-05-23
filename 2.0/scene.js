@@ -44,9 +44,14 @@ export function createScene() {
 
 export function createCamera() {
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    // Position for isometric-like view that shows the game board and some terrain
-    camera.position.set(40, 40, 40);
-    camera.lookAt(20, 0, 20); // Look at center of the board
+    
+    // Snake starts at (9,9) in matrix, each cell is 2 units, so position is (19,0,19)
+    // Start camera at snake head level - this will be animated to the final position
+    const snakeX = 19; // 9 * 2 + 1 (center of cell)
+    const snakeZ = 19; // 9 * 2 + 1 (center of cell)
+    
+    camera.position.set(snakeX, 3, snakeZ); // Start close to snake head
+    camera.lookAt(snakeX, 0, snakeZ); // Look down at snake
     return camera;
 }
 
