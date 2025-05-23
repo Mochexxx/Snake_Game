@@ -97,6 +97,12 @@ function selectMode(mode) {    // Verifica se houve mudança no modo
     if (mode === 'campaign') {
         resetCampaign();
     }
+    // Resetar todos os tutoriais ao trocar de modo (exceto campanha)
+    if (mode !== 'campaign') {
+        Object.keys(tutorialsShown).forEach(key => {
+            if (key !== 'campaign') tutorialsShown[key] = false;
+        });
+    }
 }
 
 modeClassic.addEventListener('click', () => {
@@ -201,15 +207,24 @@ playButton.addEventListener('click', function () {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('scoreBoard').style.display = 'block'; // Make sure the scoreboard is visible
     gameRunning = true;
-    startGame(); // startGame will set isPaused correctly based on popups shown
 
-    // For non-campaign modes, show tutorial if needed
+    // For non-campaign modes, show tutorial if needed BEFORE starting the game
     if (gameMode !== 'campaign' && !tutorialsShown[gameMode]) {
+        console.log('Showing tutorial for mode:', gameMode);
+        console.log('tutorialsShown state:', tutorialsShown);
         isPaused = true; // Pause for non-campaign tutorial
-        showTutorial(gameMode, () => {
-            isPaused = false;
-            tutorialsShown[gameMode] = true;
+        
+        // Aguarda um frame antes de mostrar o tutorial para garantir que o DOM esteja atualizado
+        requestAnimationFrame(() => {
+            showTutorial(gameMode, () => {
+                console.log('Tutorial closed, resuming game');
+                isPaused = false;
+                tutorialsShown[gameMode] = true;
+                startGame(); // Inicia o jogo apenas após o tutorial ser fechado
+            });
         });
+    } else {
+        startGame(); // startGame will set isPaused correctly based on popups shown
     }
     // If campaign, startGame handled isPaused and popups.
     // If non-campaign and no tutorial, startGame left isPaused as false (or as it was).
@@ -417,25 +432,28 @@ function startGame() {
         if (gameMode === 'obstacles') {
             obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos
             
-            // Importa e configura os botões para controle dos obstáculos
-            import('./buttons.js').then(module => {
-                // Remove botões existentes se houver
-                const existingButtons = document.getElementById('obstacle-buttons');
-                if (existingButtons) {
-                    document.body.removeChild(existingButtons);
-                }
-                
-                // Configura os callbacks para os botões
-                const buttonCallbacks = {
-                    onTreeAdd: () => addCustomObstacle('tree'),
-                    onRockAdd: () => addCustomObstacle('rock'),
-                    onRandomAdd: () => addCustomObstacle('random'),
-                    onClear: clearAllObstacles
-                };
-                
-                // Adiciona os botões à interface
-                module.setupObstacleButtons(document.body, buttonCallbacks);
-            });
+            // Menu de obstáculos só aparece no modo debug
+            const existingButtons = document.getElementById('obstacle-buttons');
+            if (debugMode) {
+                import('./buttons.js').then(module => {
+                    // Remove botões existentes se houver (garantia extra)
+                    if (existingButtons) {
+                        document.body.removeChild(existingButtons);
+                    }
+                    // Configura os callbacks para os botões
+                    const buttonCallbacks = {
+                        onTreeAdd: () => addCustomObstacle('tree'),
+                        onRockAdd: () => addCustomObstacle('rock'),
+                        onRandomAdd: () => addCustomObstacle('random'),
+                        onClear: clearAllObstacles
+                    };
+                    // Adiciona os botões à interface
+                    module.setupObstacleButtons(document.body, buttonCallbacks);
+                });
+            } else if (existingButtons) {
+                // Se não estiver em debug, remove o menu se existir
+                document.body.removeChild(existingButtons);
+            }
         }
     
     // Configurar modo campanha

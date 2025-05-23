@@ -2,22 +2,78 @@
 // Responsável por exibir dicas e informações de tutorial durante o jogo
 
 export function showTutorial(gameMode, onCloseTutorial) {
+    console.log('showTutorial called with gameMode:', gameMode);
+    
+    // Aguarda um pequeno tempo para garantir que o DOM esteja estável
+    setTimeout(() => {
+        createTutorialElements(gameMode, onCloseTutorial);
+    }, 100);
+}
+
+function createTutorialElements(gameMode, onCloseTutorial) {
+    console.log('Creating tutorial elements for gameMode:', gameMode);
+    
+    // Adiciona CSS override direto no head do documento
+    const cssOverride = document.createElement('style');
+    cssOverride.id = 'tutorial-css-override';
+    cssOverride.innerHTML = `
+        body.tutorial-active {
+            overflow: visible !important;
+        }
+        html.tutorial-active {
+            overflow: visible !important;
+        }
+    `;
+    document.head.appendChild(cssOverride);
+    
+    // Adiciona classes ao body e html
+    document.body.classList.add('tutorial-active');
+    document.documentElement.classList.add('tutorial-active');
+    
     // Cria um overlay para bloquear interações com o jogo
     const overlay = document.createElement('div');
-    overlay.id = 'tutorial-overlay';
-    overlay.style.position = 'fixed';
+    overlay.id = 'tutorial-overlay';    overlay.style.position = 'fixed';
     overlay.style.top = '0';
     overlay.style.left = '0';
     overlay.style.width = '100%';
     overlay.style.height = '100%';
     overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    overlay.style.zIndex = '9';
+    overlay.style.zIndex = '9999'; // Z-index muito alto
+    overlay.style.display = 'block';
+    overlay.style.visibility = 'visible';
     document.body.appendChild(overlay);
+      // Garante que todos os overlays de menus sejam ocultados ao mostrar o tutorial
+    const menusToHide = [
+        document.getElementById('mainMenu'),
+        document.getElementById('gameModeMenu'),
+        document.getElementById('startScreen'),
+        document.getElementById('endScreen'),
+        document.getElementById('optionsMenu')
+    ];
+    menusToHide.forEach(menu => {
+        if (menu && menu.style.display !== 'none') {
+            menu.dataset.prevDisplay = menu.style.display;
+            menu.style.display = 'none';
+        }
+    });
+      // Verifica se há canvas do Three.js e temporariamente reduz seu z-index
+    const canvasElements = document.querySelectorAll('canvas');
+    canvasElements.forEach(canvas => {
+        canvas.dataset.prevZIndex = canvas.style.zIndex || '0';
+        canvas.style.zIndex = '-1';
+    });    // Temporariamente muda o overflow do body para garantir que o tutorial seja visível
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'visible !important';
+    document.documentElement.style.overflow = 'visible !important';
     
+    // Força a aplicação dos estilos
+    document.body.style.setProperty('overflow', 'visible', 'important');
+    document.documentElement.style.setProperty('overflow', 'visible', 'important');
+
     // Cria um elemento de tutorial
     const tutorialDiv = document.createElement('div');
-    tutorialDiv.id = 'tutorial';
-    tutorialDiv.style.position = 'absolute';
+    tutorialDiv.id = 'tutorial';    tutorialDiv.style.position = 'fixed'; // Garante que o tutorial fique acima de tudo
     tutorialDiv.style.top = '50%';
     tutorialDiv.style.left = '50%';
     tutorialDiv.style.transform = 'translate(-50%, -50%)';
@@ -26,9 +82,12 @@ export function showTutorial(gameMode, onCloseTutorial) {
     tutorialDiv.style.padding = '25px';
     tutorialDiv.style.borderRadius = '10px';
     tutorialDiv.style.maxWidth = '600px';
-    tutorialDiv.style.zIndex = '10';
+    tutorialDiv.style.zIndex = '10000'; // Z-index ainda mais alto
     tutorialDiv.style.textAlign = 'center';
-    tutorialDiv.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.3)';    // Verifica se é dispositivo touch
+    tutorialDiv.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.3)';
+    tutorialDiv.style.display = 'block';
+    tutorialDiv.style.visibility = 'visible';
+    tutorialDiv.style.opacity = '1';// Verifica se é dispositivo touch
     const isTouchDevice = 'ontouchstart' in window;
       // Conteúdo específico para cada modo
     let tutorialContent = `
@@ -137,10 +196,18 @@ export function showTutorial(gameMode, onCloseTutorial) {
             ">COMEÇAR A JOGAR</button>
         </div>
         <p style="margin-top: 10px; font-size: 14px;">Ou pressione qualquer tecla para fechar</p>
-    `;
-    
+    `;    
     tutorialDiv.innerHTML = tutorialContent;
     document.body.appendChild(tutorialDiv);
+      console.log('Tutorial div created and added to body');
+    console.log('Overlay z-index:', overlay.style.zIndex);
+    console.log('Tutorial div z-index:', tutorialDiv.style.zIndex);
+    console.log('Tutorial div computed style:', window.getComputedStyle(tutorialDiv));
+    console.log('Body children count:', document.body.children.length);
+    console.log('Tutorial div in DOM:', document.body.contains(tutorialDiv));
+    
+    // Força o reflow para garantir que os estilos sejam aplicados
+    tutorialDiv.offsetHeight;
     
     // Adiciona evento de clique ao botão específico
     const closeButton = document.getElementById('closeTutorialButton');
@@ -149,9 +216,16 @@ export function showTutorial(gameMode, onCloseTutorial) {
             e.stopPropagation();
             closeTutorial();
         });
-    }
-      // Função para fechar o tutorial
+    }    // Função para fechar o tutorial
     function closeTutorial() {
+        // Remove classes do body e html
+        document.body.classList.remove('tutorial-active');
+        document.documentElement.classList.remove('tutorial-active');
+        
+        // Remove o CSS override
+        const cssOverride = document.getElementById('tutorial-css-override');
+        if (cssOverride) document.head.removeChild(cssOverride);
+        
         // Remove o div do tutorial
         if (document.body.contains(tutorialDiv)) {
             document.body.removeChild(tutorialDiv);
@@ -162,6 +236,24 @@ export function showTutorial(gameMode, onCloseTutorial) {
         if (overlay) {
             document.body.removeChild(overlay);
         }
+          // Restaura os menus que estavam visíveis
+        menusToHide.forEach(menu => {
+            if (menu && menu.dataset.prevDisplay) {
+                menu.style.display = menu.dataset.prevDisplay;
+                delete menu.dataset.prevDisplay;
+            }
+        });
+          // Restaura o z-index dos canvas
+        const canvasElements = document.querySelectorAll('canvas');
+        canvasElements.forEach(canvas => {
+            if (canvas.dataset.prevZIndex !== undefined) {
+                canvas.style.zIndex = canvas.dataset.prevZIndex;
+                delete canvas.dataset.prevZIndex;
+            }
+        });
+          // Restaura o overflow do body
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
         
         // Remove os event listeners para evitar vazamento de memória
         document.removeEventListener('click', closeTutorial);
@@ -181,7 +273,6 @@ export function showTutorial(gameMode, onCloseTutorial) {
             event.preventDefault();
         }
     });
-    
-    // Fechar automaticamente após 15 segundos
+      // Fechar automaticamente após 15 segundos
     setTimeout(closeTutorial, 15000);
 }
