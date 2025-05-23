@@ -250,18 +250,9 @@
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
         }
     </style>
-    <!-- import map for bare module specifiers -->
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
-          "three/": "https://cdn.jsdelivr.net/npm/three@0.128.0/"
-        }
-      }
-    </script>
 </head>
 <body>    <!-- Tela de menu principal -->
-    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:url('assets/images.png');background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="title" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:60px;"></div>
         
         <div style="display:flex;flex-direction:column;align-items:center;gap:30px;">
@@ -269,7 +260,7 @@
             <button id="optionsMenuButton" class="btn-image" style="width:200px;height:80px;background-image:url('assets/Buttons/settings_verde.png');">Opções</button>
         </div>
     </div><!-- Tela de modos de jogo -->
-    <div id="gameModeMenu" style="position:absolute;width:100%;height:100%;background-image:url('assets/images.png');background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+    <div id="gameModeMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="gameModeTitle" style="background-image:url('assets/Titlecards/gamemodes_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:60px;"></div>
         
         <div style="display:flex;flex-direction:row;gap:40px;justify-content:center;margin-bottom:50px;">
@@ -303,7 +294,7 @@
     </div>
 
     <!-- Tela de opções -->
-    <div id="optionsMenu" style="position:absolute;width:100%;height:100%;background-image:url('assets/images.png');background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+    <div id="optionsMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="optionsTitle" style="background-image:url('assets/Titlecards/options_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:50px;"></div>
           <!-- Configurações de som -->
         <div class="settings-section">
@@ -370,6 +361,14 @@
         <span id="currentMode">Mode: Classic</span>
     </div>
 
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.min.js",
+        "three/examples/jsm/geometries/RoundedBoxGeometry.js": "https://unpkg.com/three@0.128.0/examples/jsm/geometries/RoundedBoxGeometry.js"
+      }
+    }
+    </script>
     <script type="module" src="main.js"></script>
     <!-- <script src="main.js"></script> -->
 </body>
