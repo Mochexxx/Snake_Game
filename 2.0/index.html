@@ -254,8 +254,11 @@
 <body>
     <!-- Tela de pré-menu -->
     <div id="preMainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:4;">
-        <div id="preMenuTitle" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-repeat:no-repeat;width:400px;height:150px;margin-bottom:50px;"></div>
-        <button id="enterMainMenuButton" class="btn-image" style="width:220px;height:90px;background-image:url('assets/Buttons/start_verde.png');">Entrar</button>
+        <div id="animatedTitleContainer" style="display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 8vw; color: #32CD32; /* Lime Green */ font-family: 'Consolas', 'Courier New', monospace; text-transform: uppercase; font-weight: bold; text-shadow: 2px 2px #006400; /* DarkGreen shadow */">
+            <div id="snakeText" style="margin-bottom: 1vw;"></div>
+            <div id="gameText"></div>
+        </div>
+        <p id="pressKeyMessage" style="color: white; margin-top: 40px; font-size: 2.5vw; font-family: 'Consolas', 'Courier New', monospace; opacity: 0; transition: opacity 1s ease; text-shadow: 1px 1px #333;">Press any key to continue</p>
     </div>
 
     <!-- Tela de menu principal -->
