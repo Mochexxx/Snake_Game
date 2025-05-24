@@ -92,11 +92,10 @@ function createTutorialElements(gameMode, onCloseTutorial) {
       // Conteúdo específico para cada modo
     let tutorialContent = `
         <h2>Como Jogar</h2>
-        <div style="text-align: left; max-width: 400px; margin: 0 auto;">
-            <p><strong>Controles de movimento:</strong></p>
+        <div style="text-align: left; max-width: 400px; margin: 0 auto;">            <p><strong>Controles de movimento (baseado na perspectiva da câmera):</strong></p>
             <ul>
                 <li>Setas direcionais: ⬆️ ⬇️ ⬅️ ➡️ </li>
-                <li>Teclas WASD: W (cima), A (esquerda), S (baixo), D (direita)</li>
+                <li>Teclas WASD: W (para cima), A (para esquerda), S (para baixo), D (para direita)</li>
                 <li>Teclado numérico: 8 (cima), 4 (esquerda), 2 (baixo), 6 (direita)</li>
     `;
     

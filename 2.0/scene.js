@@ -35,6 +35,11 @@ let currentTheme = 'green';
 // Cores em uso atualmente
 let COLORS = THEME_COLORS[currentTheme];
 
+// Variáveis para o sistema de câmeras
+let currentCameraType = 'perspective'; // 'perspective' ou 'orthographic'
+let perspectiveCamera = null;
+let orthographicCamera = null;
+
 export function createScene() {
     const scene = new THREE.Scene();
     // Use fog to create depth and distance effect
@@ -43,16 +48,79 @@ export function createScene() {
 }
 
 export function createCamera() {
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // Create both perspective and orthographic cameras
+    createBothCameras();
     
+    // Return the currently active camera
+    return getCurrentCamera();
+}
+
+function createBothCameras() {
     // Snake starts at (9,9) in matrix, each cell is 2 units, so position is (19,0,19)
-    // Start camera at snake head level - this will be animated to the final position
     const snakeX = 19; // 9 * 2 + 1 (center of cell)
     const snakeZ = 19; // 9 * 2 + 1 (center of cell)
     
-    camera.position.set(snakeX, 3, snakeZ); // Start close to snake head
-    camera.lookAt(snakeX, 0, snakeZ); // Look down at snake
-    return camera;
+    // Create perspective camera
+    perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    perspectiveCamera.position.set(snakeX, 3, snakeZ);
+    perspectiveCamera.lookAt(snakeX, 0, snakeZ);
+      // Create orthographic camera
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustumSize = 80; // Increased size to see more of the board
+    orthographicCamera = new THREE.OrthographicCamera(
+        frustumSize * aspect / -2, // left
+        frustumSize * aspect / 2,  // right
+        frustumSize / 2,           // top
+        frustumSize / -2,          // bottom
+        0.1,                       // near
+        1000                       // far
+    );
+    orthographicCamera.position.set(snakeX, 3, snakeZ);
+    orthographicCamera.lookAt(snakeX, 0, snakeZ);
+}
+
+export function getCurrentCamera() {
+    return currentCameraType === 'perspective' ? perspectiveCamera : orthographicCamera;
+}
+
+export function switchCameraType(type) {
+    if (type === 'perspective' || type === 'orthographic') {
+        const oldCamera = getCurrentCamera();
+        currentCameraType = type;
+        const newCamera = getCurrentCamera();
+        
+        // Copy position and rotation from old camera to new camera
+        if (oldCamera && newCamera) {
+            newCamera.position.copy(oldCamera.position);
+            newCamera.rotation.copy(oldCamera.rotation);
+        }
+        
+        return newCamera;
+    }
+    return getCurrentCamera();
+}
+
+export function getCameraType() {
+    return currentCameraType;
+}
+
+// Update camera aspect ratio on window resize
+export function updateCameraAspect() {
+    const aspect = window.innerWidth / window.innerHeight;
+    
+    if (perspectiveCamera) {
+        perspectiveCamera.aspect = aspect;
+        perspectiveCamera.updateProjectionMatrix();
+    }
+    
+    if (orthographicCamera) {
+        const frustumSize = 50;
+        orthographicCamera.left = frustumSize * aspect / -2;
+        orthographicCamera.right = frustumSize * aspect / 2;
+        orthographicCamera.top = frustumSize / 2;
+        orthographicCamera.bottom = frustumSize / -2;
+        orthographicCamera.updateProjectionMatrix();
+    }
 }
 
 export function createRenderer() {

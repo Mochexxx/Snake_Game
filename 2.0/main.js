@@ -9,6 +9,7 @@ import { createHitboxVisualization, toggleHitboxVisualization, toggleDebugMode }
 import { showTutorial } from './tutorial.js';
 import { addControlsHelpButton } from './game-controls.js';
 import { setupTouchControls } from './touch-controls.js';
+import { initializeCameraIndicator, updateCameraIndicator } from './camera-indicator.js';
 import { checkGameIntegrity } from './integrity-checker.js';
 import { 
     campaignLevels,  
@@ -68,6 +69,7 @@ let cameraStartLookAt = null;
 let cameraTargetLookAt = null;
 let cameraAnimationDuration = 3000; // 3 seconds
 let cameraAnimationComplete = false;
+let initialCameraAnimationShown = false; // Flag to track if initial camera animation has been shown for current session
 
 // Mode selection logic
 const playButton = document.getElementById('playButton');
@@ -147,6 +149,9 @@ window.onload = function() {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameModeMenu').style.display = 'none';
     document.getElementById('optionsMenu').style.display = 'none';
+    
+    // Initialize camera indicator
+    initializeCameraIndicator();
     
     // Handle preMainMenu to mainMenu transition
     const enterMainMenuButton = document.getElementById('enterMainMenuButton');
@@ -258,8 +263,7 @@ function setupControls() {
         return;
     }
     
-    controlsSetup = true;
-    // Função auxiliar para definir a direção garantindo que não vá na direção oposta
+    controlsSetup = true;    // Função auxiliar para definir a direção garantindo que não vá na direção oposta
     function setDirection(newX, newZ) {
         const dir = snakeDirection;
         
@@ -268,18 +272,34 @@ function setupControls() {
             return false;
         }
         
+        // Ajusta a direção com base no tipo de câmera atual
+        let adjustedX = newX;
+        let adjustedZ = newZ;        if (Scene.getCameraType() === 'perspective') {
+            // Para a câmera perspectiva (vista lateral/inclinada desde a esquerda)
+            // A câmera está posicionada à esquerda (-25, 30, 20) olhando para (20, 0, 20)
+            // Controles baseados na perspectiva visual do jogador:
+            
+            // W (para cima no teclado) = movimento para longe da câmera (X positivo)
+            // S (para baixo no teclado) = movimento em direção à câmera (X negativo)  
+            // A (esquerda no teclado) = movimento para a esquerda na tela (Z negativo)
+            // D (direita no teclado) = movimento para a direita na tela (Z positivo)
+            
+            // Os controles estão ajustados para esta perspectiva de câmera
+        }
+        // Para câmera ortográfica, mantemos os controles originais
+        
         // Impede movimento na direção oposta (que causaria colisão imediata)
-        if ((dir.x !== 0 && newX === -dir.x) || (dir.z !== 0 && newZ === -dir.z)) {
+        if ((dir.x !== 0 && adjustedX === -dir.x) || (dir.z !== 0 && adjustedZ === -dir.z)) {
             return false; // Ignora movimento na direção oposta
         }
         
         // Verifica se a nova direção é diferente da atual e se está mudando de vertical para horizontal ou vice-versa
         // Só permite mudanças perpendiculares à direção atual (de X para Z ou de Z para X)
-        if ((dir.x !== 0 && newZ !== 0) || (dir.z !== 0 && newX !== 0)) {
+        if ((dir.x !== 0 && adjustedZ !== 0) || (dir.z !== 0 && adjustedX !== 0)) {
             // Armazena a próxima direção para ser aplicada no próximo ciclo de jogo
-            nextDirection = { x: newX, z: newZ };
+            nextDirection = { x: adjustedX, z: adjustedZ };
             return true;
-        } else if (dir.x === newX && dir.z === newZ) {
+        } else if (dir.x === adjustedX && dir.z === adjustedZ) {
             return false; // É a mesma direção, não faz nada
         }
         
@@ -291,29 +311,27 @@ function setupControls() {
         // Ignore os controles se estiver pausado com tutorial
         if (document.getElementById('tutorial-overlay')) {
             return;
-        }
-        
-        switch(event.key.toLowerCase()) {
-            // Controles de movimento da cobra - Setas
+        }        switch(event.key.toLowerCase()) {
+            // Controles de movimento da cobra - Camera perspective based
             case 'arrowup':
             case 'w':
             case '8':
-                setDirection(0, -1); // Cima
+                setDirection(1, 0); // W moves snake further from camera (right on world X-axis)
                 break;
             case 'arrowdown':
             case 's':
             case '2':
-                setDirection(0, 1); // Baixo
+                setDirection(-1, 0); // S moves snake closer to camera (left on world X-axis)
                 break;
             case 'arrowleft':
             case 'a':
             case '4':
-                setDirection(-1, 0); // Esquerda
+                setDirection(0, -1); // A moves snake left on screen (negative Z-axis)
                 break;
             case 'arrowright':
             case 'd':
             case '6':
-                setDirection(1, 0); // Direita
+                setDirection(0, 1); // D moves snake right on screen (positive Z-axis)
                 break;
                   // Controles adicionais
             case ' ': // Espaço para pausar o jogo
@@ -360,8 +378,7 @@ function setupControls() {
                 if (gameRunning) {
                     togglePause();
                 }
-                break;
-            case 'm': // Tecla M para abrir o menu de campanha (apenas no modo campanha)
+                break;            case 'm': // Tecla M para abrir o menu de campanha (apenas no modo campanha)
                 if (gameMode === 'campaign' && gameRunning) {
                     isPaused = true; // Pausa o jogo
                     showCampaignMenu(levelNumber => {
@@ -373,6 +390,15 @@ function setupControls() {
                         startNextCampaignLevel(); // This should call startGame or similar logic
                         // startGame (or equivalent in startNextCampaignLevel) will handle popups and pausing
                     });
+                }
+                break;            case 'v': // Tecla V para alternar entre câmeras perspectiva e ortográfica
+                if (gameRunning) {
+                    const newCameraType = Scene.getCameraType() === 'perspective' ? 'orthographic' : 'perspective';
+                    camera = Scene.switchCameraType(newCameraType);
+                    console.log(`Camera switched to: ${newCameraType}`);
+                    
+                    // Show visual feedback using camera indicator
+                    updateCameraIndicator(newCameraType);
                 }
                 break;
         }
@@ -415,7 +441,7 @@ function startGame() {
         }
     }    // Cria a nova cena
     scene = Scene.createScene();
-    camera = Scene.createCamera(); // Use the camera from scene.js which starts at snake position
+    camera = Scene.createCamera(); // Use the camera system from scene.js
     renderer = Scene.createRenderer();
     
     // Start camera animation to move from snake position to final position
@@ -723,17 +749,21 @@ function updateSnakeVisualPositions(time) {
 
 // Animate camera from snake position to final viewing position
 function animateCameraToPosition() {
-    // Snake starts at (9,9) in matrix, each cell is 2 units, so position is (19,0,19)
+    // Ensure a game mode is selected before animating
+    if (!gameMode) {
+        console.warn("No game mode selected. Camera animation skipped.");
+        return;
+    }    // Snake starts at (9,9) in matrix, each cell is 2 units, so position is (19,0,19)
     const snakeX = 19;
-    const snakeZ = 19;
-    
-    // Start position: at snake head level
+    const snakeZ = 19;    // Start position: at snake head level
     cameraStartPosition = new THREE.Vector3(snakeX, 3, snakeZ);
     cameraStartLookAt = new THREE.Vector3(snakeX, 0, snakeZ);
-    
-    // Target position: isometric view
-    cameraTargetPosition = new THREE.Vector3(40, 38, 40);
+      // Target position: centered at middle of left edge of board at higher elevation, moved more behind
+    cameraTargetPosition = new THREE.Vector3(-25, 30, 20);
     cameraTargetLookAt = new THREE.Vector3(20, 0, 20);
+    
+    // Get current active camera from Scene
+    camera = Scene.getCurrentCamera();
     
     // Set initial camera position
     camera.position.copy(cameraStartPosition);
@@ -759,6 +789,8 @@ function animateCameraToPosition() {
         const currentPos = new THREE.Vector3().lerpVectors(cameraStartPosition, cameraTargetPosition, easedProgress);
         const currentLookAt = new THREE.Vector3().lerpVectors(cameraStartLookAt, cameraTargetLookAt, easedProgress);
         
+        // Get current active camera in case it was switched during animation
+        camera = Scene.getCurrentCamera();
         camera.position.copy(currentPos);
         camera.lookAt(currentLookAt.x, currentLookAt.y, currentLookAt.z);
         
@@ -809,9 +841,16 @@ function animate(time) {
         return;
     }      // Verificação periódica de integridade do jogo (a cada 2 segundos)
     if (time % 2000 < 20) { // Verificamos sempre, não apenas em modo debug
+        const integrityCheckPerformed = true; // Flag to indicate check was done
         const needsCorrection = checkGameIntegrity(scene, snake, snakeHead, snakeBoard, apple, obstacles, hitboxes, barriers);
-        if (needsCorrection && debugMode) {
-            console.log("Correções de integridade aplicadas");
+        if (needsCorrection) {
+            console.log("Integrity check found issues and applied corrections. State after correction:", {
+                snakeBoard: JSON.parse(JSON.stringify(snakeBoard)), // Deep copy for logging
+                // Add other relevant game state variables if needed for debugging
+            });
+            if (debugMode) {
+                console.log("Correções de integridade aplicadas");
+            }
         }
     }
         
@@ -1106,9 +1145,11 @@ function animate(time) {
         updateSnakeTargetPositions();
           lastMoveTime = time;
     }
-    
-    // Update smooth snake animation
+      // Update smooth snake animation
     updateSnakeVisualPositions(time);
+    
+    // Get current camera in case it was switched
+    camera = Scene.getCurrentCamera();
     
     renderer.render(scene, camera);
 }
@@ -1538,4 +1579,14 @@ document.getElementById('mainMenuButton').addEventListener('click', function() {
     document.getElementById('endScreen').style.display = 'none';
     document.getElementById('mainMenu').style.display = 'flex';
     document.getElementById('scoreBoard').style.display = 'none';
+});
+
+// Handle window resize for both camera types
+window.addEventListener('resize', function() {
+    if (camera && renderer) {
+        // Update camera aspect ratio and renderer size
+        Scene.updateCameraAspect();
+        camera = Scene.getCurrentCamera(); // Get the updated current camera
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
 });

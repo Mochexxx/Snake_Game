@@ -61,7 +61,9 @@ export function checkSnakeIntegrity(snake, snakeBoard, hitboxes, scene) {
             } 
             // Para outros segmentos, usar a posição do segmento anterior
             else if (snakeBoard[i-1]) {
+                const oldPos = JSON.stringify(snakeBoard[i]); // Log before change
                 snakeBoard[i] = { ...snakeBoard[i-1] };
+                console.warn(`Segmento ${i} (posição original: ${oldPos}) corrigido para a posição do segmento ${i-1}: ${JSON.stringify(snakeBoard[i])}`); // Detailed log
                 hasCorrection = true;
             }
         }
