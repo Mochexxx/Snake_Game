@@ -64,9 +64,13 @@ function createBothCameras() {
     perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     perspectiveCamera.position.set(snakeX, 3, snakeZ);
     perspectiveCamera.lookAt(snakeX, 0, snakeZ);
-      // Create orthographic camera
+      
+    // Create orthographic camera - centered on board
     const aspect = window.innerWidth / window.innerHeight;
     const frustumSize = 80; // Increased size to see more of the board
+    const boardCenterX = 20; // Center of 40x40 board (0 to 40)
+    const boardCenterZ = 20; // Center of 40x40 board (0 to 40)
+    
     orthographicCamera = new THREE.OrthographicCamera(
         frustumSize * aspect / -2, // left
         frustumSize * aspect / 2,  // right
@@ -75,8 +79,8 @@ function createBothCameras() {
         0.1,                       // near
         1000                       // far
     );
-    orthographicCamera.position.set(snakeX, 3, snakeZ);
-    orthographicCamera.lookAt(snakeX, 0, snakeZ);
+    orthographicCamera.position.set(boardCenterX, 50, boardCenterZ); // Position directly above board center
+    orthographicCamera.lookAt(boardCenterX, 0, boardCenterZ); // Look down at board center
 }
 
 export function getCurrentCamera() {
@@ -114,7 +118,7 @@ export function updateCameraAspect() {
     }
     
     if (orthographicCamera) {
-        const frustumSize = 50;
+        const frustumSize = 80; // Same size as creation
         orthographicCamera.left = frustumSize * aspect / -2;
         orthographicCamera.right = frustumSize * aspect / 2;
         orthographicCamera.top = frustumSize / 2;
