@@ -157,7 +157,8 @@ function createBoundaryBarriers(scene, barriers, hitboxes) {
         mesh: northWall, 
         type: 'boundary', 
         position: 'north',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: -1 }))
+        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: -1 })),
+        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: i, z: -1 })) // Add hitbox data
     });
     
     // Parede Sul (z = 20)
@@ -171,7 +172,8 @@ function createBoundaryBarriers(scene, barriers, hitboxes) {
         mesh: southWall, 
         type: 'boundary', 
         position: 'south',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: 20 }))
+        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: 20 })),
+        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: i, z: 20 })) // Add hitbox data
     });
     
     // Parede Leste (x = 20)
@@ -185,7 +187,8 @@ function createBoundaryBarriers(scene, barriers, hitboxes) {
         mesh: eastWall, 
         type: 'boundary', 
         position: 'east',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: 20, z: i }))
+        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: 20, z: i })),
+        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: 20, z: i })) // Add hitbox data
     });
     
     // Parede Oeste (x = 0)
@@ -199,7 +202,8 @@ function createBoundaryBarriers(scene, barriers, hitboxes) {
         mesh: westWall, 
         type: 'boundary', 
         position: 'west',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: -1, z: i }))
+        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: -1, z: i })),
+        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: -1, z: i })) // Add hitbox data
     });
 }
 
@@ -299,7 +303,10 @@ function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, bo
     barriers.push({
         mesh: baseGroup,
         type: 'complex',
-        boardPosition: { x: boardX, z: boardZ }
+        boardPosition: { x: boardX, z: boardZ },
+        hitbox: { x: boardX, z: boardZ }, // Add specific hitbox data
+        centerX: centerX,
+        centerZ: centerZ
     });
 }
 
@@ -309,4 +316,31 @@ export function showLevelInfo(levelInfo) {
     console.log(`Nível ${levelInfo.level}: ${levelInfo.name}`);
     console.log(levelInfo.description);
     console.log(`Objetivo: Coletar ${levelInfo.targetApples} maçãs`);
+}
+
+// Add new function to check campaign barrier collisions
+export function checkCampaignBarrierCollision(newX, newZ, barriers) {
+    if (!barriers || barriers.length === 0) {
+        return false;
+    }
+    
+    for (let i = 0; i < barriers.length; i++) {
+        const barrier = barriers[i];
+        
+        // Check boundary barriers
+        if (barrier.type === 'boundary') {
+            if (barrier.boardPositions && barrier.boardPositions.some(pos => pos.x === newX && pos.z === newZ)) {
+                return true;
+            }
+        }
+        
+        // Check complex barriers
+        if (barrier.type === 'complex' && barrier.boardPosition) {
+            if (barrier.boardPosition.x === newX && barrier.boardPosition.z === newZ) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
 }

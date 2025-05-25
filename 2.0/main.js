@@ -243,10 +243,9 @@ playButton.addEventListener('click', function () {
             });
         });
     } else {
+        // Only start the game if no tutorial is needed
         startGame(); // startGame will set isPaused correctly based on popups shown
     }
-    // If campaign, startGame handled isPaused and popups.
-    // If non-campaign and no tutorial, startGame left isPaused as false (or as it was).
 });
 
 // Variável para armazenar a próxima direção (para melhorar responsividade)
@@ -510,6 +509,14 @@ function startGame() {
         // Criar barreiras baseadas no nível atual
         barriers = createCampaignBarriers(scene, snakeBoard, hitboxes);
         
+        // Expose barriers globally for testing
+        window.barriers = barriers;
+        
+        // Expose collision checking function for testing
+        import('./campaign.js').then(module => {
+            window.checkCampaignBarrierCollision = module.checkCampaignBarrierCollision;
+        });
+        
         // Reset do contador de maçãs para o nível
         applesCollected = 0;
           // Atualizar o texto do modo para incluir informações do nível
@@ -628,7 +635,6 @@ document.getElementById('playAgainButton').addEventListener('click', function ()
     document.getElementById('endScreen').style.display = 'none';
     document.getElementById('scoreBoard').style.display = 'block';
     gameRunning = true;
-    startGame(); // startGame will handle campaign popups correctly (skip them) and set isPaused.
 
     // For non-campaign modes, show tutorial if needed
     if (gameMode !== 'campaign' && !tutorialsShown[gameMode]) {
@@ -636,8 +642,11 @@ document.getElementById('playAgainButton').addEventListener('click', function ()
         showTutorial(gameMode, () => {
             isPaused = false;
             tutorialsShown[gameMode] = true;
-        });    } else {
-        isPaused = false;
+            startGame(); // Start game after tutorial
+        });
+    } else {
+        // Start game directly if no tutorial needed or campaign mode
+        startGame(); // startGame will handle campaign popups correctly (skip them) and set isPaused.
     }
 });
 
@@ -1144,9 +1153,11 @@ function animate(time) {
         // Update animation target positions after snake movement
         updateSnakeTargetPositions();
           lastMoveTime = time;
-    }
-      // Update smooth snake animation
+    }    // Update smooth snake animation
     updateSnakeVisualPositions(time);
+    
+    // Animate terrain shader
+    Scene.animateTerrain(scene, time);
     
     // Get current camera in case it was switched
     camera = Scene.getCurrentCamera();
@@ -1279,6 +1290,7 @@ function startNextCampaignLevel() {
     applesCollected = 0;
     
     // Reinicia o jogo mantendo o modo campanha
+    // Note: Caller should handle startGame() to avoid double initialization
     startGame();
 }
 

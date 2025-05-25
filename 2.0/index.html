@@ -284,11 +284,10 @@
             <div id="gameText" style="display:flex; flex-direction:row; align-items:center; justify-content:center;"></div>
         </div>
         <p id="pressKeyMessage" style="color: rgb(255, 0, 0); margin-top: 40px; font-size: 2.5vw; font-family: 'Consolas', 'Courier New', monospace; opacity: 0; transition: opacity 1s ease; text-shadow: 1px 1px #333;">Press any key to continue</p>
-    </div>
-
-    <!-- Tela de menu principal -->
-    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
-        <div id="title" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:60px;"></div>
+    </div>    <!-- Tela de menu principal -->
+    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">        <div id="titleContainer" style="position:relative;width:500px;max-width:90%;height:auto;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;">
+            <div id="title" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-position:center;background-repeat:no-repeat;width:100%;height:0;padding-bottom:40%;"></div>
+        </div>
         
         <div style="display:flex;flex-direction:column;align-items:center;gap:30px;">
             <button id="startMenuButton" class="btn-image" style="width:200px;height:100px;background-image:url('assets/Buttons/play_verde.png');">Jogar</button>
@@ -412,11 +411,12 @@
       "imports": {
         "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.min.js",
         "three/examples/jsm/geometries/RoundedBoxGeometry.js": "https://unpkg.com/three@0.128.0/examples/jsm/geometries/RoundedBoxGeometry.js"
-      }
+   
     }
-    </script>
-    <script type="module" src="main.js"></script>
+    }
+    </script>    <script type="module" src="main.js"></script>
     <script type="module" src="premenu.js"></script>
+    <script src="3d-effect.js"></script>
     <!-- <script src="main.js"></script> -->
 </body>
 </html>

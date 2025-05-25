@@ -201,51 +201,68 @@ export function addBoard(scene) {    // Remove any existing floor, grid, or terr
             scene.remove(scene.children[i]);
         }
     }
-    
-    // Constants for game board and extended terrain
+      // Constants for game board and extended terrain
     const GRID_DIVISIONS = 20; // Exactly 20x20 grid
     const CELL_SIZE = 2; // Each cell is 2x2 units
     const GRID_SIZE = GRID_DIVISIONS * CELL_SIZE; // 40x40 units for game board
-    const TERRAIN_EXTEND = 80; // How far the terrain extends beyond the game board
-    
-    // First create an extended terrain that goes beyond the game area
+    const TERRAIN_EXTEND = 160; // Maior terreno ao redor para efeito mais expansivo
+      // First create an extended terrain that goes beyond the game area
     const terrainGeometry = new THREE.PlaneGeometry(
         GRID_SIZE + TERRAIN_EXTEND, 
         GRID_SIZE + TERRAIN_EXTEND, 
-        80, 
-        80
+        120, // Mais subdivisões para maior detalhe
+        120
     );
-    
-    // Create a more detailed terrain with noise-based displacement
+      // Create a more detailed terrain with playdoh-style colors and gradients
     const terrainMaterial = new THREE.ShaderMaterial({
         uniforms: {
             baseColor: { value: new THREE.Color(COLORS.background) },
             floorColor: { value: new THREE.Color(COLORS.floor) },
-            noiseScale: { value: 0.2 },
-            heightScale: { value: 0.5 }
+            accentColor: { value: new THREE.Color(COLORS.border) },
+            noiseScale: { value: 0.15 },
+            heightScale: { value: 1.2 },
+            time: { value: 0.0 },
+            colorVariation: { value: 0.3 }
         },
         vertexShader: `
             uniform float noiseScale;
             uniform float heightScale;
+            uniform float time;
             
             varying vec2 vUv;
             varying float vHeight;
+            varying vec3 vPosition;
             
-            // Simple noise function
+            // Função de ruído melhorada
             float noise(vec2 p) {
                 return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
             }
             
-            // Fractional Brownian Motion for more natural terrain
+            // Ruído Perlin simplificado
+            float perlinNoise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                
+                float a = noise(i);
+                float b = noise(i + vec2(1.0, 0.0));
+                float c = noise(i + vec2(0.0, 1.0));
+                float d = noise(i + vec2(1.0, 1.0));
+                
+                vec2 u = f * f * (3.0 - 2.0 * f);
+                
+                return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+            }
+            
+            // Fractional Brownian Motion para terreno mais natural
             float fbm(vec2 p) {
                 float value = 0.0;
                 float amplitude = 0.5;
                 float frequency = 1.0;
                 
-                for (int i = 0; i < 5; i++) {
-                    value += amplitude * noise(p * frequency);
-                    amplitude *= 0.5;
-                    frequency *= 2.0;
+                for (int i = 0; i < 6; i++) {
+                    value += amplitude * perlinNoise(p * frequency);
+                    amplitude *= 0.6;
+                    frequency *= 2.1;
                 }
                 
                 return value;
@@ -253,24 +270,30 @@ export function addBoard(scene) {    // Remove any existing floor, grid, or terr
             
             void main() {
                 vUv = uv;
+                vPosition = position;
                 
-                // Calculate distance from center (0.5, 0.5)
+                // Calcular distância do centro (0.5, 0.5)
                 float dist = length(uv - 0.5);
                 
-                // Calculate noise-based height
-                // Less height variation near the center (game area)
+                // Criar altura baseada em ruído, com transição suave
                 float height = 0.0;
                 
-                // Only apply height to areas outside the game board
-                if (dist > 0.25) {
-                    height = fbm(position.xz * noiseScale) * heightScale;
-                    // More height variation as we move away from center
-                    height *= smoothstep(0.25, 0.5, dist);
+                // Aplicar altura apenas fora da área do jogo, com transição suave
+                if (dist > 0.22) {
+                    float noiseValue = fbm(position.xz * noiseScale + time * 0.1);
+                    height = noiseValue * heightScale;
+                    
+                    // Suavizar transição da área do jogo para o terreno
+                    float transition = smoothstep(0.22, 0.35, dist);
+                    height *= transition;
+                    
+                    // Mais variação conforme se afasta do centro
+                    height *= (1.0 + dist * 0.8);
                 }
                 
-                vHeight = height; // Pass to fragment shader
+                vHeight = height;
                 
-                // Apply height to vertex
+                // Aplicar altura ao vértice
                 vec3 newPosition = position;
                 newPosition.y += height;
                 
@@ -280,21 +303,73 @@ export function addBoard(scene) {    // Remove any existing floor, grid, or terr
         fragmentShader: `
             uniform vec3 baseColor;
             uniform vec3 floorColor;
+            uniform vec3 accentColor;
+            uniform float colorVariation;
+            uniform float time;
             
             varying vec2 vUv;
             varying float vHeight;
+            varying vec3 vPosition;
+            
+            // Função de ruído para variação de cor
+            float noise(vec2 p) {
+                return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+            }
+            
+            // Mistura de cores estilo playdoh
+            vec3 playdohMix(vec3 color1, vec3 color2, vec3 color3, float factor, vec2 pos) {
+                // Criar padrões orgânicos de mistura
+                float noise1 = noise(pos * 20.0 + time * 0.5);
+                float noise2 = noise(pos * 35.0 - time * 0.3);
+                float noise3 = noise(pos * 50.0 + time * 0.2);
+                
+                // Combinear ruídos para criar padrões complexos
+                float blend1 = sin(noise1 * 6.28) * 0.5 + 0.5;
+                float blend2 = sin(noise2 * 6.28) * 0.5 + 0.5;
+                float blend3 = sin(noise3 * 6.28) * 0.5 + 0.5;
+                
+                // Misturar cores de forma orgânica
+                vec3 mix1 = mix(color1, color2, blend1 * factor);
+                vec3 mix2 = mix(mix1, color3, blend2 * factor * 0.7);
+                
+                // Adicionar variação sutil
+                return mix2 + (blend3 - 0.5) * colorVariation * 0.1;
+            }
             
             void main() {
-                // Blend from floor color to terrain color based on height
-                vec3 color = mix(floorColor, baseColor, smoothstep(0.0, 0.2, vHeight));
-                
-                // Add some texture variation
-                float noise = fract(sin(dot(vUv * 100.0, vec2(12.9898, 78.233))) * 43758.5453);
-                color = mix(color, color * 0.9, noise * 0.1);
-                
-                // Darken edges for a vignette effect
                 float distFromCenter = length(vUv - 0.5);
-                color = mix(color, color * 0.7, smoothstep(0.4, 0.5, distFromCenter));
+                
+                // Cores base mais suaves estilo playdoh
+                vec3 centerColor = floorColor;
+                vec3 midColor = mix(floorColor, baseColor, 0.6);
+                vec3 outerColor = mix(baseColor, accentColor, 0.4);
+                
+                // Transições suaves entre áreas
+                vec3 color;
+                if (distFromCenter < 0.25) {
+                    // Área central do jogo - cor limpa
+                    color = centerColor;
+                } else if (distFromCenter < 0.4) {
+                    // Transição para terreno
+                    float factor = smoothstep(0.25, 0.4, distFromCenter);
+                    color = playdohMix(centerColor, midColor, outerColor, factor, vPosition.xz);
+                } else {
+                    // Terreno externo
+                    float heightFactor = clamp(vHeight * 2.0, 0.0, 1.0);
+                    color = playdohMix(midColor, outerColor, baseColor, heightFactor, vPosition.xz);
+                }
+                
+                // Adicionar variação de textura sutil estilo playdoh
+                float surfaceNoise = noise(vPosition.xz * 80.0);
+                color = mix(color, color * 0.95, surfaceNoise * 0.2);
+                
+                // Pequeno highlight nas elevações
+                if (vHeight > 0.3) {
+                    color = mix(color, color * 1.1, (vHeight - 0.3) * 0.3);
+                }
+                
+                // Efeito vinheta suave
+                color = mix(color, color * 0.85, smoothstep(0.45, 0.5, distFromCenter));
                 
                 gl_FragColor = vec4(color, 1.0);
             }
@@ -474,11 +549,11 @@ export function updateSceneTheme(scene) {
                 object.material.uniforms.color.value.set(COLORS.border);
             }
         }
-        
-        // Atualiza o shader do terreno circundante
+          // Atualiza o shader do terreno circundante
         if (object.name === "terrain" && object.material && object.material.uniforms) {
             object.material.uniforms.baseColor.value.set(COLORS.background);
             object.material.uniforms.floorColor.value.set(COLORS.floor);
+            object.material.uniforms.accentColor.value.set(COLORS.border);
         }
         
         // Atualiza as bordas do tabuleiro
@@ -491,6 +566,17 @@ export function updateSceneTheme(scene) {
 // Obtém o tema atual
 export function getCurrentTheme() {
     return currentTheme;
+}
+
+// Função para animar o terrain (atualiza o tempo do shader)
+export function animateTerrain(scene, time) {
+    scene.traverse(object => {
+        if (object.name === "terrain" && object.material && object.material.uniforms) {
+            if (object.material.uniforms.time) {
+                object.material.uniforms.time.value = time * 0.001; // Animação lenta
+            }
+        }
+    });
 }
 
 

@@ -132,6 +132,18 @@ export function applyTheme(themeName) {
     document.querySelector('#title[style*="mainmenu_"]').style.backgroundImage = `url('${theme.titlecards.mainmenu}')`;
     document.querySelector('#gameModeTitle').style.backgroundImage = `url('${theme.titlecards.gamemodes}')`;
     document.querySelector('#optionsTitle').style.backgroundImage = `url('${theme.titlecards.options}')`;
+    
+    // Update 3D text color based on theme
+    const title3dElement = document.getElementById('title3d');
+    if (title3dElement) {
+        if (themeName === 'green') {
+            title3dElement.style.color = '#00ff00';
+        } else if (themeName === 'purple') {
+            title3dElement.style.color = '#9932cc';
+        } else if (themeName === 'orange') {
+            title3dElement.style.color = '#ff8c00';
+        }
+    }
       // Update game mode buttons
     document.querySelector('#infinityButton').style.backgroundImage = `url('${theme.gamemodes.infinity}')`;
     document.querySelector('#campaignButton').style.backgroundImage = `url('${theme.gamemodes.campaign}')`;

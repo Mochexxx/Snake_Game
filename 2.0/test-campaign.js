@@ -125,5 +125,65 @@ function loadScript(url) {
         console.log("===== FIM DO TESTE DO MODO DEBUG =====");
     };
     
+    // Add hitbox testing function for campaign mode
+    window.testCampaignHitboxes = function() {
+        console.log("===== TESTE DE HITBOXES DA CAMPANHA =====");
+        
+        // Check if campaign barriers exist
+        if (typeof window.barriers === 'undefined' || !window.barriers) {
+            console.error("❌ Barreiras da campanha não encontradas");
+            return;
+        }
+        
+        console.log("✅ Barreiras da campanha encontradas:", window.barriers.length);
+        
+        // Test boundary barrier hitboxes
+        const boundaryBarriers = window.barriers.filter(b => b.type === 'boundary');
+        console.log("Barreiras de limite encontradas:", boundaryBarriers.length);
+        
+        boundaryBarriers.forEach((barrier, index) => {
+            console.log(`Barreira de limite ${index + 1}:`, {
+                position: barrier.position,
+                boardPositions: barrier.boardPositions ? barrier.boardPositions.length : 0,
+                hitboxes: barrier.hitboxes ? barrier.hitboxes.length : 0
+            });
+        });
+        
+        // Test complex barrier hitboxes
+        const complexBarriers = window.barriers.filter(b => b.type === 'complex');
+        console.log("Barreiras complexas encontradas:", complexBarriers.length);
+        
+        complexBarriers.forEach((barrier, index) => {
+            console.log(`Barreira complexa ${index + 1}:`, {
+                boardPosition: barrier.boardPosition,
+                hitbox: barrier.hitbox,
+                centerX: barrier.centerX,
+                centerZ: barrier.centerZ
+            });
+        });
+        
+        // Test collision detection
+        if (typeof window.checkCampaignBarrierCollision === 'function') {
+            console.log("✅ Função de detecção de colisão encontrada");
+            
+            // Test some collision points
+            const testPoints = [
+                { x: -1, z: 10 }, // Should hit west wall
+                { x: 20, z: 10 }, // Should hit east wall
+                { x: 10, z: -1 }, // Should hit north wall
+                { x: 10, z: 20 }  // Should hit south wall
+            ];
+            
+            testPoints.forEach(point => {
+                const collision = window.checkCampaignBarrierCollision(point.x, point.z, window.barriers);
+                console.log(`Teste de colisão em (${point.x}, ${point.z}):`, collision ? "COLISÃO" : "LIVRE");
+            });
+        } else {
+            console.error("❌ Função de detecção de colisão não encontrada");
+        }
+        
+        console.log("===== FIM DO TESTE DE HITBOXES =====");
+    };
+    
     console.log("✅ Botão de teste adicionado - Clique para testar o menu da campanha");
 })();

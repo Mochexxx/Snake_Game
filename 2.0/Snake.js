@@ -113,13 +113,53 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
         if (newZ < min) newZ = max;
         else if (newZ > max) newZ = min;
     } else if (gameMode === 'barriers' || gameMode === 'randomBarriers' || gameMode === 'obstacles' || gameMode === 'campaign') {
-        // Nos modos barreiras, obstáculos ou campanha, colisão com a borda termina o jogo
         if (newX < min || newX > max || newZ < min || newZ > max) {
-            console.log(`Colisão com barreira detectada em posição inválida: ${newX}, ${newZ}`);
-            endGame();
-            return false;
+            // Check if it's campaign mode and handle boundary collisions
+            if (gameMode === 'campaign') {
+                console.log("Campaign boundary collision at:", newX, newZ);
+                endGame();
+                return false;
+            }
+            // Nos modos barreiras, obstáculos ou campanha, colisão com a borda termina o jogo
+            if (newX < min || newX > max || newZ < min || newZ > max) {
+                console.log(`Colisão com barreira detectada em posição inválida: ${newX}, ${newZ}`);
+                endGame();
+                return false;
+            }
         }
-          // Verificação adicional para colisões com barreiras no modo barriers
+        
+        // Enhanced barrier collision detection for campaign mode
+        if (gameMode === 'campaign' && barriers && barriers.length > 0) {
+            // Import and use campaign-specific collision checking
+            import('./campaign.js').then(module => {
+                const campaignCollision = module.checkCampaignBarrierCollision(newX, newZ, barriers);
+                if (campaignCollision) {
+                    console.log("Campaign barrier collision detected at:", newX, newZ);
+                    endGame();
+                    return false;
+                }
+            }).catch(err => {
+                // Fallback to standard barrier collision check
+                console.warn("Could not load campaign collision checker, using fallback");
+                const fallbackCollision = barriers.some(barrier => {
+                    if (barrier.type === 'complex' && barrier.boardPosition) {
+                        return barrier.boardPosition.x === newX && barrier.boardPosition.z === newZ;
+                    }
+                    if (barrier.type === 'boundary' && barrier.boardPositions) {
+                        return barrier.boardPositions.some(pos => pos.x === newX && pos.z === newZ);
+                    }
+                    return false;
+                });
+                
+                if (fallbackCollision) {
+                    console.log("Campaign barrier collision detected (fallback) at:", newX, newZ);
+                    endGame();
+                    return false;
+                }
+            });
+        }
+        
+        // Verificação adicional para colisões com barreiras no modo barriers
         if ((gameMode === 'barriers' || gameMode === 'randomBarriers') && barriers && barriers.length > 0) {
             // Verificar colisão com barreiras complexas
             const complexCollision = barriers.some(barrier => {

@@ -1,22 +1,62 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const preMainMenu = document.getElementById('preMainMenu');
+document.addEventListener('DOMContentLoaded', () => {    const preMainMenu = document.getElementById('preMainMenu');
     const mainMenu = document.getElementById('mainMenu');
     const snakeTextContainer = document.getElementById('snakeText');
     const gameTextContainer = document.getElementById('gameText');
-    const pressKeyMessage = document.getElementById('pressKeyMessage');
-
+    const pressKeyMessage = document.getElementById('pressKeyMessage');    
     const textToAnimateSnake = "SNAKE";
     const textToAnimateGame = "GAME";
     let animationTimeout; // Stores the timeout for the current animation sequence
+      // Element to hold the "3D" text below "GAME"
+    const gameText3DContainer = document.createElement('div');
+    gameText3DContainer.id = 'gameText3D';
+    gameText3DContainer.style.display = 'flex';
+    gameText3DContainer.style.flexDirection = 'row';
+    gameText3DContainer.style.alignItems = 'center';
+    gameText3DContainer.style.justifyContent = 'center';
+    gameText3DContainer.style.marginTop = '0.5vw';
+    gameText3DContainer.style.transform = 'scale(0)'; // Start hidden
+    gameText3DContainer.style.transition = 'transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.5)'; // Bounce effect
+    
+    // Insert the 3D container after gameText
+    document.getElementById('animatedTitleContainer').appendChild(gameText3DContainer);
+    
+    // Function to create a simple floating animation for the 3D text
+    function start3DAnimation() {
+        if (!gameText3DContainer) return;
+        
+        // Set up the floating animation
+        let floatingUp = true;
+        const floatStep = 0.05; // pixels per step
+        const floatMax = 5; // maximum pixels to float
+        let currentFloat = 0;
+        
+        // Start the floating animation
+        const floatInterval = setInterval(() => {
+            if (floatingUp) {
+                currentFloat += floatStep;
+                if (currentFloat >= floatMax) {
+                    floatingUp = false;
+                }
+            } else {
+                currentFloat -= floatStep;
+                if (currentFloat <= -floatMax) {
+                    floatingUp = true;
+                }
+            }
+            
+            gameText3DContainer.style.transform = `scale(1) translateY(${currentFloat}px)`;
+        }, 30);
+        
+        // Store the interval in a property so it can be cleared if needed
+        gameText3DContainer.floatInterval = floatInterval;
+    }
 
     // --- SVG Letter Creation ---
     function createLetterSVG(letterCharacter, letterIndexInWord) {
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
         // Unique ID for clipPath, incorporating letter and a random component
-        const letterID = `letter-${letterCharacter}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-        // Simplified block-style SVG paths for letters
+        const letterID = `letter-${letterCharacter}-${Date.now()}-${Math.random().toString(16).slice(2)}`;        // Simplified block-style SVG paths for letters
         const letterPaths = {
             'S': "M30,15 L10,15 L10,35 L30,35 L30,55 L10,55",
             'N': "M10,55 L10,15 L30,55 L30,15",
@@ -24,7 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
             'K': "M10,55 L10,15 M30,15 L10,35 L30,55",
             'E': "M30,15 L10,15 L10,55 L30,55 M10,35 L25,35",
             'G': "M30,15 L10,15 L10,55 L30,55 L30,35 L20,35",
-            'M': "M10,55 L10,15 L20,35 L30,15 L30,55"
+            'M': "M10,55 L10,15 L20,35 L30,15 L30,55",
+            '3': "M10,15 L30,15 L30,35 L10,35 M30,35 L30,55 L10,55",
+            'D': "M10,15 L25,15 C35,25 35,45 25,55 L10,55 L10,15"
         };
 
         const pathData = letterPaths[letterCharacter.toUpperCase()];
@@ -49,13 +91,19 @@ document.addEventListener('DOMContentLoaded', () => {
         clipRect.setAttribute("width", "40"); // Cover the viewBox width
         clipRect.setAttribute("height", "70"); // Cover the viewBox height
         clipPath.appendChild(clipRect);
-        svg.appendChild(clipPath);
-
-        // 2. The letter path (the "snake")
+        svg.appendChild(clipPath);        // 2. The letter path (the "snake")
         const pathElement = document.createElementNS(svgNS, "path");
         pathElement.setAttribute("d", pathData);
-        pathElement.setAttribute("stroke", "#32CD32"); // Lime Green
-        pathElement.setAttribute("stroke-width", "4");  // Snake thickness
+        
+        // Special color handling for "3D" text
+        if (letterCharacter === '3' || letterCharacter === 'D') {
+            pathElement.setAttribute("stroke", "#ff0000"); // Red for 3D
+            pathElement.setAttribute("stroke-width", "5");  // Slightly thicker for emphasis
+        } else {
+            pathElement.setAttribute("stroke", "#32CD32"); // Lime Green
+            pathElement.setAttribute("stroke-width", "4");  // Snake thickness
+        }
+        
         pathElement.setAttribute("stroke-linecap", "round");
         pathElement.setAttribute("stroke-linejoin", "round");
         pathElement.setAttribute("fill", "none");
@@ -116,9 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Initial delay before starting the first letter of this word
         animationTimeout = setTimeout(addNextLetter, baseDelayForWordStart);
-    }
-
-    // --- Full Title Animation Sequence ---
+    }    // --- Full Title Animation Sequence ---
     function startFullTitleAnimation() {
         // Clear any globally tracked animationTimeout. This is mostly for the pressKeyMessage timeout.
         // Internal timeouts from animateWord are harder to clear globally with this simple model if skip happens mid-word.
@@ -131,42 +177,27 @@ document.addEventListener('DOMContentLoaded', () => {
         animateWord(textToAnimateSnake, snakeTextContainer, 0, null);
 
         // Start animating "GAME" simultaneously by calling it immediately after "SNAKE"
-        // with a baseDelayForWordStart of 0. Also pass null for its callback.
-        animateWord(textToAnimateGame, gameTextContainer, 0, null);
+        // with a baseDelayForWordStart of 0. And a callback to animate 3D text
+        animateWord(textToAnimateGame, gameTextContainer, 0, () => {
+            // After "GAME" is animated, add the "3D" text with a pop effect
+            animateWord("3D", gameText3DContainer, 0, () => {
+                // After 3D text is animated, start the floating animation
+                setTimeout(() => {
+                    start3DAnimation();
+                    // Now show the 'Press any key' message
+                    setTimeout(() => {
+                        if (preMainMenu.style.display !== 'none' && !animationSkipped) {
+                            pressKeyMessage.style.opacity = '1';
+                        }
+                    }, 80); // Reduced delay for snappier appearance
+                }, 200); // Wait for the pop effect to finish
+            });
 
-        // Calculate when to show the "Press any key" message.
-        // This should be after the longer of the two word animations has completed.
-        const PRESS_KEY_MESSAGE_DELAY_MS = 500; // Buffer after animations complete
-
-        const letterStagger = 200; // From createLetterSVG: revealDelay = letterIndexInWord * 200
-        const revealDuration = 700;  // From createLetterSVG: clipRect transition duration
-        const drawDuration = 1200; // From createLetterSVG: pathElement stroke-dashoffset transition duration
-        const drawStartOffset = 150; // Drawing animation starts 150ms into the reveal animation
-
-        // Helper function to calculate the estimated visual completion time for a word's animation.
-        // This logic matches the estimation used inside animateWord if it were to call an onWordCompleteCallback.
-        const calculateWordAnimTime = (text) => {
-            if (!text || text.length === 0) return 0;
-            // Time for the last letter's reveal animation to begin
-            const lastLetterRevealDelay = (text.length - 1) * letterStagger;
-            // Total time is when the last letter's reveal starts, plus its own reveal and draw duration.
-            // (drawDuration - drawStartOffset) is the effective time the drawing takes *after* reveal starts.
-            return lastLetterRevealDelay + revealDuration + Math.max(0, drawDuration - drawStartOffset);
-        };
-
-        const estimatedAnimTimeSnake = calculateWordAnimTime(textToAnimateSnake);
-        const estimatedAnimTimeGame = calculateWordAnimTime(textToAnimateGame);
-
-        const timeUntilPressKeyMessage = Math.max(estimatedAnimTimeSnake, estimatedAnimTimeGame) + PRESS_KEY_MESSAGE_DELAY_MS;
-
-        // Set the timeout for showing the "Press any key" message.
-        // This specific timeout ID will be stored in the global animationTimeout variable.
-        animationTimeout = setTimeout(() => {
-            // Ensure we are still on the preMainMenu and the animation hasn't been skipped
-            if (preMainMenu.style.display !== 'none' && !animationSkipped) {
-                pressKeyMessage.style.opacity = '1';
-            }
-        }, timeUntilPressKeyMessage);
+            // Show the 3D container with a pop effect
+            setTimeout(() => {
+                gameText3DContainer.style.transform = 'scale(1)';
+            }, 200);
+        });
     }
 
     // --- Event Handling for Skipping ---
