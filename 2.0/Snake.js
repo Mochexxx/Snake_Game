@@ -4,13 +4,29 @@ import { BoxGeometry, MeshStandardMaterial } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { SphereGeometry } from 'three';
 import { TextureLoader } from 'three';
+import { createPlaydohMaterial, getThemeColors } from './scene.js';
+import { createApple } from './apple.js';
 
 // Snake.js
 // Responsável por criar e controlar a cobra
 
-// Load snake texture
+// Load snake texture with error handling
 const textureLoader = new TextureLoader();
-const snakeTexture = textureLoader.load('assets/textures/snake_texture.png');
+let snakeTexture = null;
+
+// Try to load the texture, but continue without it if not found
+textureLoader.load(
+    'assets/textures/snake_texture.png',
+    (texture) => {
+        snakeTexture = texture;
+        console.log('Snake texture loaded successfully');
+    },
+    undefined,
+    (error) => {
+        console.warn('Snake texture not found, using solid color material instead:', error);
+        snakeTexture = null;
+    }
+);
 
 // Replace materials to use texture
 const HEAD_MATERIAL = new MeshStandardMaterial({ 
@@ -23,6 +39,91 @@ const SEGMENT_MATERIAL = new MeshStandardMaterial({
     roughness: 0.5,
     metalness: 0.2 
 });
+
+// Update material creation to handle missing texture
+function createSnakeMaterial() {
+    if (snakeTexture) {
+        return new THREE.MeshStandardMaterial({
+            map: snakeTexture,
+            roughness: 0.5,
+            metalness: 0.2
+        });
+    } else {
+        // Fallback to solid color material
+        return new THREE.MeshStandardMaterial({
+            color: 0x32cd32, // Lime green
+            roughness: 0.5,
+            metalness: 0.2
+        });
+    }
+}
+
+// Function to create a new snake segment with consistent style
+function createSnakeSegment(scene, x, z, hitboxes, isHead = false) {
+    const cubeSize = 1.8; // Same size as initial snake segments
+    
+    // Use the same geometry and material as initial snake creation
+    const segmentGeom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 8, 0.3);
+    const segmentMaterialInstance = isHead ? HEAD_MATERIAL.clone() : SEGMENT_MATERIAL.clone();
+    const segment = new THREE.Mesh(segmentGeom, segmentMaterialInstance);
+    
+    const { centerX, centerZ } = hitboxes[x][z];
+    segment.position.set(centerX, 1, centerZ); // Same Y position as initial segments
+    segment.castShadow = true;
+    segment.receiveShadow = true;
+    
+    scene.add(segment);
+    return segment;
+}
+
+// Function to check if apple would spawn on snake
+export function isAppleOnSnake(snake, x, z, snakeBoard) {
+    // Verifica se as coordenadas da maçã coincidem com qualquer segmento da cobra
+    if (!snakeBoard || !Array.isArray(snakeBoard)) {
+        return false;
+    }
+    
+    return snakeBoard.some(seg => seg && seg.x === x && seg.z === z);
+}
+
+// Function to add a new segment when apple is eaten
+export function addSegment(scene, snake, snakeBoard, hitboxes, apple, gameMode, updateScore, endGame, obstacles = [], barriers = []) {
+    // Get the tail position for the new segment
+    const tailPosition = snakeBoard[snakeBoard.length - 1];
+    
+    if (!tailPosition) {
+        console.error("No tail position found for new segment");
+        return;
+    }
+    
+    // Create new segment at tail position with consistent material
+    const newSegment = createSnakeSegment(scene, tailPosition.x, tailPosition.z, hitboxes, false);
+    
+    // Add to arrays
+    snake.push(newSegment);
+    snakeBoard.push({ x: tailPosition.x, z: tailPosition.z });
+    
+    // Update score
+    updateScore();
+    
+    // Remove current apple
+    if (apple && apple.parent) {
+        scene.remove(apple);
+    }
+    
+    // Create new apple with proper barrier collision checking
+    const newApple = createApple(
+        scene, 
+        snake, 
+        isAppleOnSnake, 
+        snakeBoard, 
+        hitboxes, 
+        obstacles, 
+        barriers // Ensure barriers are passed for collision checking
+    );
+    
+    return newApple;
+}
 
 export function createSnake(scene) {
     const snake = [];
@@ -146,6 +247,10 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
                         return barrier.boardPosition.x === newX && barrier.boardPosition.z === newZ;
                     }
                     if (barrier.type === 'boundary' && barrier.boardPositions) {
+                        return barrier.boardPositions.some(pos => pos.x === newX && pos.z === newZ);
+                    }
+                    // Add check for random-piece barriers (maze mode)
+                    if (barrier.type === 'random-piece' && barrier.boardPositions) {
                         return barrier.boardPositions.some(pos => pos.x === newX && pos.z === newZ);
                     }
                     return false;
@@ -305,15 +410,6 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
     snakeHead.rotation.y = angle;
     
     return true;
-}
-
-export function isAppleOnSnake(snake, x, z, snakeBoard) {
-    // Verifica se as coordenadas da maçã coincidem com qualquer segmento da cobra
-    if (!snakeBoard || !Array.isArray(snakeBoard)) {
-        return false;
-    }
-    
-    return snakeBoard.some(seg => seg && seg.x === x && seg.z === z);
 }
 
 // Função para depuração das colisões

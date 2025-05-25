@@ -142,39 +142,39 @@ export function createRenderer() {
 }
 
 export function addLights(scene) {
-    // Ambient light for general illumination
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-    
-    // Main directional light with shadows
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(40, 40, 40);
-    dirLight.castShadow = true;
-    
-    // Optimize shadow map settings for performance and quality
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 100;
-    
-    // Configure shadow camera frustum to cover the game area
-    dirLight.shadow.camera.left = -40;
-    dirLight.shadow.camera.right = 40;
-    dirLight.shadow.camera.top = 40;
-    dirLight.shadow.camera.bottom = -40;
-    
-    // Add a target for the directional light to aim at the center of the board
-    dirLight.target.position.set(20, 0, 20);
-    scene.add(dirLight.target);
-    scene.add(dirLight);
-    
-    // Add a fill light from the opposite side (softer)
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    fillLight.position.set(-20, 30, -20);
-    scene.add(fillLight);
-    
-    // Return lights for potential later reference
-    return { ambientLight, dirLight, fillLight };
+    // Use dynamic import to avoid multiple THREE.js instances
+    return import('./lighting-system.js').then(lightingModule => {
+        return lightingModule.createLights(scene);
+    }).catch(error => {
+        console.warn('Lighting system not available, using fallback lights:', error);
+        
+        // Fallback lighting implementation
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(40, 40, 40);
+        dirLight.castShadow = true;
+        
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 100;
+        dirLight.shadow.camera.left = -40;
+        dirLight.shadow.camera.right = 40;
+        dirLight.shadow.camera.top = 40;
+        dirLight.shadow.camera.bottom = -40;
+        
+        dirLight.target.position.set(20, 0, 20);
+        scene.add(dirLight.target);
+        scene.add(dirLight);
+        
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        fillLight.position.set(-20, 30, -20);
+        scene.add(fillLight);
+        
+        return { ambientLight, dirLight, fillLight };
+    });
 }
 
 export function addFloor(scene) {
@@ -190,7 +190,8 @@ export function addFloor(scene) {
     scene.add(floor);
 }
 
-export function addBoard(scene) {    // Remove any existing floor, grid, or terrain elements
+export function addBoard(scene) {    
+    // Remove any existing floor, grid, or terrain elements
     for (let i = scene.children.length - 1; i >= 0; i--) {
         if (scene.children[i].isGridHelper || 
             (scene.children[i].isMesh && 
@@ -201,193 +202,47 @@ export function addBoard(scene) {    // Remove any existing floor, grid, or terr
             scene.remove(scene.children[i]);
         }
     }
-      // Constants for game board and extended terrain
+    
+    // Constants for game board and extended terrain
     const GRID_DIVISIONS = 20; // Exactly 20x20 grid
     const CELL_SIZE = 2; // Each cell is 2x2 units
     const GRID_SIZE = GRID_DIVISIONS * CELL_SIZE; // 40x40 units for game board
-    const TERRAIN_EXTEND = 160; // Maior terreno ao redor para efeito mais expansivo
-      // First create an extended terrain that goes beyond the game area
+    const TERRAIN_EXTEND = 160; // Extended terrain around the game area
+    
+    // Create an extended terrain with playdoh-style material
     const terrainGeometry = new THREE.PlaneGeometry(
         GRID_SIZE + TERRAIN_EXTEND, 
         GRID_SIZE + TERRAIN_EXTEND, 
-        120, // Mais subdivisões para maior detalhe
-        120
+        32, // Reduced subdivisions for uniform appearance
+        32
     );
-      // Create a more detailed terrain with playdoh-style colors and gradients
-    const terrainMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            baseColor: { value: new THREE.Color(COLORS.background) },
-            floorColor: { value: new THREE.Color(COLORS.floor) },
-            accentColor: { value: new THREE.Color(COLORS.border) },
-            noiseScale: { value: 0.15 },
-            heightScale: { value: 1.2 },
-            time: { value: 0.0 },
-            colorVariation: { value: 0.3 }
-        },
-        vertexShader: `
-            uniform float noiseScale;
-            uniform float heightScale;
-            uniform float time;
-            
-            varying vec2 vUv;
-            varying float vHeight;
-            varying vec3 vPosition;
-            
-            // Função de ruído melhorada
-            float noise(vec2 p) {
-                return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-            }
-            
-            // Ruído Perlin simplificado
-            float perlinNoise(vec2 p) {
-                vec2 i = floor(p);
-                vec2 f = fract(p);
-                
-                float a = noise(i);
-                float b = noise(i + vec2(1.0, 0.0));
-                float c = noise(i + vec2(0.0, 1.0));
-                float d = noise(i + vec2(1.0, 1.0));
-                
-                vec2 u = f * f * (3.0 - 2.0 * f);
-                
-                return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-            }
-            
-            // Fractional Brownian Motion para terreno mais natural
-            float fbm(vec2 p) {
-                float value = 0.0;
-                float amplitude = 0.5;
-                float frequency = 1.0;
-                
-                for (int i = 0; i < 6; i++) {
-                    value += amplitude * perlinNoise(p * frequency);
-                    amplitude *= 0.6;
-                    frequency *= 2.1;
-                }
-                
-                return value;
-            }
-            
-            void main() {
-                vUv = uv;
-                vPosition = position;
-                
-                // Calcular distância do centro (0.5, 0.5)
-                float dist = length(uv - 0.5);
-                
-                // Criar altura baseada em ruído, com transição suave
-                float height = 0.0;
-                
-                // Aplicar altura apenas fora da área do jogo, com transição suave
-                if (dist > 0.22) {
-                    float noiseValue = fbm(position.xz * noiseScale + time * 0.1);
-                    height = noiseValue * heightScale;
-                    
-                    // Suavizar transição da área do jogo para o terreno
-                    float transition = smoothstep(0.22, 0.35, dist);
-                    height *= transition;
-                    
-                    // Mais variação conforme se afasta do centro
-                    height *= (1.0 + dist * 0.8);
-                }
-                
-                vHeight = height;
-                
-                // Aplicar altura ao vértice
-                vec3 newPosition = position;
-                newPosition.y += height;
-                
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 baseColor;
-            uniform vec3 floorColor;
-            uniform vec3 accentColor;
-            uniform float colorVariation;
-            uniform float time;
-            
-            varying vec2 vUv;
-            varying float vHeight;
-            varying vec3 vPosition;
-            
-            // Função de ruído para variação de cor
-            float noise(vec2 p) {
-                return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-            }
-            
-            // Mistura de cores estilo playdoh
-            vec3 playdohMix(vec3 color1, vec3 color2, vec3 color3, float factor, vec2 pos) {
-                // Criar padrões orgânicos de mistura
-                float noise1 = noise(pos * 20.0 + time * 0.5);
-                float noise2 = noise(pos * 35.0 - time * 0.3);
-                float noise3 = noise(pos * 50.0 + time * 0.2);
-                
-                // Combinear ruídos para criar padrões complexos
-                float blend1 = sin(noise1 * 6.28) * 0.5 + 0.5;
-                float blend2 = sin(noise2 * 6.28) * 0.5 + 0.5;
-                float blend3 = sin(noise3 * 6.28) * 0.5 + 0.5;
-                
-                // Misturar cores de forma orgânica
-                vec3 mix1 = mix(color1, color2, blend1 * factor);
-                vec3 mix2 = mix(mix1, color3, blend2 * factor * 0.7);
-                
-                // Adicionar variação sutil
-                return mix2 + (blend3 - 0.5) * colorVariation * 0.1;
-            }
-            
-            void main() {
-                float distFromCenter = length(vUv - 0.5);
-                
-                // Cores base mais suaves estilo playdoh
-                vec3 centerColor = floorColor;
-                vec3 midColor = mix(floorColor, baseColor, 0.6);
-                vec3 outerColor = mix(baseColor, accentColor, 0.4);
-                
-                // Transições suaves entre áreas
-                vec3 color;
-                if (distFromCenter < 0.25) {
-                    // Área central do jogo - cor limpa
-                    color = centerColor;
-                } else if (distFromCenter < 0.4) {
-                    // Transição para terreno
-                    float factor = smoothstep(0.25, 0.4, distFromCenter);
-                    color = playdohMix(centerColor, midColor, outerColor, factor, vPosition.xz);
-                } else {
-                    // Terreno externo
-                    float heightFactor = clamp(vHeight * 2.0, 0.0, 1.0);
-                    color = playdohMix(midColor, outerColor, baseColor, heightFactor, vPosition.xz);
-                }
-                
-                // Adicionar variação de textura sutil estilo playdoh
-                float surfaceNoise = noise(vPosition.xz * 80.0);
-                color = mix(color, color * 0.95, surfaceNoise * 0.2);
-                
-                // Pequeno highlight nas elevações
-                if (vHeight > 0.3) {
-                    color = mix(color, color * 1.1, (vHeight - 0.3) * 0.3);
-                }
-                
-                // Efeito vinheta suave
-                color = mix(color, color * 0.85, smoothstep(0.45, 0.5, distFromCenter));
-                
-                gl_FragColor = vec4(color, 1.0);
-            }
-        `,
-        side: THREE.DoubleSide
+    
+    // Create simple playdoh-style material that responds to lighting
+    const terrainMaterial = new THREE.MeshStandardMaterial({
+        color: COLORS.floor,
+        roughness: 0.8, // High roughness for playdoh-like appearance
+        metalness: 0.0, // No metallic properties
+        flatShading: false, // Smooth shading for uniform appearance
+        transparent: false
     });
     
     const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
     terrain.rotation.x = -Math.PI / 2;
     terrain.position.set(GRID_SIZE / 2, -0.1, GRID_SIZE / 2); // Slightly below game board
     terrain.receiveShadow = true;
+    terrain.castShadow = false;
     terrain.name = "terrain";
-    scene.add(terrain);    // Now create the actual game board with simple geometry
+    scene.add(terrain);
+    
+    // Create the game board with the same playdoh material
     const planeGeometry = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE);
     planeGeometry.rotateX(-Math.PI * 0.5);
     
     const planeMaterial = new THREE.MeshStandardMaterial({
         color: COLORS.floor,
+        roughness: 0.8, // Match terrain material
+        metalness: 0.0,
+        flatShading: false
     });
     
     // Create grid lines using LineSegments for the 20x20 grid
@@ -533,8 +388,14 @@ export function updateSceneTheme(scene) {
     }
     
     // Procura e atualiza as cores de todos os elementos temáticos
-    scene.traverse(object => {        // Atualiza o material padrão do chão se ele existir
+    scene.traverse(object => {        
+        // Atualiza o material padrão do chão se ele existir
         if (object.name === "floor" && object.material) {
+            object.material.color.set(COLORS.floor);
+        }
+        
+        // Update terrain material to match theme
+        if (object.name === "terrain" && object.material) {
             object.material.color.set(COLORS.floor);
         }
         
@@ -549,12 +410,6 @@ export function updateSceneTheme(scene) {
                 object.material.uniforms.color.value.set(COLORS.border);
             }
         }
-          // Atualiza o shader do terreno circundante
-        if (object.name === "terrain" && object.material && object.material.uniforms) {
-            object.material.uniforms.baseColor.value.set(COLORS.background);
-            object.material.uniforms.floorColor.value.set(COLORS.floor);
-            object.material.uniforms.accentColor.value.set(COLORS.border);
-        }
         
         // Atualiza as bordas do tabuleiro
         if (object.isLine && object.material) {
@@ -568,15 +423,27 @@ export function getCurrentTheme() {
     return currentTheme;
 }
 
-// Função para animar o terrain (atualiza o tempo do shader)
-export function animateTerrain(scene, time) {
-    scene.traverse(object => {
-        if (object.name === "terrain" && object.material && object.material.uniforms) {
-            if (object.material.uniforms.time) {
-                object.material.uniforms.time.value = time * 0.001; // Animação lenta
-            }
-        }
+// Create consistent playdoh-style material for game objects
+export function createPlaydohMaterial(color, options = {}) {
+    return new THREE.MeshStandardMaterial({
+        color: color || COLORS.floor,
+        roughness: options.roughness || 0.8, // High roughness for playdoh-like appearance
+        metalness: options.metalness || 0.0, // No metallic properties
+        flatShading: options.flatShading || false, // Smooth shading for uniform appearance
+        transparent: options.transparent || false,
+        opacity: options.opacity || 1.0
     });
+}
+
+// Get current theme colors for consistent styling
+export function getThemeColors() {
+    return { ...COLORS };
+}
+
+// Placeholder function for animateTerrain (no longer needed with simple materials)
+export function animateTerrain(scene, time) {
+    // No animation needed for simple playdoh materials
+    // This function is kept for compatibility with main.js
 }
 
 

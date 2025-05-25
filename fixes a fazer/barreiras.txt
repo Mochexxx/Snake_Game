@@ -1,6 +1,0 @@
-as barreiras nao deverão dar spawn no local onde a cobra está
-deverão também ter uma condição para não sobrelotar o tabuleiro com barrerias e tornar a gameplay impossível
-
-
-
-as barreiras do modo campanha nao tem hitbox atribuida

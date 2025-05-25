@@ -70,3 +70,17 @@ export function loadSavedTheme(scene) {
         changeTheme(savedTheme, scene);
     }
 }
+
+// Theme management utilities
+// This file provides additional theme-related functionality
+
+// Placeholder for future theme functionality
+export function getThemeColors(themeName) {
+    const themes = {
+        green: { primary: '#4e8d77', secondary: '#65b798', highlight: '#8ee4af' },
+        purple: { primary: '#7d55a0', secondary: '#9b59b6', highlight: '#bb8cce' },
+        orange: { primary: '#d35400', secondary: '#e67e22', highlight: '#f39c12' }
+    };
+    
+    return themes[themeName] || themes.green;
+}

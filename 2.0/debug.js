@@ -1,6 +1,8 @@
 // debug.js
 // Funções auxiliares para debugging e visualização das hitboxes
 
+import * as THREE from 'three';
+
 export function createHitboxVisualization(scene, hitboxes) {
     const visuals = [];
     const material = new THREE.MeshBasicMaterial({ 
@@ -40,12 +42,32 @@ export function toggleDebugMode(debugEnabled) {
         // Adiciona notificação visual de debug ativo
         showDebugNotification(true);
         
+        // Create lighting debug menu if scene exists - use dynamic import
+        import('./lighting-system.js').then(lightingModule => {
+            lightingModule.createLightingDebugMenu();
+        }).catch(error => {
+            console.warn('Lighting system not available:', error);
+        });
+        
         // Salva o estado no localStorage
         localStorage.setItem('debugMode', 'true');
     } else {
         console.log("Debug mode: OFF");
         // Remove notificação visual de debug ativo
         showDebugNotification(false);
+        
+        // Hide lighting debug menu - use dynamic import
+        import('./lighting-system.js').then(lightingModule => {
+            lightingModule.hideLightingDebugMenu();
+        }).catch(error => {
+            console.warn('Lighting system not available:', error);
+        });
+        
+        // Remove lighting menu from DOM
+        const lightingMenu = document.getElementById('lighting-debug-menu');
+        if (lightingMenu) {
+            document.body.removeChild(lightingMenu);
+        }
         
         // Salva o estado no localStorage
         localStorage.setItem('debugMode', 'false');
@@ -61,7 +83,8 @@ function showDebugNotification(show) {
     }
     
     // Cria nova notificação se necessário
-    if (show) {        const notification = document.createElement('div');
+    if (show) {
+        const notification = document.createElement('div');
         notification.id = 'debug-mode-notification';
         notification.style.position = 'fixed';
         notification.style.top = '10px';
@@ -106,9 +129,9 @@ function showDebugNotification(show) {
         title.appendChild(titleText);
         title.appendChild(closeButton);
         
-        // Informações sobre atalhos de debug
+        // Informações sobre atalhos de debug - updated to include lighting controls
         const infoText = document.createElement('div');
-        infoText.innerHTML = 'Teclas: <b>F3/B</b> para toggle<br>Todos os níveis da campanha desbloqueados';
+        infoText.innerHTML = 'Teclas: <b>F3/B</b> para toggle, <b>L</b> para luzes<br>Todos os níveis da campanha desbloqueados';
         infoText.style.fontSize = '10px';
         infoText.style.marginTop = '5px';
         

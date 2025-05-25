@@ -29,6 +29,12 @@ import {
 import { initTheme, setupThemeButtons } from './theme-manager.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { TextureLoader } from 'three';
+import { 
+    createLightingDebugMenu, 
+    toggleLightingDebugMenu, 
+    isLightingDebugMenuVisible,
+    createLights 
+} from './lighting-system.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -39,6 +45,7 @@ let barriers = [];
 let hitboxVisuals = [];
 let isPaused = true;
 let gameRunning = false;
+let lightingSystemAvailable = false; // Track if lighting system is available
 let lastMoveTime = 0, moveInterval = 200;
 let score = 0;
 let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
@@ -217,6 +224,14 @@ function initDebugMode() {
     // Se o modo debug estiver ativo, mostrar a notificação
     if (debugMode) {
         toggleDebugMode(true);
+        // Create lighting menu if game is running and lighting system is available
+        if (gameRunning && lightingSystemAvailable) {
+            import('./lighting-system.js').then(lightingModule => {
+                lightingModule.createLightingDebugMenu();
+            }).catch(error => {
+                console.warn('Could not create lighting debug menu:', error);
+            });
+        }
     }
 }
 
@@ -400,6 +415,19 @@ function setupControls() {
                     updateCameraIndicator(newCameraType);
                 }
                 break;
+            case 'l': // Tecla L para abrir/fechar menu de luzes (apenas no modo debug)
+                if (debugMode && gameRunning) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    // Use dynamic import to avoid loading issues
+                    import('./lighting-system.js').then(lightingModule => {
+                        lightingModule.toggleLightingDebugMenu();
+                    }).catch(error => {
+                        console.warn('Lighting system not available:', error);
+                    });
+                }
+                break;
         }
     });
     
@@ -409,9 +437,23 @@ function setupControls() {
     }
 }
 
+// Função para criar a maçã inicial com verificação adequada de barreiras
+function createInitialApple() {
+    return createApple(
+        scene, 
+        snake, 
+        isAppleOnSnake, 
+        snakeBoard, 
+        hitboxes, 
+        obstacles, 
+        barriers // Garantir que as barreiras sejam passadas para verificação de colisão
+    );
+}
+
 // Função para iniciar o jogo
 function startGame() {
-    score = 0;    snake = [];
+    score = 0;
+    snake = [];
     snakeBoard = [];
     obstacles = [];
     barriers = [];
@@ -434,25 +476,44 @@ function startGame() {
     
     // Remove o renderer antigo se existir
     if (renderer) {
-        // Only remove if renderer.domElement is actually a child of document.body
         if (renderer.domElement && renderer.domElement.parentNode === document.body) {
             document.body.removeChild(renderer.domElement);
         }
-    }    // Cria a nova cena
+    }
+
+    // Cria a nova cena
     scene = Scene.createScene();
-    camera = Scene.createCamera(); // Use the camera system from scene.js
+    camera = Scene.createCamera();
     renderer = Scene.createRenderer();
     
     // Start camera animation to move from snake position to final position
     animateCameraToPosition();
     
-    // Adiciona elementos na cena
-    Scene.addLights(scene);
+    // Use new lighting system with async handling
+    Scene.addLights(scene).then(lights => {
+        lightingSystemAvailable = true;
+        console.log('Lighting system loaded successfully');
+        
+        // Create lighting debug menu if in debug mode
+        if (debugMode) {
+            import('./lighting-system.js').then(lightingModule => {
+                lightingModule.createLightingDebugMenu();
+            }).catch(error => {
+                console.warn('Could not create lighting debug menu:', error);
+            });
+        }
+    }).catch(error => {
+        console.warn('Lighting system failed, using fallback:', error);
+        lightingSystemAvailable = false;
+    });
+    
     Scene.addBoard(scene);
     Scene.addLowPolyDecorations(scene);
     
     // Gera a matriz de hitboxes para o tabuleiro
-    hitboxes = Scene.generateBoardHitboxes();    // Cria a cobra
+    hitboxes = Scene.generateBoardHitboxes();
+
+    // Cria a cobra
     const snakeObj = createSnake(scene);
     snake = snakeObj.snake;
     snakeHead = snakeObj.snakeHead;
@@ -460,8 +521,10 @@ function startGame() {
     snakeBoard = snakeObj.snakeBoard;
     
     // Initialize smooth animation positions
-    initializeSnakeAnimationPositions();// Criar maçã
-    apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes, obstacles, barriers);
+    initializeSnakeAnimationPositions();
+
+    // Criar maçã
+    apple = createInitialApple();
     
     // Criar barreiras se o modo for "barriers"
     if (gameMode === 'barriers') {
