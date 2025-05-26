@@ -34,9 +34,9 @@ export function showControlsHelp() {
             <li>WASD: W (cima), A (esquerda), S (baixo), D (direita)</li>
             <li>Teclado numérico: 8, 4, 2, 6</li>
         </ul>
-        <p><strong>Jogo:</strong></p>
-        <ul style="padding-left: 20px; margin-top: 5px;">
+        <p><strong>Jogo:</strong></p>        <ul style="padding-left: 20px; margin-top: 5px;">
             <li>Pausar/Continuar: ESPAÇO ou P</li>
+            <li>Ativar/Desativar Modo Debug: B ou F3</li>
         </ul>
         <button id="close-controls" style="
             background-color: #4CAF50;

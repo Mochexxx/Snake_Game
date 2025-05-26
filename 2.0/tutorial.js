@@ -30,8 +30,7 @@ export function showTutorial(gameMode, onCloseTutorial) {
     tutorialDiv.style.textAlign = 'center';
     tutorialDiv.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.3)';    // Verifica se é dispositivo touch
     const isTouchDevice = 'ontouchstart' in window;
-    
-    // Conteúdo específico para cada modo
+      // Conteúdo específico para cada modo
     let tutorialContent = `
         <h2>Como Jogar</h2>
         <div style="text-align: left; max-width: 400px; margin: 0 auto;">
@@ -50,45 +49,63 @@ export function showTutorial(gameMode, onCloseTutorial) {
     }
     
     tutorialContent += `
-            </ul>
-            <p><strong>Outros comandos:</strong></p>
+            </ul>            <p><strong>Outros controles:</strong></p>
             <ul>
-                <li>Pausar/Continuar: ESPAÇO ou P</li>
+                <li>P ou Espaço: pausar/retomar o jogo</li>
+                <li>B: ativar/desativar modo de debug</li>
     `;
-    
-    if (isTouchDevice) {
+      // Adiciona instruções específicas para o modo campanha
+    if (gameMode === 'campaign') {
         tutorialContent += `
-                <li>Em dispositivos móveis: use o botão "Pause" na tela</li>
+                <li>M: abrir menu de seleção de níveis</li>
+                <li>F3: ativar/desativar modo de debug</li>
+            </ul>
+            <p><strong>Modo Campanha:</strong></p>
+            <ul>
+                <li>Colete 10 maçãs para completar cada nível</li>
+                <li>Complete níveis para desbloquear novos desafios</li>
+                <li>O número de obstáculos aumenta a cada nível</li>
+                <li>Pressione M durante o jogo para acessar o menu de níveis</li>
+            </ul>            <p><strong>🐞 Modo Debug:</strong></p>
+            <ul>
+                <li>Ative o modo debug pressionando F3 ou usando a tecla B</li>
+                <li>Em modo debug, todos os níveis da campanha estão desbloqueados</li>
+                <li>Os níveis desbloqueados por debug têm uma borda roxa</li>
+                <li>Você também pode ativar/desativar o debug no menu de níveis</li>
+            </ul>
+        `;
+    } else {
+        tutorialContent += `
+            </ul>
         `;
     }
     
-    tutorialContent += `
-            </ul>
-        </div>
-        <p>Coma as maçãs vermelhas para crescer e somar pontos.</p>
-    `;
-    
-    // Adiciona informações específicas para cada modo
+    // Adicionando conteúdo específico para cada modo de jogo
     if (gameMode === 'classic') {
         tutorialContent += `
-            <h3>Modo Clássico (Teleporte)</h3>
-            <p>Ao atingir as bordas do tabuleiro, a cobra teleporta para o lado oposto.</p>
-        `;    } else if (gameMode === 'barriers') {
+            <p><strong>Modo Clássico:</strong></p>
+            <ul>
+                <li>Ao atingir os limites do tabuleiro, você teleporta para o lado oposto</li>
+                <li>Cuidado para não colidir com seu próprio corpo!</li>
+            </ul>
+        `;
+    } else if (gameMode === 'barriers') {
         tutorialContent += `
-            <h3>Modo Barreiras</h3>
-            <p>Cuidado! As bordas do tabuleiro são barreiras sólidas.</p>
-            <p>Além disso, há estruturas complexas de barreiras dentro do tabuleiro.</p>
-            <p>Essas estruturas são formadas por cubos empilhados com uma meia-laje no topo.</p>
-            <p>Colidir com qualquer barreira resulta em Game Over.</p>
-            <div style="margin: 15px auto; background-color: #333; padding: 10px; border-radius: 5px;">
-                <span style="color: #aaaaaa; font-weight: bold;">Dica:</span> Observe cuidadosamente o tabuleiro para identificar os padrões de barreiras.
-            </div>
+            <p><strong>Modo Barreiras:</strong></p>
+            <ul>
+                <li>Há barreiras nos limites do tabuleiro</li>
+                <li>Colidir com uma barreira resulta em fim de jogo</li>
+                <li>Evite as barreiras e seu próprio corpo</li>
+            </ul>
         `;
     } else if (gameMode === 'obstacles') {
         tutorialContent += `
-            <h3>Modo Obstáculos</h3>
-            <p>Além das bordas serem barreiras sólidas, existem obstáculos roxos espalhados pelo tabuleiro.</p>
-            <p>Colidir com obstáculos ou bordas resulta em Game Over.</p>
+            <p><strong>Modo Obstáculos:</strong></p>
+            <ul>
+                <li>Há obstáculos móveis pelo tabuleiro</li>
+                <li>Os obstáculos se movem aleatoriamente</li>
+                <li>Colidir com um obstáculo resulta em fim de jogo</li>
+            </ul>
         `;
     }
       tutorialContent += `
