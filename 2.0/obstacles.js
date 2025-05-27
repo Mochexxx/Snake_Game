@@ -4,6 +4,8 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
 import { getBoardCellCenter } from './scene.js';
 import { createTreeModel, createRockModel } from './models.js';
+import { getCurrentBoardTheme, getThemeConfig } from './board-theme-manager.js';
+import { loadModel } from './model-loader.js';
 
 // Configurações dos obstáculos
 const OBSTACLE_LIFETIME = 10000; // 10 segundos em milissegundos
@@ -208,188 +210,254 @@ export function animateObstacles(obstacles, time) {
 }
 
 // Criar decorações ambientais ao redor do tabuleiro
-export function createEnvironmentalDecorations(scene) {
+export async function createEnvironmentalDecorations(scene) {
+    console.log('Creating environmental decorations...');
     const decorations = [];
-    
-    // Configurações para as decorações
-    const gridSize = 40; // Tamanho do tabuleiro em unidades 3D (20x20 células * 2 unidades cada)
-    const gridCenter = { x: 20, z: 20 }; // Centro do tabuleiro
-    const gridBounds = {
-        minX: 0,  // Limite esquerdo do tabuleiro
-        maxX: 40, // Limite direito do tabuleiro
-        minZ: 0,  // Limite superior do tabuleiro
-        maxZ: 40  // Limite inferior do tabuleiro
+      // Performance settings - can be adjusted based on device performance
+    const PERFORMANCE_SETTINGS = {
+        maxComplexObjects: 4,
+        maxSimpleObjectsPerComplex: 6,
+        minSimpleObjectsPerComplex: 3,
+        enableAnimations: true,
+        minDistanceBetweenObjects: 15 // Distância mínima aumentada para acomodar os objetos maiores
     };
-    
-    // Locais especialmente posicionados para câmeras
-    const cameraFriendlyPositions = [
-        // Os principais pontos cardeais (visíveis de todas as perspectivas)
-        { angle: 0, distanceMultiplier: 1.2 },         // Leste
-        { angle: Math.PI / 2, distanceMultiplier: 1.0 }, // Sul
-        { angle: Math.PI, distanceMultiplier: 1.2 },     // Oeste
-        { angle: Math.PI * 1.5, distanceMultiplier: 1.0 }, // Norte
-        
-        // Pontos intermediários espaçados de forma irregular
-        { angle: Math.PI / 4, distanceMultiplier: 1.1 },     // Sudeste
-        { angle: Math.PI * 0.75, distanceMultiplier: 1.3 },  // Sudoeste
-        { angle: Math.PI * 1.25, distanceMultiplier: 1.1 },  // Noroeste
-        { angle: Math.PI * 1.75, distanceMultiplier: 1.3 },  // Nordeste
-        
-        // Posições extras com distâncias variadas
-        { angle: Math.PI / 6, distanceMultiplier: 1.4 },
-        { angle: Math.PI / 3, distanceMultiplier: 1.2 },
-        { angle: Math.PI * 0.6, distanceMultiplier: 1.5 },
-        { angle: Math.PI * 0.9, distanceMultiplier: 1.3 },
-        { angle: Math.PI * 1.1, distanceMultiplier: 1.4 },
-        { angle: Math.PI * 1.4, distanceMultiplier: 1.2 },
-        { angle: Math.PI * 1.6, distanceMultiplier: 1.5 },
-        { angle: Math.PI * 1.9, distanceMultiplier: 1.3 }
+      // Fixed positions for complex objects (matching your X marks in the screenshot)
+    // These are positioned further outside the 40x40 grid in the corners to acomodate bigger objects
+    const complexPositions = [
+        { x: -20, z: -20 },  // Top-left X
+        { x: 60, z: -20 },   // Top-right X  
+        { x: -20, z: 60 },   // Bottom-left X
+        { x: 60, z: 60 }     // Bottom-right X
     ];
     
-    // Array para acompanhar todas as posições usadas
-    const usedPositions = [];
+    // Get current theme
+    const theme = getCurrentBoardTheme();
+    let themeConfig;
     
-    // Função para verificar se uma nova posição está longe o suficiente das usadas
-    function isPositionValid(newPos, minDistance) {
-        return !usedPositions.some(pos => {
-            const dx = newPos.x - pos.x;
-            const dz = newPos.z - pos.z;
-            const distance = Math.sqrt(dx * dx + dz * dz);
-            return distance < minDistance;
-        });
+    try {
+        themeConfig = getThemeConfig(theme);
+        console.log('Current theme:', theme, 'Config:', themeConfig);
+    } catch (error) {
+        console.warn('Failed to get theme config, using fallback:', error);
+        themeConfig = { folder: 'quinta' }; // Fallback to classic theme
     }
     
-    // Função para encontrar uma posição válida
-    function findValidPosition(baseAngle, distanceMultiplier) {
-        // Adicionar uma pequena variação ao ângulo para criar mais diversidade
-        const angleVariation = (Math.random() * 0.2 - 0.1); // ±0.1 radianos (~5.7°)
-        const angle = baseAngle + angleVariation;
+    // Enhanced theme object mapping with correct file names matching available models
+    const themeObjects = {
+        desert: {
+            complex: ['Camelo_paisagem.glb'],
+            simple: ['cacto_obstaculo.glb']
+        },
+        snow: {
+            complex: ['Igloo_paisagem.glb'],
+            simple: ['Snowman_paisagem.glb', 'bush_obstaculo.glb', 'avore_neve_obstaculo.glb']
+        },
+        classic: {
+            complex: ['barn_paisagem.glb'],
+            simple: ['Cow.glb', 'silo_paisagem.glb', 'hay_obstaculo.glb']
+        },
+        farm: {
+            complex: ['barn_paisagem.glb'],
+            simple: ['Cow.glb', 'silo_paisagem.glb', 'hay_obstaculo.glb']
+        },
+        forest: {
+            complex: [], // Will use trees at fixed positions
+            simple: []
+        }    };
+      // Get objects for current theme
+    const objects = themeObjects[theme] || themeObjects['classic'];
+    console.log('Theme objects for', theme, ':', objects);
+    
+    // Lista para rastrear posições de todos os objetos (tanto complexos quanto simples)
+    const allObjectPositions = [];
+    
+    // Place complex objects at the X positions
+    for (let i = 0; i < complexPositions.length; i++) {
+        const pos = complexPositions[i];
+        console.log('Processing position', i, ':', pos);
         
-        // Base para distância
-        const minDistance = 50; // Distância mínima do centro
-        const maxDistance = 80; // Distância máxima
+        // Verifica se essa posição está muito próxima de outros objetos complexos já adicionados
+        if (isPositionTooClose(pos, allObjectPositions, PERFORMANCE_SETTINGS.minDistanceBetweenObjects * 3)) {
+            console.warn(`Posição ${i} (${pos.x}, ${pos.z}) está muito próxima de outros objetos. Ajustando posição.`);
+            // Ajusta levemente a posição para evitar sobreposição com outros objetos complexos
+            pos.x += (Math.random() * 6) - 3;
+            pos.z += (Math.random() * 6) - 3;
+        }
         
-        // Aplicar multiplicador com pequena variação aleatória
-        const variableFactor = 0.9 + Math.random() * 0.2; // 0.9 a 1.1
-        const effectiveMultiplier = distanceMultiplier * variableFactor;
+        // Adiciona à lista de posições usadas
+        allObjectPositions.push(pos);
         
-        // Calcular distância final
-        const distance = (minDistance + Math.random() * (maxDistance - minDistance)) * effectiveMultiplier;
+        if (objects.complex && objects.complex.length > 0) {
+            // Use different complex objects or repeat if not enough
+            const modelFile = objects.complex[i % objects.complex.length];
+            const basePath = `assets/temas_models/${themeConfig.folder}/`;
+            
+            try {
+                const model = await loadModel(basePath + modelFile);
+                console.log('Successfully loaded complex model:', modelFile, 'at position:', pos);
+                model.position.set(pos.x, 0, pos.z);
+                  // Theme-specific scaling
+                if (theme === 'snow') {
+                    model.scale.set(30, 30, 30); // Igloos 10x bigger
+                } else if (theme === 'desert') {
+                    model.scale.set(2.5, 2.5, 2.5); // Camels medium
+                } else {
+                    model.scale.set(2, 2, 2); // Barns standard
+                }
+                
+                model.rotation.y = Math.random() * Math.PI * 2; // Random rotation
+                model.userData.isThemeModel = true;
+                scene.add(model);
+                decorations.push({ 
+                    mesh: model, 
+                    type: 'complex', 
+                    position: { x: pos.x, z: pos.z } 
+                });                // Place 4-6 simple objects around each complex object
+                if (objects.simple && objects.simple.length > 0) {
+                    const numSimple = 4 + Math.floor(Math.random() * 3); // 4-6 objects
+                    
+                    // Lista para rastrear posições já ocupadas
+                    const usedPositions = [
+                        { x: pos.x, z: pos.z } // Adiciona a posição do objeto complexo
+                    ];
+                    
+                    for (let j = 0; j < numSimple; j++) {
+                        // Encontra uma posição válida para o objeto simples
+                        const { x: sx, z: sz } = findValidPosition(
+                            pos.x, 
+                            pos.z, 
+                            usedPositions, 
+                            PERFORMANCE_SETTINGS.minDistanceBetweenObjects,
+                            6,  // min radius
+                            10  // max radius
+                        );
+                        
+                        // Adiciona à lista de posições usadas
+                        usedPositions.push({ x: sx, z: sz });
+                        
+                        const simpleFile = objects.simple[j % objects.simple.length];
+                        console.log('Loading simple model:', simpleFile, 'at position:', {x: sx, z: sz});
+                        const simpleModel = await loadModel(basePath + simpleFile);
+                        
+                        // Theme-specific scaling for simple objects
+                        if (simpleFile.toLowerCase().includes('cow')) {
+                            simpleModel.scale.set(0.6, 0.6, 0.6); // Small cows                        } else if (simpleFile.toLowerCase().includes('snowman')) {
+                            simpleModel.scale.set(15, 15, 15); // Snowmen 10x bigger
+                        } else if (simpleFile.toLowerCase().includes('cactus')) {
+                            simpleModel.scale.set(1.0, 1.0, 1.0); // Medium cacti
+                        } else {
+                            simpleModel.scale.set(1.2, 1.2, 1.2); // Default medium
+                        }
+                        
+                        simpleModel.position.set(sx, 0, sz);
+                        simpleModel.rotation.y = Math.random() * Math.PI * 2;
+                        simpleModel.userData.isThemeModel = true;
+                        scene.add(simpleModel);
+                        decorations.push({ 
+                            mesh: simpleModel, 
+                            type: 'simple', 
+                            position: { x: sx, z: sz } 
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to load theme model', modelFile, ':', e);
+            }
+        } else if (theme === 'forest') {
+            // For forest theme, place large trees at the X positions
+            const tree = createTreeModel();
+            tree.scale.set(3, 3, 3); // Large trees for forest theme
+            tree.position.set(pos.x, 0, pos.z);
+            tree.rotation.y = Math.random() * Math.PI * 2;
+            scene.add(tree);
+            decorations.push({
+                mesh: tree,
+                type: 'environmental-tree',
+                position: { x: pos.x, z: pos.z },
+                scale: 3
+            });
+              // Add some rocks around each tree
+            // Lista para rastrear posições já ocupadas
+            const usedPositions = [
+                { x: pos.x, z: pos.z } // Adiciona a posição da árvore
+            ];
+            
+            for (let j = 0; j < 3; j++) {
+                // Encontra uma posição válida para a pedra
+                const { x: sx, z: sz } = findValidPosition(
+                    pos.x, 
+                    pos.z, 
+                    usedPositions, 
+                    PERFORMANCE_SETTINGS.minDistanceBetweenObjects,
+                    5,  // min radius
+                    8   // max radius
+                );
+                
+                // Adiciona à lista de posições usadas
+                usedPositions.push({ x: sx, z: sz });
+                
+                const rock = createRockModel();
+                rock.scale.set(1.5, 1.2, 1.5);
+                rock.position.set(sx, 0, sz);
+                rock.rotation.set(
+                    Math.random() * 0.3,
+                    Math.random() * Math.PI * 2,
+                    Math.random() * 0.3
+                );
+                scene.add(rock);
+                decorations.push({
+                    mesh: rock,
+                    type: 'environmental-rock',
+                    position: { x: sx, z: sz }                });
+            }
+        }
+    }
+      // Registra informações sobre os objetos criados
+    const complexCount = decorations.filter(d => d.type === 'complex').length;
+    const simpleCount = decorations.filter(d => d.type === 'simple').length;
+    const treeCount = decorations.filter(d => d.type === 'environmental-tree').length;
+    const rockCount = decorations.filter(d => d.type === 'environmental-rock').length;
+    
+    console.log('Environmental decorations created successfully.', {
+        total: decorations.length,
+        complex: complexCount,
+        simple: simpleCount,
+        trees: treeCount,
+        rocks: rockCount
+    });
+    
+    // Verificação final de sobreposições e ajustes se necessário
+    console.log('Realizando verificação final de sobreposições entre modelos...');
+    let overlapsFound = 0;
+    
+    // Obtém todos os meshes de decoração
+    const allMeshes = decorations.map(d => d.mesh).filter(Boolean);
+    
+    // Verifica e corrige sobreposições para cada modelo
+    for (let i = 0; i < allMeshes.length; i++) {
+        const model = allMeshes[i];
         
-        // Calcular posição
-        const x = gridCenter.x + Math.cos(angle) * distance;
-        const z = gridCenter.z + Math.sin(angle) * distance;
+        // Cria uma lista de todos os outros modelos para comparação
+        const otherModels = allMeshes.filter((_, index) => index !== i);
         
-        return { x, z, distance };
+        // Verifica e ajusta posição se houver sobreposição visual
+        const hadOverlap = adjustPositionToAvoidOverlap(model, otherModels, scene);
+        
+        // Atualiza a posição no objeto de decoração após possível ajuste
+        if (hadOverlap) {
+            overlapsFound++;
+            const decorationObj = decorations[i];
+            if (decorationObj) {
+                decorationObj.position.x = model.position.x;
+                decorationObj.position.z = model.position.z;
+            }
+        }
     }
     
-    // Criar árvores usando posições estratégicas para visibilidade nas câmeras
-    const treePositions = [];
-    const numTrees = 8; // Aumentado de 6 para 8
-    
-    // Distribuir árvores nas posições principais e secundárias
-    for (let i = 0; i < numTrees; i++) {
-        // Escolher uma posição da lista ou criar uma nova se já usamos todas
-        const posIndex = i % cameraFriendlyPositions.length;
-        const { angle, distanceMultiplier } = cameraFriendlyPositions[posIndex];
-        
-        let position;
-        let attempts = 0;
-        const maxAttempts = 10;
-        
-        // Tentar encontrar uma posição válida
-        do {
-            position = findValidPosition(angle, distanceMultiplier);
-            attempts++;
-        } while (!isPositionValid(position, 15) && attempts < maxAttempts);
-        
-        // Se não encontrou posição válida após tentativas, pular esta árvore
-        if (!isPositionValid(position, 15)) continue;
-        
-        // Marcar posição como usada
-        usedPositions.push(position);
-        treePositions.push(position);
-        
-        const tree = createTreeModel();
-        
-        // Escala variada para árvores ambientais - alguns gigantes, alguns médios
-        const baseScale = i % 3 === 0 ? 2.0 : 1.5; // Algumas árvores maiores
-        const scale = baseScale + Math.random() * 0.8;
-        tree.scale.set(scale, scale, scale);
-        
-        // Posicionar na posição encontrada
-        tree.position.set(position.x, 0, position.z);
-        
-        // Rotação aleatória
-        tree.rotation.y = Math.random() * Math.PI * 2;
-        
-        // Inclinação sutil para quebrar a uniformidade
-        const tiltAngle = Math.random() * 0.05; // Inclinação máxima de 0.05 radianos (~2.9°)
-        const tiltDirection = Math.random() * Math.PI * 2;
-        tree.rotation.x = Math.cos(tiltDirection) * tiltAngle;
-        tree.rotation.z = Math.sin(tiltDirection) * tiltAngle;
-        
-        scene.add(tree);
-        decorations.push({
-            mesh: tree,
-            type: 'environmental-tree',
-            position: { x: position.x, z: position.z },
-            scale: scale
-        });
-    }
-    
-    // Criar pedras em posições estratégicas
-    const numRocks = 6; // Aumentado de 5 para 6
-    
-    for (let i = 0; i < numRocks; i++) {
-        // Escolher posição, evitando as usadas pelas árvores
-        const posIndex = (i + numTrees / 2) % cameraFriendlyPositions.length; // Deslocamento para distribuir diferente das árvores
-        const { angle, distanceMultiplier } = cameraFriendlyPositions[posIndex];
-        
-        let position;
-        let attempts = 0;
-        const maxAttempts = 10;
-        
-        // Tentar encontrar uma posição válida
-        do {
-            position = findValidPosition(angle, distanceMultiplier * 0.9); // Pedras um pouco mais próximas que árvores
-            attempts++;
-        } while (!isPositionValid(position, 12) && attempts < maxAttempts);
-        
-        // Se não encontrou posição válida após tentativas, pular esta pedra
-        if (!isPositionValid(position, 12)) continue;
-        
-        // Marcar posição como usada
-        usedPositions.push(position);
-        
-        const rock = createRockModel();
-        
-        // Escala média para pedras ambientais
-        const scale = 1.0 + Math.random() * 1.0; // Entre 1.0 e 2.0
-        rock.scale.set(scale, scale * 0.8, scale);
-        
-        // Alguns blocos ficam em "mini-colinas" para variação de altura
-        const useElevation = Math.random() > 0.5;
-        const elevation = useElevation ? 1.5 + Math.random() * 1.0 : 0.8;
-        
-        // Posicionar na posição encontrada com altura variável
-        rock.position.set(position.x, elevation, position.z);
-        
-        // Rotação aleatória mais pronunciada
-        rock.rotation.set(
-            Math.random() * 0.5,
-            Math.random() * Math.PI * 2,
-            Math.random() * 0.5
-        );
-        
-        scene.add(rock);
-        decorations.push({
-            mesh: rock,
-            type: 'environmental-rock',
-            position: { x: position.x, z: position.z },
-            elevation: elevation,
-            scale: scale
-        });
+    if (overlapsFound > 0) {
+        console.log(`Foram encontradas e corrigidas ${overlapsFound} sobreposições entre modelos.`);
+    } else {
+        console.log('Nenhuma sobreposição visual encontrada entre os modelos.');
     }
     
     return decorations;
@@ -441,4 +509,156 @@ export function animateEnvironmentalDecorations(decorations, time) {
             decoration.mesh.position.y = originalY + heightOffset;
         }
     });
+}
+
+// Função auxiliar para verificar se uma posição está muito próxima de outros objetos
+function isPositionTooClose(position, existingPositions, minDistance) {
+    for (let existing of existingPositions) {
+        const dx = Math.abs(position.x - existing.x);
+        const dz = Math.abs(position.z - existing.z);
+        const distance = Math.sqrt(dx * dx + dz * dz);
+        if (distance < minDistance) {
+            return true; // Posição está muito próxima de outro objeto
+        }
+    }
+    return false; // Posição está OK
+}
+
+// Função para encontrar uma posição válida para um objeto simples
+function findValidPosition(centerX, centerZ, existingPositions, minDistance, minRadius = 6, maxRadius = 10) {
+    const maxAttempts = 30; // Aumentado para mais tentativas
+    
+    // Estratégia de distribuição em setores para melhor ocupação do espaço
+    const sectors = 8; // Divide o círculo em 8 setores
+    const sectorAngle = (Math.PI * 2) / sectors;
+    const useSectors = existingPositions.length <= sectors;
+    
+    // Se tivermos menos posições que setores, tentamos distribuir melhor
+    if (useSectors) {
+        // Para cada setor, tentamos encontrar uma posição válida
+        for (let sector = 0; sector < sectors; sector++) {
+            // Calcula o ângulo base para este setor
+            const baseAngle = sector * sectorAngle;
+            
+            // Tenta algumas posições dentro deste setor
+            for (let attempt = 0; attempt < Math.floor(maxAttempts / sectors); attempt++) {
+                // Gera uma variação no ângulo dentro do setor
+                const angleVariation = (Math.random() * 0.8 + 0.1) * sectorAngle; // 10% a 90% do ângulo do setor
+                const angle = baseAngle + angleVariation;
+                
+                // Gera um raio aleatório entre minRadius e maxRadius
+                const radius = minRadius + Math.random() * (maxRadius - minRadius);
+                
+                // Calcula a posição
+                const x = centerX + Math.cos(angle) * radius;
+                const z = centerZ + Math.sin(angle) * radius;
+                
+                // Verifica se essa posição está longe o suficiente de outros objetos
+                if (!isPositionTooClose({x, z}, existingPositions, minDistance)) {
+                    console.log(`Posição válida encontrada no setor ${sector} após ${attempt + 1} tentativas`);
+                    return {x, z};
+                }
+            }
+        }
+    }
+    
+    // Abordagem mais aleatória se a abordagem por setores falhar ou não for usada
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Gera um ângulo completamente aleatório
+        const angle = Math.random() * Math.PI * 2;
+        // Aumenta o raio com base no número de tentativas para se distanciar mais
+        const adjustedMaxRadius = maxRadius + (attempt / maxAttempts) * 5;
+        const radius = minRadius + Math.random() * (adjustedMaxRadius - minRadius);
+        
+        // Calcula a posição
+        const x = centerX + Math.cos(angle) * radius;
+        const z = centerZ + Math.sin(angle) * radius;
+        
+        // Verifica se essa posição está longe o suficiente de outros objetos
+        if (!isPositionTooClose({x, z}, existingPositions, minDistance)) {
+            console.log(`Posição válida encontrada após ${attempt + 1} tentativas aleatórias`);
+            return {x, z};
+        }
+    }
+    
+    // Se não encontrou uma posição válida, aumenta o raio e tenta novamente
+    if (maxRadius < 25) {
+        console.log('Aumentando raio de busca...');
+        return findValidPosition(centerX, centerZ, existingPositions, minDistance, maxRadius, maxRadius + 8);
+    }
+    
+    // Se ainda não conseguiu, retorna uma posição com distância mínima reduzida
+    console.warn('Não foi possível encontrar uma posição ideal, usando posição sub-ótima');
+    return findValidPosition(centerX, centerZ, existingPositions, minDistance * 0.6, minRadius, maxRadius);
+}
+
+// Verifica se dois modelos 3D estão visualmente sobrepostos, considerando suas dimensões
+function areModelsOverlapping(model1, model2, tolerance = 0.5) {
+    // Se algum dos modelos não existir, não há sobreposição
+    if (!model1 || !model2) return false;
+    
+    // Calcula a caixa delimitadora (bounding box) de cada modelo
+    const box1 = new THREE.Box3().setFromObject(model1);
+    const box2 = new THREE.Box3().setFromObject(model2);
+    
+    // Expande ligeiramente as caixas com base na tolerância
+    box1.expandByScalar(tolerance);
+    box2.expandByScalar(tolerance);
+    
+    // Verifica se as caixas se sobrepõem
+    return box1.intersectsBox(box2);
+}
+
+// Função para ajustar a posição de um objeto para evitar sobreposições
+function adjustPositionToAvoidOverlap(model, otherModels, scene, maxAttempts = 5, moveDistance = 1.5) {
+    if (!model || otherModels.length === 0) return false;
+    
+    let attempts = 0;
+    let hasOverlap = false;
+    let overlapFound = false;
+    
+    do {
+        hasOverlap = false;
+        
+        // Verifica se há sobreposição com qualquer outro modelo
+        for (const otherModel of otherModels) {
+            if (model === otherModel) continue; // Ignora o próprio modelo
+            
+            if (areModelsOverlapping(model, otherModel)) {
+                hasOverlap = true;
+                overlapFound = true; // Registra que pelo menos uma sobreposição foi encontrada
+                
+                // Calcula direção de afastamento (para longe do outro modelo)
+                const direction = new THREE.Vector3(
+                    model.position.x - otherModel.position.x,
+                    0, // Mantém a mesma altura
+                    model.position.z - otherModel.position.z
+                ).normalize();
+                
+                // Aumenta a distância de movimento com base no número de tentativas
+                const adjustedMoveDistance = moveDistance * (1 + attempts * 0.3);
+                
+                // Move na direção calculada
+                model.position.x += direction.x * adjustedMoveDistance;
+                model.position.z += direction.z * adjustedMoveDistance;
+                
+                break; // Sai do loop para verificar novamente com a nova posição
+            }
+        }
+        
+        attempts++;
+    } while (hasOverlap && attempts < maxAttempts);
+    
+    // Se ainda tem sobreposição após várias tentativas, tenta uma posição mais distante
+    if (hasOverlap && attempts >= maxAttempts) {
+        // Move para uma posição mais afastada em direção aleatória
+        const randomAngle = Math.random() * Math.PI * 2;
+        model.position.x += Math.cos(randomAngle) * moveDistance * 3;
+        model.position.z += Math.sin(randomAngle) * moveDistance * 3;
+        
+        console.warn('Não foi possível eliminar completamente a sobreposição após várias tentativas');
+    }
+    
+    // Retorna true se encontrou sobreposição e teve que ajustar
+    return overlapFound;
 }

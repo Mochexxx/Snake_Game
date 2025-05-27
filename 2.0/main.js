@@ -3,7 +3,7 @@ import * as THREE from 'three'; // Importa o módulo three
 import * as Scene from './scene.js';
 import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
 import { createApple } from './apple.js';
-import { createObstacles, checkObstacleCollision, removeObstacles } from './obstacles.js';
+import { createObstacles, checkObstacleCollision, removeObstacles, animateEnvironmentalDecorations } from './obstacles.js';
 import { createBarriers, createRandomBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
 import { createHitboxVisualization, toggleHitboxVisualization, toggleDebugMode } from './debug.js';
 import { showTutorial } from './tutorial.js';
@@ -546,10 +546,14 @@ function startGame() {
     } catch (error) {
         console.warn('Failed to initialize board theme manager:', error);
     }
-    
-    // Criar decorações ambientais para todos os modos de jogo
-    import('./obstacles.js').then(module => {
-        environmentalDecorations = module.createEnvironmentalDecorations(scene);
+      // Criar decorações ambientais para todos os modos de jogo
+    import('./obstacles.js').then(async module => {
+        try {
+            environmentalDecorations = await module.createEnvironmentalDecorations(scene);
+            console.log('Environmental decorations created successfully');
+        } catch (error) {
+            console.warn('Failed to create environmental decorations:', error);
+        }
     });
     
     // Gera a matriz de hitboxes para o tabuleiro
@@ -791,12 +795,14 @@ function resetGame() {
     hitboxVisuals = [];
     applesCollected = 0;
     moveInterval = 200; // Reset da velocidade do jogo
-    
-    // Limpar decorações ambientais
-    if (environmentalDecorations.length > 0) {
+      // Limpar decorações ambientais
+    if (environmentalDecorations && environmentalDecorations.length > 0) {
         import('./obstacles.js').then(module => {
             module.removeEnvironmentalDecorations(scene, environmentalDecorations);
             environmentalDecorations = [];
+            console.log('Decorações ambientais removidas');
+        }).catch(error => {
+            console.warn('Erro ao remover decorações ambientais:', error);
         });
     }
     
@@ -1144,9 +1150,12 @@ function animate(time) {
           lastMoveTime = time;
     }    // Update smooth snake animation
     updateSnakeVisualPositions(time);
-    
-    // Animate terrain shader
+      // Animate terrain shader
     Scene.animateTerrain(scene, time);
+      // Animate environmental decorations if they exist
+    if (environmentalDecorations && environmentalDecorations.length > 0) {
+        animateEnvironmentalDecorations(environmentalDecorations, time);
+    }
     
     // Get current camera in case it was switched
     camera = Scene.getCurrentCamera();
@@ -1618,7 +1627,7 @@ function selectBoardTheme(theme) {
     selectedBoardTheme = theme;
     
     // Update the board theme manager
-    setBoardTheme(theme);
+    const themeResult = setBoardTheme(theme);
     
     // Remove active class from all theme buttons
     document.querySelectorAll('.board-theme-btn').forEach(btn => {
@@ -1630,6 +1639,27 @@ function selectBoardTheme(theme) {
     
     // Store selected theme in localStorage
     localStorage.setItem('selectedBoardTheme', theme);
+    
+    // If theme changed and we have a scene, update the visual elements
+    if (themeResult.changed && scene) {
+        // Apply the new theme to the scene
+        applyBoardThemeToSceneLocal(theme)
+            .then(() => {
+                // Recreate environmental decorations if they exist
+                if (environmentalDecorations && environmentalDecorations.length > 0) {
+                    import('./board-theme-manager.js')
+                        .then(module => {
+                            module.recreateEnvironmentalDecorations(scene, environmentalDecorations)
+                                .then(newDecorations => {
+                                    environmentalDecorations = newDecorations;
+                                    console.log('Decorações ambientais recriadas após mudança de tema');
+                                })
+                                .catch(error => console.warn('Erro ao recriar decorações ambientais:', error));
+                        });
+                }
+            })
+            .catch(error => console.warn('Erro ao aplicar tema à cena:', error));
+    }
 }
 
 // Board theme menu navigation buttons
@@ -1670,11 +1700,18 @@ function applyBoardThemeToSceneLocal(themeName) {
     if (scene) {
         try {
             // If a specific theme is provided, set it first
+            let themeChanged = false;
             if (themeName) {
-                setBoardTheme(themeName);
+                const themeResult = setBoardTheme(themeName);
+                themeChanged = themeResult.changed;
             }
             
-            return applyBoardThemeToScene(scene);
+            // Apply the theme to the scene
+            return applyBoardThemeToScene(scene).then(result => {
+                // If theme changed and we have environmental decorations, update them
+                // Note: This is now handled by the selectBoardTheme function to avoid duplication
+                return result;
+            });
         } catch (error) {
             console.error('Error applying board theme:', error);
             return Promise.reject(error);

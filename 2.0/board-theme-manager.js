@@ -97,11 +97,24 @@ export function getCurrentBoardTheme() {
 // Set board theme
 export function setBoardTheme(themeName) {
     if (BOARD_THEMES[themeName]) {
+        const previousTheme = currentBoardTheme;
         currentBoardTheme = themeName;
         localStorage.setItem('selectedBoardTheme', themeName);
-        console.log('Board theme set to:', themeName);
+        console.log('Board theme set to:', themeName, '(previous:', previousTheme, ')');
+        
+        // Retorna informação sobre a mudança de tema
+        return {
+            changed: previousTheme !== themeName,
+            previousTheme,
+            currentTheme: themeName
+        };
     } else {
         console.error('Invalid board theme:', themeName);
+        return {
+            changed: false,
+            previousTheme: currentBoardTheme,
+            currentTheme: currentBoardTheme
+        };
     }
 }
 
@@ -236,9 +249,9 @@ function applyThemeColors(scene, themeConfig) {
             object.material.color.set(themeConfig.colors.floor);
         }
         
-        // Always keep grid lines black regardless of theme settings
+        // Update grid line colors
         if (object.name === "gridLines" && object.material) {
-            object.material.color.set(0x000000);
+            object.material.color.set(themeConfig.colors.gridLines);
         }
         
         // Update border colors if they exist
@@ -617,4 +630,28 @@ function createFallbackMiddleBarrier(theme) {
     group.userData.themeType = 'middle-barrier';
     
     return group;
+}
+
+// Função para recriar decorações ambientais quando o tema muda
+export async function recreateEnvironmentalDecorations(scene, currentDecorations = []) {
+    try {
+        console.log('Recriando decorações ambientais para tema:', currentBoardTheme);
+        
+        // Importar dinamicamente o módulo de obstáculos
+        const obstaclesModule = await import('./obstacles.js');
+        
+        // Remover as decorações existentes
+        if (currentDecorations && currentDecorations.length > 0) {
+            obstaclesModule.removeEnvironmentalDecorations(scene, currentDecorations);
+        }
+        
+        // Criar novas decorações ambientais
+        const newDecorations = await obstaclesModule.createEnvironmentalDecorations(scene);
+        console.log('Decorações ambientais recriadas com sucesso:', newDecorations.length);
+        
+        return newDecorations;
+    } catch (error) {
+        console.error('Erro ao recriar decorações ambientais:', error);
+        return [];
+    }
 }
