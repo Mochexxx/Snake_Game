@@ -37,84 +37,9 @@ export function toggleDebugMode(debugEnabled) {
     // Habilita/desabilita os elementos de debug
     if (debugEnabled) {
         console.log("Debug mode: ON");
-        // Adiciona notificação visual de debug ativo
-        showDebugNotification(true);
-        
-        // Salva o estado no localStorage
-        localStorage.setItem('debugMode', 'true');
+        // Adicionar mais elementos de debug conforme necessário
     } else {
         console.log("Debug mode: OFF");
-        // Remove notificação visual de debug ativo
-        showDebugNotification(false);
-        
-        // Salva o estado no localStorage
-        localStorage.setItem('debugMode', 'false');
-    }
-}
-
-// Função para mostrar notificação visual do modo debug
-function showDebugNotification(show) {
-    // Remove notificação anterior se existir
-    const existingNotification = document.getElementById('debug-mode-notification');
-    if (existingNotification) {
-        document.body.removeChild(existingNotification);
-    }
-    
-    // Cria nova notificação se necessário
-    if (show) {        const notification = document.createElement('div');
-        notification.id = 'debug-mode-notification';
-        notification.style.position = 'fixed';
-        notification.style.top = '10px';
-        notification.style.right = '10px';
-        notification.style.backgroundColor = 'rgba(155, 89, 182, 0.9)';
-        notification.style.color = 'white';
-        notification.style.padding = '10px';
-        notification.style.borderRadius = '5px';
-        notification.style.fontWeight = 'bold';
-        notification.style.fontSize = '12px';
-        notification.style.zIndex = '1000';
-        notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
-        notification.style.display = 'flex';
-        notification.style.flexDirection = 'column';
-        notification.style.gap = '5px';
-        notification.style.cursor = 'default';
-        
-        // Título da notificação
-        const title = document.createElement('div');
-        title.style.display = 'flex';
-        title.style.justifyContent = 'space-between';
-        title.style.alignItems = 'center';
-        title.style.width = '100%';
-        
-        const titleText = document.createElement('span');
-        titleText.textContent = '🐞 MODO DEBUG ATIVO';
-        titleText.style.fontWeight = 'bold';
-        
-        // Adiciona um botão para fechar a notificação
-        const closeButton = document.createElement('span');
-        closeButton.textContent = '×';
-        closeButton.style.marginLeft = '10px';
-        closeButton.style.cursor = 'pointer';
-        closeButton.style.fontWeight = 'bold';
-        closeButton.style.fontSize = '16px';
-        
-        closeButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.body.removeChild(notification);
-        });
-        
-        title.appendChild(titleText);
-        title.appendChild(closeButton);
-        
-        // Informações sobre atalhos de debug
-        const infoText = document.createElement('div');
-        infoText.innerHTML = 'Teclas: <b>F3/B</b> para toggle<br>Todos os níveis da campanha desbloqueados';
-        infoText.style.fontSize = '10px';
-        infoText.style.marginTop = '5px';
-        
-        notification.appendChild(title);
-        notification.appendChild(infoText);
-        document.body.appendChild(notification);
     }
 }
 

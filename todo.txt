@@ -1,0 +1,2 @@
+fazer uma loading screen ao iniciar o jogo
+fazer 1 animação 

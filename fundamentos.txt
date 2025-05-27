@@ -14,5 +14,3 @@ Semana 6: Implementação das câmaras (perspetiva e ortográfica) e sistema de 
 Semana 7: Melhorias visuais, pontuação (HUD), reinício do jogo;
 
 Semana 8: Fase de testes, conclusão e entrega do relatório final;
-
-aa

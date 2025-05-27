@@ -1,2 +1,0 @@
-colocar uma animacao do cubo a surgir quando a cobra ingere uma maca 
-a cor da cobra ira ser dependente da cor do tema que for escohlido
