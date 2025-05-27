@@ -524,3 +524,97 @@ export function getThemeDisplayInfo(themeName) {
 
 // Export theme configurations for other modules
 export { BOARD_THEMES };
+
+// Get theme-specific middle barrier model (for middle barrier game mode)
+export async function getThemeMiddleBarrierModel() {
+    const currentTheme = getCurrentBoardTheme();
+    
+    // Map themes to their specific middle barrier model files
+    const themeMiddleBarrierFiles = {
+        'forest': 'assets/models/forest.glb',
+        'farm': 'assets/models/farm.glb',
+        'classic': 'assets/models/farm.glb', // Farm is the classic theme
+        'desert': 'assets/models/desert.glb',
+        'snow': 'assets/models/snow.glb'
+    };
+    
+    const modelPath = themeMiddleBarrierFiles[currentTheme] || themeMiddleBarrierFiles['farm'];
+    
+    try {
+        const model = await loadModel(modelPath);
+        if (model) {
+            // Configure the model
+            model.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            // Scale to represent 1.5 cubes worth of barrier (instead of 2 cubes + 1 slab)
+            // This creates a middle ground between a single cube and the full 2 cubes + slab
+            model.scale.set(1.2, 1.5, 1.2); // Height of 1.5 for 1.5 cubes effect
+            
+            // Mark the model as a theme middle barrier
+            model.userData.isThemeModel = true;
+            model.userData.themeType = 'middle-barrier';
+            model.userData.themeName = currentTheme;
+            
+            return model;
+        }
+    } catch (error) {
+        console.warn('Failed to load theme-specific middle barrier model:', modelPath, error);
+    }
+    
+    // Fallback: create a 1.5 cube equivalent using basic geometry
+    return createFallbackMiddleBarrier(currentTheme);
+}
+
+// Create a fallback middle barrier that represents 1.5 cubes
+function createFallbackMiddleBarrier(theme) {
+    const group = new THREE.Group();
+    
+    // Theme-specific colors for fallback
+    const themeColors = {
+        'forest': 0x2d4c1e, // Dark forest green
+        'desert': 0xd2b48c, // Sandy color
+        'snow': 0xf0f0ff,   // Snow white with slight blue tint
+        'farm': 0x8b4513,   // Brown wooden color
+        'classic': 0x8b4513 // Standard wooden color
+    };
+    
+    const color = themeColors[theme] || themeColors['classic'];
+    
+    // Create a base cube (1 cube)
+    const baseMaterial = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.6,
+        metalness: 0.2
+    });
+    
+    const baseCube = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 3, 3),
+        baseMaterial
+    );
+    baseCube.position.set(0, 1.5, 0);
+    baseCube.castShadow = true;
+    baseCube.receiveShadow = true;
+    group.add(baseCube);
+    
+    // Create a half-height cube on top (0.5 cube)
+    const halfCube = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 1.5, 3), // Half the height
+        baseMaterial
+    );
+    halfCube.position.set(0, 3.75, 0); // On top of the base cube
+    halfCube.castShadow = true;
+    halfCube.receiveShadow = true;
+    group.add(halfCube);
+    
+    // Mark as fallback
+    group.userData.fallback = true;
+    group.userData.isThemeModel = true;
+    group.userData.themeType = 'middle-barrier';
+    
+    return group;
+}

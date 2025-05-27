@@ -69,7 +69,7 @@ function loadAppleModel() {
                         // Keep y position as is to maintain proper height
                     });
                       // Apply scaling after centering (5x bigger than previous small size)
-                    appleModelCache.scale.set(0.007, 0.007, 0.007);
+                    appleModelCache.scale.set(0.009, 0.009, 0.009);
                     
                     // Set a fixed rotation
                     appleModelCache.rotation.set(0, Math.PI * 0.25, 0); // Fixed 45-degree rotation for visual appeal

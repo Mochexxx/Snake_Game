@@ -5,7 +5,7 @@ import { getBoardCellCenter } from './scene.js';
 import { randomPatterns } from './barrier-shapes.js';
 import * as THREE from 'three';
 import { createWoodenFenceModel } from './model-loader.js';
-import { getThemeBarrierModel } from './board-theme-manager.js';
+import { getThemeBarrierModel, getThemeMiddleBarrierModel } from './board-theme-manager.js';
 
 // Criação das barreiras para o modo "barriers"
 export function createBarriers(scene, snakeBoard, hitboxes) {
@@ -28,7 +28,7 @@ export function createBarriers(scene, snakeBoard, hitboxes) {
 }
 
 // Criação das barreiras para o modo "barreiras aleatórias" (apenas peças únicas)
-export function createRandomBarriers(scene, barriers, snakeBoard, hitboxes, count = 12) {
+export async function createRandomBarriers(scene, barriers, snakeBoard, hitboxes, count = 12) {
     const usedPositions = [];
     const allBlocks = [];
     let tentativas = 0;
@@ -55,13 +55,12 @@ export function createRandomBarriers(scene, barriers, snakeBoard, hitboxes, coun
         
         // Tenta colocar barreiras em quadrantes diferentes para melhor distribuição
         const targetQuadrant = quadrants[quadrantIndex % quadrants.length];
-        
-        // Gera uma peça candidata
+          // Gera uma peça candidata
         const tempBarriers = [];
-        const ok = createRandomBarrierPieceInQuadrant(scene, tempBarriers, usedPositions, hitboxes, snakeBoard, pattern, targetQuadrant);
+        const ok = await createRandomBarrierPieceInQuadrant(scene, tempBarriers, usedPositions, hitboxes, snakeBoard, pattern, targetQuadrant);
         if (!ok) {
             // Se não conseguir colocar no quadrante alvo, tenta em qualquer lugar
-            const fallbackOk = createRandomBarrierPiece(scene, tempBarriers, usedPositions, hitboxes, snakeBoard, pattern);
+            const fallbackOk = await createRandomBarrierPiece(scene, tempBarriers, usedPositions, hitboxes, snakeBoard, pattern);
             if (!fallbackOk) continue;
         }
         
@@ -92,20 +91,7 @@ export function createRandomBarriers(scene, barriers, snakeBoard, hitboxes, coun
 }
 
 // Função auxiliar para criar barreiras em quadrantes específicos
-function createRandomBarrierPieceInQuadrant(scene, barriers, usedPositions, hitboxes, snakeBoard, pattern, quadrant) {
-    // Materiais
-    const baseMaterial = new THREE.MeshStandardMaterial({
-        color: 0x777777,
-        roughness: 0.5,
-        metalness: 0.5
-    });
-    const slabMaterial = new THREE.MeshStandardMaterial({
-        color: 0xaaaaaa,
-        roughness: 0.3,
-        metalness: 0.7,
-        emissive: 0x222222
-    });
-
+async function createRandomBarrierPieceInQuadrant(scene, barriers, usedPositions, hitboxes, snakeBoard, pattern, quadrant) {
     // Usa pool centralizada de padrões
     if (!pattern) {
         pattern = randomPatterns[Math.floor(Math.random() * randomPatterns.length)];
@@ -150,21 +136,48 @@ function createRandomBarrierPieceInQuadrant(scene, barriers, usedPositions, hitb
     if (attempts >= 50) return false; // Não conseguiu posicionar no quadrante
 
     // Marca posições como usadas
-    positions.forEach(pos => usedPositions.push({x: pos.x, z: pos.z}));
-
-    // Cria o grupo 3D
+    positions.forEach(pos => usedPositions.push({x: pos.x, z: pos.z}));    // Cria o grupo 3D
     const group = new THREE.Group();
     const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
     const hitboxMeshes = [];
-    // Para cada bloco da peça, cria um cubo do tamanho de uma célula
-    positions.forEach((pos, idx) => {
-        const {centerX, centerZ} = hitboxes[pos.x][pos.z];        const cube = new THREE.Mesh(
-            new THREE.BoxGeometry(3, 3, 3),
-            baseMaterial
-        );
-        cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1.5, centerZ - hitboxes[baseX][baseZ].centerZ);
-        group.add(cube);
-        // Adiciona hitbox invisível para cada célula
+    
+    // For each block of the piece, create a themed middle barrier
+    for (const pos of positions) {
+        const {centerX, centerZ} = hitboxes[pos.x][pos.z];
+        
+        try {
+            // Use the new theme-specific middle barrier model (1.5 cubes equivalent)
+            const themeBarrier = await getThemeMiddleBarrierModel();
+            
+            // Position at cell center
+            themeBarrier.position.set(centerX - hitboxes[baseX][baseZ].centerX, 0, centerZ - hitboxes[baseX][baseZ].centerZ);
+            
+            // Add controlled random rotation for variety
+            themeBarrier.rotation.y = Math.PI * 0.5 * Math.floor(Math.random() * 4); // 0, 90, 180, or 270 degrees
+            
+            // Apply shadow settings
+            themeBarrier.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            group.add(themeBarrier);
+        } catch (error) {
+            // Fallback to single large cube if theme model loading fails
+            console.warn('Failed to create themed middle barrier in quadrant, using cube fallback:', error);
+            const cube = new THREE.Mesh(
+                new THREE.BoxGeometry(4.5, 4.5, 4.5), // Single large cube representing 1.5 cubes
+                new THREE.MeshStandardMaterial({ color: 0x8B4513 }) // Brown color
+            );
+            cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 2.25, centerZ - hitboxes[baseX][baseZ].centerZ);
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+            group.add(cube);
+        }
+        
+        // Add hitbox for collision detection
         const hitbox = new THREE.Mesh(
             new THREE.BoxGeometry(2, 2, 2),
             hitboxMaterial
@@ -172,15 +185,7 @@ function createRandomBarrierPieceInQuadrant(scene, barriers, usedPositions, hitb
         hitbox.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
         group.add(hitbox);
         hitboxMeshes.push(hitbox);
-    });
-    // Opcional: adicionar uma slab no topo do primeiro bloco para variedade visual
-    const {x: sx, z: sz} = positions[0];
-    const {centerX: slabX, centerZ: slabZ} = hitboxes[sx][sz];    const slab = new THREE.Mesh(
-        new THREE.BoxGeometry(3.15, 1.35, 3.15),
-        slabMaterial
-    );
-    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 2.93, slabZ - hitboxes[baseX][baseZ].centerZ);
-    group.add(slab);
+    }
     // Posiciona o grupo no tabuleiro
     group.position.set(hitboxes[baseX][baseZ].centerX, 0, hitboxes[baseX][baseZ].centerZ);
     scene.add(group);
@@ -489,21 +494,8 @@ export function animateBarriers(barriers, time) {
     return;
 }
 
-// Cria uma peça única de barreira composta por 2 cubos e 1 slab, bem alinhada
+// Cria uma peça única de barreira composta por modelos temáticos representando 1.5 cubos
 export async function createRandomBarrierPiece(scene, barriers, usedPositions, hitboxes, pattern = null) {
-    // Materiais
-    const baseMaterial = new THREE.MeshStandardMaterial({
-        color: 0x777777,
-        roughness: 0.5,
-        metalness: 0.5
-    });
-    const slabMaterial = new THREE.MeshStandardMaterial({
-        color: 0xaaaaaa,
-        roughness: 0.3,
-        metalness: 0.7,
-        emissive: 0x222222
-    });
-
     // Usa pool centralizada de padrões
     if (!pattern) {
         pattern = randomPatterns[Math.floor(Math.random() * randomPatterns.length)];
@@ -536,54 +528,42 @@ export async function createRandomBarrierPiece(scene, barriers, usedPositions, h
     if (attempts >= 100) return false; // Não conseguiu posicionar
 
     // Marca posições como usadas
-    positions.forEach(pos => usedPositions.push({x: pos.x, z: pos.z}));
-
-    // Cria o grupo 3D
+    positions.forEach(pos => usedPositions.push({x: pos.x, z: pos.z}));    // Cria o grupo 3D
     const group = new THREE.Group();
     const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
     const hitboxMeshes = [];
-    // For each block of the piece, create a themed barrier or wooden fence
+    
+    // For each block of the piece, create a themed middle barrier
     for (const pos of positions) {
         const {centerX, centerZ} = hitboxes[pos.x][pos.z];
-          try {
-            // Try to use theme-specific barrier first
-            let fence = await getThemeBarrierModel();
-            let barrierType = 'theme-barrier';
-            
-            // If no themed barrier available, use default wooden fence
-            if (!fence) {
-                fence = await createWoodenFenceModel();
-                barrierType = 'wooden-fence';
-            }
+        
+        try {
+            // Try to use theme-specific middle barrier first
+            let barrierModel = await getThemeMiddleBarrierModel();
             
             // Position at cell center
-            fence.position.set(centerX - hitboxes[baseX][baseZ].centerX, 0, centerZ - hitboxes[baseX][baseZ].centerZ);
+            barrierModel.position.set(centerX - hitboxes[baseX][baseZ].centerX, 0, centerZ - hitboxes[baseX][baseZ].centerZ);
             
-            // Add controlled random rotation for more consistency
-            fence.rotation.y = Math.PI * 0.5 * Math.floor(Math.random() * 4); // 0, 90, 180, or 270 degrees
-              // Set appropriate scale based on barrier type
-            if (!fence.userData.themeBarrier) {
-                // For default barriers, use much bigger scaling
-                fence.scale.multiplyScalar(1.95);
-            }
-            // Theme-specific barriers already have their scale set in getThemeBarrierModel
+            // Add controlled random rotation for variety
+            barrierModel.rotation.y = Math.PI * 0.5 * Math.floor(Math.random() * 4); // 0, 90, 180, or 270 degrees
             
             // Apply shadow settings
-            fence.traverse((child) => {
+            barrierModel.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
                 }
             });
             
-            group.add(fence);
+            group.add(barrierModel);
         } catch (error) {
-            // Fallback to cube if fence loading fails
-            console.warn('Failed to create themed random barrier piece, using cube fallback:', error);            const cube = new THREE.Mesh(
-                new THREE.BoxGeometry(4.2, 4.2, 4.2), // Much bigger cube size
+            // Fallback to single large cube if theme model loading fails
+            console.warn('Failed to create themed middle barrier, using cube fallback:', error);
+            const cube = new THREE.Mesh(
+                new THREE.BoxGeometry(4.5, 4.5, 4.5), // Single large cube representing 1.5 cubes
                 new THREE.MeshStandardMaterial({ color: 0x8B4513 }) // Brown color
             );
-            cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 2.1, centerZ - hitboxes[baseX][baseZ].centerZ);
+            cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 2.25, centerZ - hitboxes[baseX][baseZ].centerZ);
             cube.castShadow = true;
             cube.receiveShadow = true;
             group.add(cube);
@@ -593,19 +573,11 @@ export async function createRandomBarrierPiece(scene, barriers, usedPositions, h
         const hitbox = new THREE.Mesh(
             new THREE.BoxGeometry(2, 2, 2),
             hitboxMaterial
-        );
-        hitbox.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
+        );        hitbox.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
         group.add(hitbox);
         hitboxMeshes.push(hitbox);
     }
-    // Opcional: adicionar uma slab no topo do primeiro bloco para variedade visual
-    const {x: sx, z: sz} = positions[0];
-    const {centerX: slabX, centerZ: slabZ} = hitboxes[sx][sz];    const slab = new THREE.Mesh(
-        new THREE.BoxGeometry(3.9, 1.8, 3.9), // Much bigger slab size
-        slabMaterial
-    );
-    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 3.6, slabZ - hitboxes[baseX][baseZ].centerZ);
-    group.add(slab);
+    
     // Posiciona o grupo no tabuleiro
     group.position.set(hitboxes[baseX][baseZ].centerX, 0, hitboxes[baseX][baseZ].centerZ);
     scene.add(group);
