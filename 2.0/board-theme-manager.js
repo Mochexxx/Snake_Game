@@ -300,6 +300,8 @@ export function getThemeBarrierModel() {
     return new Promise((resolve, reject) => {
         const gltfLoader = new GLTFLoader();
         const currentTheme = getCurrentBoardTheme();
+        const themeConfig = getThemeConfig(currentTheme);
+        const basePath = `assets/temas_models/${themeConfig.folder}/`;
         
         console.log(`Getting barrier model for theme: ${currentTheme}`);
         
@@ -312,44 +314,106 @@ export function getThemeBarrierModel() {
             'classic': 'assets/barreira_madeira.glb' // Default to wooden barrier
         };
         
-        // Get the appropriate file path for the current theme
-        const barrierFile = themeBarrierFiles[currentTheme] || themeBarrierFiles['classic'];
-        
-        // Try to load the theme-specific barrier
-        gltfLoader.load(
-            barrierFile,
-            (gltf) => {
-                const barrier = gltf.scene;
+        // Use the correct path based on theme configuration if available
+        if (themeConfig.models.barrier) {
+            try {
+                console.log(`Loading theme barrier: ${basePath}${themeConfig.models.barrier} for theme ${currentTheme}`);
                 
-                // Configure the model
-                barrier.traverse(child => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
+                // Try to load the theme-specific barrier from themes folder
+                gltfLoader.load(
+                    basePath + themeConfig.models.barrier,
+                    (gltf) => {
+                        const barrier = gltf.scene;
+                        
+                        // Configure the model
+                        barrier.traverse(child => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });                        // Adjust scale based on barrier type (can be customized per theme)
+                        let scaleMultiplier = 1.0;
+                        if (themeConfig.models.barrier.includes('neve')) {
+                            scaleMultiplier = 12.0; // Snow barriers much bigger
+                        } else if (themeConfig.models.barrier.includes('deserto')) {
+                            scaleMultiplier = 3.3; // Desert barriers 3x bigger
+                        } else if (themeConfig.models.barrier.includes('floresta')) {
+                            scaleMultiplier = 3.0; // Forest barriers 3x bigger
+                        } else if (themeConfig.models.barrier.includes('madeira')) {
+                            scaleMultiplier = 3.9; // Farm barriers 3x bigger
+                        }
+                        
+                        // Apply the appropriate scale
+                        barrier.scale.set(
+                            barrier.scale.x * scaleMultiplier,
+                            barrier.scale.y * scaleMultiplier,
+                            barrier.scale.z * scaleMultiplier
+                        );
+                        
+                        // Mark the model as a theme barrier
+                        barrier.userData.isThemeModel = true;
+                        barrier.userData.themeType = 'barrier';
+                        barrier.userData.themeBarrier = true;
+                        barrier.userData.themeName = currentTheme;
+                        
+                        resolve(barrier);
+                    },
+                    (xhr) => {
+                        // Progress callback
+                        console.log(`Loading barrier model (${currentTheme}): ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
+                    },
+                    (error) => {
+                        console.warn(`Could not load themed barrier from folder: ${error}. Trying fallback path.`);
+                        
+                        // Try the fallback path if folder-specific path fails
+                        const barrierFile = themeBarrierFiles[currentTheme] || themeBarrierFiles['classic'];
+                        gltfLoader.load(
+                            barrierFile,
+                            (gltf) => {
+                                const barrier = gltf.scene;
+                                
+                                // Configure the model
+                                barrier.traverse(child => {
+                                    if (child.isMesh) {
+                                        child.castShadow = true;
+                                        child.receiveShadow = true;
+                                    }
+                                });
+                                  // Appropriate scale for barrier models - much bigger
+                                barrier.scale.set(1.95, 2.25, 1.95); // Much bigger default scaling
+                                
+                                // Mark the model as a theme barrier
+                                barrier.userData.themeBarrier = true;
+                                barrier.userData.themeName = currentTheme;
+                                
+                                resolve(barrier);
+                            },
+                            null,
+                            (secondError) => {
+                                // Both paths failed, use wooden fence fallback
+                                console.warn('Could not load either barrier model, falling back to wooden fence:', secondError);
+                                
+                                // Import fallback model creation
+                                import('./model-loader.js').then(module => {
+                                    module.createWoodenFenceModel().then(fallbackModel => {
+                                        console.log('Using fallback wooden fence barrier');
+                                        
+                                        // Apply theme-specific coloring to the fallback model
+                                        applyThemeColorToFallbackBarrier(fallbackModel, currentTheme);
+                                        
+                                        resolve(fallbackModel);
+                                    }).catch(reject);
+                                }).catch(reject);                            }
+                        );
                     }
-                });
+                );
+            } catch (error) {
+                console.error('Error setting up barrier model load:', error);
                 
-                // Appropriate scale for barrier models
-                barrier.scale.set(1, 1, 1); // May need adjustment based on actual model size
-                
-                // Mark the model as a theme barrier
-                barrier.userData.themeBarrier = true;
-                barrier.userData.themeName = currentTheme;
-                
-                resolve(barrier);
-            },
-            (xhr) => {
-                // Progress callback
-                console.log(`Loading barrier model (${currentTheme}): ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
-            },
-            (error) => {
-                // Error handling - fallback to basic model
-                console.warn(`Could not load ${currentTheme} barrier model:`, error);
-                
-                // Import fallback model creation
+                // Fallback to standard wooden fence
                 import('./model-loader.js').then(module => {
                     module.createWoodenFenceModel().then(fallbackModel => {
-                        console.log('Using fallback wooden fence barrier');
+                        console.log('Using fallback wooden fence barrier due to error');
                         
                         // Apply theme-specific coloring to the fallback model
                         applyThemeColorToFallbackBarrier(fallbackModel, currentTheme);
@@ -364,7 +428,19 @@ export function getThemeBarrierModel() {
                     reject(importError);
                 });
             }
-        );
+        } else {
+            // No barrier model configured, use default fallback
+            import('./model-loader.js').then(module => {
+                module.createWoodenFenceModel().then(fallbackModel => {
+                    console.log('Using default wooden fence barrier');
+                    
+                    // Apply theme-specific coloring to the fallback model
+                    applyThemeColorToFallbackBarrier(fallbackModel, currentTheme);
+                    
+                    resolve(fallbackModel);
+                }).catch(reject);
+            }).catch(reject);
+        }
     });
 }
 

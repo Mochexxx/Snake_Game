@@ -143,9 +143,9 @@ async function createCustomBarriers(scene, snakeBoard, hitboxes, count) {
 async function createBoundaryBarriers(scene, barriers, hitboxes) {
     const FENCE_MODEL_LENGTH = 2; // Base fence model length
     const BOARD_CELLS_PER_SIDE = 20;
-    const fenceScaleFactor = 1.3; // Further increased scale factor for bigger models
-    const heightScale = 1.5; // Make fences much taller
-    const thicknessScale = 1.3; // Make fences thicker
+    const fenceScaleFactor = 1.95; // Much bigger scale factor for larger models
+    const heightScale = 2.25; // Make fences much taller
+    const thicknessScale = 1.95; // Make fences thicker
 
     // North Wall (top edge, z=-1, fences rotated 90° for horizontal unity)
     const northFences = [];
@@ -314,9 +314,8 @@ async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boar
         
         // Add slight random rotation for variety
         fence.rotation.y = (Math.random() - 0.5) * 0.4;
-        
-        // Scale up the campaign barriers to match the enhanced barrier system
-        fence.scale.multiplyScalar(1.4); // Increased to match barriers.js scaling
+          // Scale up the campaign barriers to match the enhanced barrier system
+        fence.scale.multiplyScalar(2.1); // Much bigger to match new barriers.js scaling
         
         // Add to scene
         scene.add(fence);
@@ -334,9 +333,8 @@ async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boar
         
     } catch (error) {
         console.warn('Failed to create wooden fence, using fallback cubes:', error);
-        
-        // Fallback to original cube-based implementation with larger sizes to match barriers.js
-        const baseSize = 2.4; // Increased to match barriers.js fallback sizing
+          // Fallback to original cube-based implementation with larger sizes to match barriers.js
+        const baseSize = 3.6; // Much bigger to match new barriers.js fallback sizing
         const stackHeight = 2;
         const baseGroup = new THREE.Group();
         

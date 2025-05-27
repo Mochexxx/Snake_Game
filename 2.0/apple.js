@@ -62,16 +62,14 @@ function loadAppleModel() {
                     // Compute the bounding box to center the model
                     const boundingBox = new THREE.Box3().setFromObject(appleModelCache);
                     const center = boundingBox.getCenter(new THREE.Vector3());
-                    
-                    // Adjust the model position to center it
+                      // Adjust the model position to center it
                     appleModelCache.children.forEach(child => {
                         child.position.x -= center.x;
                         child.position.z -= center.z;
                         // Keep y position as is to maintain proper height
                     });
-                    
-                    // Apply scaling after centering
-                    appleModelCache.scale.set(0.01, 0.01, 0.01);
+                      // Apply scaling after centering (5x bigger than previous small size)
+                    appleModelCache.scale.set(0.007, 0.007, 0.007);
                     
                     // Set a fixed rotation
                     appleModelCache.rotation.set(0, Math.PI * 0.25, 0); // Fixed 45-degree rotation for visual appeal
@@ -109,40 +107,34 @@ function loadAppleModel() {
 // Function to create a fallback sphere apple (in case model loading fails)
 function createFallbackApple() {
     console.log('Creating fallback apple (red sphere)');
-    
-    // More detailed apple using multiple geometries
+      // More detailed apple using multiple geometries
     const appleGroup = new THREE.Group();
-    
-    // Main apple body (sphere)
-    const appleGeometry = new THREE.SphereGeometry(1, 24, 24);
+      // Main apple body (sphere) - 5x bigger than previous small size
+    const appleGeometry = new THREE.SphereGeometry(0.5, 24, 24);
     const appleMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xff0000,
         roughness: 0.6,
         metalness: 0.1
     });
     const appleBody = new THREE.Mesh(appleGeometry, appleMaterial);
-    appleGroup.add(appleBody);
-    
-    // Apple stem
-    const stemGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+    appleGroup.add(appleBody);    
+    // Apple stem - 5x bigger than previous small size
+    const stemGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.25, 8);
     const stemMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x8B4513, // Brown
         roughness: 0.8,
         metalness: 0.1
-    });
-    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
-    stem.position.y = 1.0;
-    appleGroup.add(stem);
-    
-    // Small leaf
-    const leafGeometry = new THREE.BoxGeometry(0.3, 0.1, 0.3);
+    });    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+    stem.position.y = 0.5;
+    appleGroup.add(stem);    
+    // Small leaf - 5x bigger than previous small size
+    const leafGeometry = new THREE.BoxGeometry(0.15, 0.05, 0.15);
     const leafMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x228B22, // Forest green
         roughness: 0.7,
         metalness: 0.1
-    });
-    const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
-    leaf.position.set(0.2, 1.0, 0.2);
+    });    const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
+    leaf.position.set(0.1, 0.5, 0.1);
     leaf.rotation.set(0.3, 0.5, 0.2);
     appleGroup.add(leaf);
     
