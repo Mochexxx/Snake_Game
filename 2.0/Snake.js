@@ -87,7 +87,7 @@ export function isAppleOnSnake(snake, x, z, snakeBoard) {
 }
 
 // Function to add a new segment when apple is eaten
-export function addSegment(scene, snake, snakeBoard, hitboxes, apple, gameMode, updateScore, endGame, obstacles = [], barriers = []) {
+export async function addSegment(scene, snake, snakeBoard, hitboxes, apple, gameMode, updateScore, endGame, obstacles = [], barriers = []) {
     // Get the tail position for the new segment
     const tailPosition = snakeBoard[snakeBoard.length - 1];
     
@@ -112,14 +112,14 @@ export function addSegment(scene, snake, snakeBoard, hitboxes, apple, gameMode, 
     }
     
     // Create new apple with proper barrier collision checking
-    const newApple = createApple(
+    const newApple = await createApple(
         scene, 
         snake, 
         isAppleOnSnake, 
         snakeBoard, 
         hitboxes, 
         obstacles, 
-        barriers // Ensure barriers are passed for collision checking
+        barriers
     );
     
     return newApple;

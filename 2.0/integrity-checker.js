@@ -138,9 +138,14 @@ export function checkAppleIntegrity(apple, snake, snakeBoard, hitboxes) {
         return false;
     }
     
-    // Calcula a posição da maçã na matriz
-    const appleX = Math.round((apple.position.x - 1) / 2);
-    const appleZ = Math.round((apple.position.z - 1) / 2);
+    // If the apple has a stored board position, use that
+    const appleX = apple.userData && apple.userData.boardPosition ? 
+        apple.userData.boardPosition.x : 
+        Math.round((apple.position.x - 1) / 2);
+    
+    const appleZ = apple.userData && apple.userData.boardPosition ? 
+        apple.userData.boardPosition.z : 
+        Math.round((apple.position.z - 1) / 2);
     
     // Verifica se a posição está nos limites do tabuleiro
     if (appleX < 0 || appleX > 19 || appleZ < 0 || appleZ > 19) {
@@ -153,6 +158,12 @@ export function checkAppleIntegrity(apple, snake, snakeBoard, hitboxes) {
         const { centerX, centerZ } = hitboxes[newX][newZ];
         apple.position.x = centerX;
         apple.position.z = centerZ;
+        
+        // Update stored board position if available
+        if (apple.userData && apple.userData.boardPosition) {
+            apple.userData.boardPosition.x = newX;
+            apple.userData.boardPosition.z = newZ;
+        }
         
         return true;
     }

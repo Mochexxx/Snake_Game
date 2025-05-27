@@ -2,6 +2,7 @@
 // Manages board theme selection and 3D model integration
 
 import * as THREE from 'three';
+import { GLTFLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 import { loadModel } from './model-loader.js';
 import { setTheme, updateSceneTheme, getThemeColors } from './scene.js';
 
@@ -295,45 +296,100 @@ export async function applyBoardThemeToScene(scene) {
 }
 
 // Get barrier model for current theme (for game mode barriers)
-export async function getThemeBarrierModel() {
-    const themeConfig = getThemeConfig(currentBoardTheme);
-    const basePath = `assets/temas_models/${themeConfig.folder}/`;
-    
-    if (themeConfig.models.barrier) {
-        try {
-            console.log(`Loading theme barrier: ${basePath}${themeConfig.models.barrier} for theme ${currentBoardTheme}`);
-            const model = await loadModel(basePath + themeConfig.models.barrier);
-            if (model) {
-                model.userData.isThemeModel = true;
-                model.userData.themeType = 'barrier';
-                model.userData.themeBarrier = themeConfig.models.barrier;
+export function getThemeBarrierModel() {
+    return new Promise((resolve, reject) => {
+        const gltfLoader = new GLTFLoader();
+        const currentTheme = getCurrentBoardTheme();
+        
+        console.log(`Getting barrier model for theme: ${currentTheme}`);
+        
+        // Map themes to their specific barrier model files
+        const themeBarrierFiles = {
+            'forest': 'assets/barreira_floresta.glb',
+            'farm': 'assets/barreira_madeira.glb',
+            'desert': 'assets/barreira_deserto.glb',
+            'snow': 'assets/barreira_neve.glb',
+            'classic': 'assets/barreira_madeira.glb' // Default to wooden barrier
+        };
+        
+        // Get the appropriate file path for the current theme
+        const barrierFile = themeBarrierFiles[currentTheme] || themeBarrierFiles['classic'];
+        
+        // Try to load the theme-specific barrier
+        gltfLoader.load(
+            barrierFile,
+            (gltf) => {
+                const barrier = gltf.scene;
                 
-                // Adjust scale based on barrier type (can be customized per theme)
-                let scaleMultiplier = 1.0;
-                if (themeConfig.models.barrier.includes('neve')) {
-                    scaleMultiplier = 1.2; // Snow barriers slightly larger
-                } else if (themeConfig.models.barrier.includes('deserto')) {
-                    scaleMultiplier = 1.1; // Desert barriers slightly larger
-                } else if (themeConfig.models.barrier.includes('floresta')) {
-                    scaleMultiplier = 1.0; // Forest barriers normal size
-                } else if (themeConfig.models.barrier.includes('madeira')) {
-                    scaleMultiplier = 1.3; // Farm barriers larger
-                }
+                // Configure the model
+                barrier.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
                 
-                model.scale.set(
-                    model.scale.x * scaleMultiplier,
-                    model.scale.y * scaleMultiplier,
-                    model.scale.z * scaleMultiplier
-                );
+                // Appropriate scale for barrier models
+                barrier.scale.set(1, 1, 1); // May need adjustment based on actual model size
                 
-                return model;
+                // Mark the model as a theme barrier
+                barrier.userData.themeBarrier = true;
+                barrier.userData.themeName = currentTheme;
+                
+                resolve(barrier);
+            },
+            (xhr) => {
+                // Progress callback
+                console.log(`Loading barrier model (${currentTheme}): ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
+            },
+            (error) => {
+                // Error handling - fallback to basic model
+                console.warn(`Could not load ${currentTheme} barrier model:`, error);
+                
+                // Import fallback model creation
+                import('./model-loader.js').then(module => {
+                    module.createWoodenFenceModel().then(fallbackModel => {
+                        console.log('Using fallback wooden fence barrier');
+                        
+                        // Apply theme-specific coloring to the fallback model
+                        applyThemeColorToFallbackBarrier(fallbackModel, currentTheme);
+                        
+                        resolve(fallbackModel);
+                    }).catch(fallbackError => {
+                        console.error('Failed to create fallback barrier model:', fallbackError);
+                        reject(fallbackError);
+                    });
+                }).catch(importError => {
+                    console.error('Failed to import model-loader module:', importError);
+                    reject(importError);
+                });
             }
-        } catch (error) {
-            console.warn('Failed to load barrier model for theme:', currentBoardTheme, error);
-        }
-    }
+        );
+    });
+}
+
+// Helper function to apply theme-appropriate coloring to fallback barriers
+function applyThemeColorToFallbackBarrier(model, theme) {
+    const themeColors = {
+        'forest': 0x2d4c1e, // Dark forest green
+        'desert': 0xd2b48c, // Sandy color
+        'snow': 0xf0f0ff,   // Snow white with slight blue tint
+        'farm': 0x8b4513,   // Brown wooden color
+        'classic': 0x8b4513 // Standard wooden color
+    };
     
-    return null;
+    const color = themeColors[theme] || themeColors['classic'];
+    
+    // Apply the color to all meshes in the model
+    model.traverse(child => {
+        if (child.isMesh && child.material) {
+            child.material = child.material.clone(); // Clone to avoid affecting shared materials
+            child.material.color.set(color);
+        }
+    });
+    
+    // Mark as fallback
+    model.userData.fallback = true;
 }
 
 // Get obstacle model for current theme (for game modes with obstacles)

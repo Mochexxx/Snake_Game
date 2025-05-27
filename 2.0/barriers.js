@@ -9,15 +9,22 @@ import { getThemeBarrierModel } from './board-theme-manager.js';
 
 // Criação das barreiras para o modo "barriers"
 export function createBarriers(scene, snakeBoard, hitboxes) {
-    const barriers = [];
-    
-    // Criar barreiras em torno do tabuleiro (limites do jogo)
-    createBoundaryBarriers(scene, barriers, hitboxes);
-    
-    // Remover barreiras no meio para modo padrão
-    // createComplexBarriers(scene, barriers, snakeBoard, hitboxes);
-    
-    return barriers;
+    return new Promise(async (resolve, reject) => {
+        try {
+            const barriers = [];
+            
+            // Criar barreiras em torno do tabuleiro (limites do jogo)
+            await createBoundaryBarriers(scene, barriers, hitboxes);
+            
+            // Remover barreiras no meio para modo padrão
+            // createComplexBarriers(scene, barriers, snakeBoard, hitboxes);
+            
+            resolve(barriers);
+        } catch (error) {
+            console.error('Error creating barriers:', error);
+            resolve([]); // Return empty array on error to avoid breaking the game
+        }
+    });
 }
 
 // Criação das barreiras para o modo "barreiras aleatórias" (apenas peças únicas)

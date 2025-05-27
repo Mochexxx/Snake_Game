@@ -1,12 +1,1 @@
-fazer uma loading screen ao iniciar o jogo
-fazer 1 animação 
-
-
-modo multiplayer, cada cobra começa com a mesma dimensão se uma bater 
-na outra a que bate com a cabeça perde e no final de 2 minutos se nenhuma 
-tiver batido ganha a que tem mais maças comidas
-
-
-
-
-colocar um tema para mapas mapa deserto mapa neve mapa floresta
+fazer uma animação da cobra a partir apos bater contra alguma barreira

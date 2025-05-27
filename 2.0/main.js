@@ -467,7 +467,7 @@ function createInitialApple() {
 }
 
 // Função para iniciar o jogo
-async function startGame() {
+function startGame() {
     score = 0;
     snake = [];
     snakeBoard = [];
@@ -479,7 +479,8 @@ async function startGame() {
     
     // Reset camera animation state
     cameraAnimationComplete = false;
-      // Atualiza a interface
+    
+    // Atualiza a interface
     document.getElementById('score').textContent = 'Score: 0';
     document.getElementById('highscore').textContent = 'Highscore: ' + highscore;
     
@@ -526,20 +527,27 @@ async function startGame() {
     
     Scene.addBoard(scene);
     Scene.addLowPolyDecorations(scene);
-      // Initialize board theme manager and apply board theme to the scene
+    
+    // Initialize board theme manager and apply board theme to the scene
     try {
         console.log('Initializing board theme manager...');
         initBoardThemeManager();
         
         console.log('Applying board theme to scene...');
         const selectedBoardTheme = getCurrentBoardTheme();
-        await applyBoardThemeToSceneLocal(selectedBoardTheme);
         
-        // Store the theme globally so other modules can access it
-        window.currentBoardTheme = selectedBoardTheme;
+        // Replace await with Promise handling
+        applyBoardThemeToSceneLocal(selectedBoardTheme).then(success => {
+            // Store the theme globally so other modules can access it
+            window.currentBoardTheme = selectedBoardTheme;
+        }).catch(error => {
+            console.warn('Failed to apply board theme:', error);
+        });
     } catch (error) {
-        console.warn('Failed to apply board theme:', error);
-    }    // Criar decorações ambientais para todos os modos de jogo
+        console.warn('Failed to initialize board theme manager:', error);
+    }
+    
+    // Criar decorações ambientais para todos os modos de jogo
     import('./obstacles.js').then(module => {
         environmentalDecorations = module.createEnvironmentalDecorations(scene);
     });
@@ -557,57 +565,72 @@ async function startGame() {
     // Initialize smooth animation positions
     initializeSnakeAnimationPositions();
 
-    // Criar maçã
-    apple = createInitialApple();
+    // Criar maçã - use promise-based approach
+    createInitialApple().then(newApple => {
+        apple = newApple;
+    });
     
-    // Criar barreiras se o modo for "barriers"
+    // Criar barreiras se o modo for "barriers" - Replace await with Promise
     if (gameMode === 'barriers') {
-        barriers = await createBarriers(scene, snakeBoard, hitboxes);
+        createBarriers(scene, snakeBoard, hitboxes)
+        .then(newBarriers => {
+            barriers = newBarriers;
+        })
+        .catch(error => {
+            console.error("Error creating barriers:", error);
+            barriers = []; // Set empty barriers array on error
+        });
     }
-    // Criar barreiras aleatórias se o modo for "randomBarriers"
+    
+    // Criar barreiras aleatórias se o modo for "randomBarriers" - Replace await with Promise
     if (gameMode === 'randomBarriers') {
         barriers = [];
         // Import the enhanced barrier system
-        const { createRandomBarriers } = await import('./barriers.js');
-        await createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
-    }        // Criar obstáculos se o modo for "obstacles"
-        if (gameMode === 'obstacles') {
-            obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos
-            
-            // Menu de obstáculos só aparece no modo debug
-            const existingButtons = document.getElementById('obstacle-buttons');
-            if (debugMode) {
-                import('./buttons.js').then(module => {
-                    // Remove botões existentes se houver (garantia extra)
-                    if (existingButtons) {
-                        document.body.removeChild(existingButtons);
-                    }
-                    // Configura os callbacks para os botões
-                    const buttonCallbacks = {
-                        onTreeAdd: () => addCustomObstacle('tree'),
-                        onRockAdd: () => addCustomObstacle('rock'),
-                        onRandomAdd: () => addCustomObstacle('random'),
-                        onClear: clearAllObstacles
-                    };
-                    // Adiciona os botões à interface
-                    module.setupObstacleButtons(document.body, buttonCallbacks);
-                });
-            } else if (existingButtons) {
-                // Se não estiver em debug, remove o menu se existir
-                document.body.removeChild(existingButtons);
-            }
+        import('./barriers.js').then(module => {
+            module.createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
+        });
+    }
+    
+    // Criar obstáculos se o modo for "obstacles"
+    if (gameMode === 'obstacles') {
+        obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos
+        
+        // Menu de obstáculos só aparece no modo debug
+        const existingButtons = document.getElementById('obstacle-buttons');
+        if (debugMode) {
+            import('./buttons.js').then(module => {
+                // Remove botões existentes se houver (garantia extra)
+                if (existingButtons) {
+                    document.body.removeChild(existingButtons);
+                }
+                // Configura os callbacks para os botões
+                const buttonCallbacks = {
+                    onTreeAdd: () => addCustomObstacle('tree'),
+                    onRockAdd: () => addCustomObstacle('rock'),
+                    onRandomAdd: () => addCustomObstacle('random'),
+                    onClear: clearAllObstacles
+                };
+                // Adiciona os botões à interface
+                module.setupObstacleButtons(document.body, buttonCallbacks);
+            });
+        } else if (existingButtons) {
+            // Se não estiver em debug, remove o menu se existir
+            document.body.removeChild(existingButtons);
         }
+    }
     
     // Configurar modo campanha
     if (gameMode === 'campaign') {
         // Obter informações do nível atual
         const levelInfo = getLevelInfo();
         
-        // Criar barreiras baseadas no nível atual
-        barriers = await createCampaignBarriers(scene, snakeBoard, hitboxes);
-        
-        // Expose barriers globally for testing
-        window.barriers = barriers;
+        // Criar barreiras baseadas no nível atual - Replace await with Promise
+        createCampaignBarriers(scene, snakeBoard, hitboxes).then(newBarriers => {
+            barriers = newBarriers;
+            
+            // Expose barriers globally for testing
+            window.barriers = barriers;
+        });
         
         // Expose collision checking function for testing
         import('./campaign.js').then(module => {
@@ -616,7 +639,8 @@ async function startGame() {
         
         // Reset do contador de maçãs para o nível
         applesCollected = 0;
-          // Atualizar o texto do modo para incluir informações do nível
+        
+        // Atualizar o texto do modo para incluir informações do nível
         document.getElementById('currentMode').textContent = `Campaign - Level ${levelInfo.level}: ${levelInfo.name}`;
         
         // Mostrar objetivo na pontuação e manter o highscore
@@ -641,7 +665,8 @@ async function startGame() {
         if (!currentCampaignLevelInfoShown) {
             isPaused = true; // Pause for Level Info
             showCampaignLevelInfo(levelInfo, () => { // Callback when "Começar Nível" is clicked
-                currentCampaignLevelInfoShown = true;                if (!tutorialsShown['campaign']) {
+                currentCampaignLevelInfoShown = true;
+                if (!tutorialsShown['campaign']) {
                     // isPaused is still true
                     showTutorial('campaign', () => { // Callback when tutorial is closed
                         tutorialsShown['campaign'] = true;
@@ -662,7 +687,8 @@ async function startGame() {
             // isPaused remains false (from start of startGame)
         }
     }
-      // Configura controles e inicia a animação
+    
+    // Configura controles e inicia a animação
     setupControls();
     animate();
     
@@ -947,11 +973,14 @@ function animate(time) {
         animateBarriers(barriers, time);
     }
     
-    // Anima a maçã se existir (rotação e flutuação)
-    if (apple && apple.userData && apple.userData.animate) {
-        apple.userData.animate(time);
+    // Animate the apple if it exists
+    if (apple) {
+        if (apple.userData && typeof apple.userData.animate === 'function') {
+            apple.userData.animate(time);
+        }
     }
-      if (isPaused || !gameRunning) {
+    
+    if (isPaused || !gameRunning) {
         // Continua renderizando mesmo se pausado para que efeitos visuais funcionem
         renderer.render(scene, camera);
         return;
@@ -1055,169 +1084,21 @@ function animate(time) {
                 }
                   // Remove a maçã existente
                 scene.remove(apple);
-                  // Cria uma nova maçã em uma posição que não está em um obstáculo ou na cobra
-                let appleX, appleZ;
-                let validPosition = false;
-                let maxAttempts = 100; // Aumenta o limite de tentativas
-                let attempts = 0;
-                let spawnFailed = false;
                 
-                // Cria uma nova maçã usando a função createApple
-                apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes, obstacles, barriers);
-                  // Verifica se o jogo foi completado (tabuleiro quase cheio)
-                if (apple.userData && apple.userData.gameCompleted) {
-                    // Mostra uma mensagem de vitória
-                    console.log("PARABÉNS! Você preencheu quase todo o tabuleiro!");
-                    alert("PARABÉNS! Você preencheu quase todo o tabuleiro e venceu o jogo!");
-                    endGame(true); // Encerra o jogo com vitória
-                    return;
-                }
+                // Create new apple with proper barrier collision checking
+                createApple(
+                    scene, 
+                    snake, 
+                    isAppleOnSnake, 
+                    snakeBoard, 
+                    hitboxes, 
+                    obstacles, 
+                    barriers // Ensure barriers are passed for collision checking
+                ).then(newApple => {
+                    apple = newApple;
+                });
                 
-                // Calcula a posição da maçã na matriz do tabuleiro
-                appleX = Math.round((apple.position.x - 1) / 2);
-                appleZ = Math.round((apple.position.z - 1) / 2);
-                
-                do {
-                    // Por padrão, a posição é válida
-                    validPosition = true;
-                    
-                    // Verifica se a maçã não está em um obstáculo (modo obstáculos)
-                    if (gameMode === 'obstacles') {
-                        if (obstacles.some(obstacle => 
-                            obstacle.boardPosition && obstacle.boardPosition.x === appleX && obstacle.boardPosition.z === appleZ)) {
-                            validPosition = false;
-                        }
-                    }
-                    // Verifica se a maçã não está em uma barreira (qualquer modo com barreiras)
-                    if (barriers && barriers.length > 0) {
-                        // Barreiras complexas (campanha)
-                        const complexCollision = barriers.some(barrier => {
-                            if (barrier.type === 'complex' && barrier.boardPosition) {
-                                return barrier.boardPosition.x === appleX && barrier.boardPosition.z === appleZ;
-                            }
-                            return false;
-                        });
-                        // Barreiras de limite
-                        const boundaryCollision = barriers.some(barrier => {
-                            if (barrier.type === 'boundary' && barrier.boardPositions) {
-                                return barrier.boardPositions.some(pos => pos.x === appleX && pos.z === appleZ);
-                            }
-                            return false;
-                        });
-                        // Barreiras random-piece (aleatórias)
-                        const randomPieceCollision = barriers.some(barrier => {
-                            if (barrier.type === 'random-piece' && barrier.boardPositions) {
-                                return barrier.boardPositions.some(pos => pos.x === appleX && pos.z === appleZ);
-                            }
-                            return false;
-                        });
-                        if (complexCollision || boundaryCollision || randomPieceCollision) {
-                            validPosition = false;
-                        }
-                    }
-                    
-                    // Se a posição não for válida, remove a maçã e tenta criar uma nova
-                    if (!validPosition) {
-                        scene.remove(apple);
-                        attempts++;
-                        
-                        // Se exceder o número máximo de tentativas, busca uma posição manualmente
-                        if (attempts >= maxAttempts) {
-                            console.warn("Máximo de tentativas atingido para posicionar a maçã. Buscando posição alternativa.");
-                            
-                            // Encontra todas as posições livres, considerando obstáculos e barreiras
-                            const availablePositions = findAvailableSpot();
-                            
-                            if (availablePositions && availablePositions.x !== undefined) {
-                                // Usa a posição encontrada
-                                appleX = availablePositions.x;
-                                appleZ = availablePositions.z;
-                                const { centerX, centerZ } = hitboxes[appleX][appleZ];
-                                
-
-                                // Cria uma nova maçã na posição encontrada
-                                const appleGeometry = new THREE.SphereGeometry(1, 16, 16);
-                                const appleMaterial = new THREE.MeshStandardMaterial({ 
-                                    color: 0xff0000,
-                                    roughness: 0.5,
-                                    metalness: 0.2
-                                });
-                                apple = new THREE.Mesh(appleGeometry, appleMaterial);
-                                apple.position.set(centerX, 1, centerZ);
-                                scene.add(apple);
-                                
-
-                                // Anima a maçã
-                                const originalY = apple.position.y;
-                                apple.userData.animationStartTime = Date.now();
-                                apple.userData.animate = function(time) {
-                                    apple.rotation.y += 0.005;
-                                    apple.position.y = originalY + Math.sin(time * 0.002) * 0.2;
-                                };
-                                
-                                validPosition = true;
-                                console.log("Maçã posicionada manualmente em:", appleX, appleZ);
-                            } else {
-                                console.error("ERRO: Impossível encontrar posição para a maçã!");
-                                spawnFailed = true;
-                            }
-                            break;
-                        }
-                        
-                        // Tenta uma nova posição aleatória
-                        apple = createApple(scene, snake, (s, x, z) => isAppleOnSnake(s, x, z, snakeBoard), snakeBoard, hitboxes, obstacles, barriers);
-                        appleX = Math.round((apple.position.x - 1) / 2);
-                        appleZ = Math.round((apple.position.z - 1) / 2);
-                    }
-                } while (!validPosition && (gameMode === 'obstacles' || gameMode === 'barriers'));
-                
-                // Função para encontrar um espaço disponível manualmente
-                function findAvailableSpot() {
-                    // Percorre todo o tabuleiro em busca de uma posição livre
-                    for (let x = 0; x < 20; x++) {
-                        for (let z = 0; z < 20; z++) {
-                            // Verifica se a posição está ocupada pela cobra
-                            const isOnSnake = snakeBoard.some(seg => seg.x === x && seg.z === z);
-                            if (isOnSnake) continue;
-                            
-                            // Verifica se a posição está em algum obstáculo
-                            let isOnObstacle = false;
-                            if (gameMode === 'obstacles') {
-                                isOnObstacle = obstacles.some(obs => obs.boardPosition.x === x && obs.boardPosition.z === z);
-                            }
-                            if (isOnObstacle) continue;
-                            
-                            // Verifica se a posição está em alguma barreira
-                            let isOnBarrier = false;
-                            if (gameMode === 'barriers') {
-                                // Verifica barreiras complexas
-                                isOnBarrier = barriers.some(barrier => {
-                                    if (barrier.type === 'complex') {
-                                        return barrier.boardPosition.x === x && barrier.boardPosition.z === z;
-                                    }
-                                    return false;
-                                });
-                                
-                                // Verifica barreiras de limite
-                                if (!isOnBarrier) {
-                                    isOnBarrier = barriers.some(barrier => {
-                                        if (barrier.type === 'boundary') {
-                                            return barrier.boardPositions.some(pos => pos.x === x && pos.z === z);
-                                        }
-                                        return false;
-                                    });
-                                }
-                            }
-                            if (isOnBarrier) continue;
-                            
-                            // Se chegou até aqui, a posição está livre
-                            return { x, z };
-                        }
-                    }
-                    
-                    // Se não encontrar nenhuma posição, retorna null
-                    return null;
-                }
+                return apple;
             },            () => {
                 // Aumenta o score e atualiza o placar
                 score += 10;
@@ -1785,7 +1666,7 @@ function getCurrentBoardThemeLocal() {
 }
 
 // Function to apply board theme to the 3D scene (now uses board theme manager)
-async function applyBoardThemeToSceneLocal(themeName) {
+function applyBoardThemeToSceneLocal(themeName) {
     if (scene) {
         try {
             // If a specific theme is provided, set it first
@@ -1793,19 +1674,13 @@ async function applyBoardThemeToSceneLocal(themeName) {
                 setBoardTheme(themeName);
             }
             
-            const success = await applyBoardThemeToScene(scene);
-            if (success) {
-                console.log('Board theme applied successfully:', getCurrentBoardTheme());
-            } else {
-                console.warn('Failed to apply board theme');
-            }
-            return success;
+            return applyBoardThemeToScene(scene);
         } catch (error) {
             console.error('Error applying board theme:', error);
-            return false;
+            return Promise.reject(error);
         }
     } else {
         console.warn('Scene not initialized when trying to apply board theme');
-        return false;
+        return Promise.resolve(false);
     }
 }
