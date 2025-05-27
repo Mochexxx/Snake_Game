@@ -267,7 +267,7 @@ export function addBoard(scene) {
     gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridLines, 3));
     
     const gridMaterial = new THREE.LineBasicMaterial({ 
-        color: 0x000000, // Black grid lines
+        color: 0x000000, // Black grid lines for all themes
         transparent: true,
         opacity: 0.8
     });

@@ -251,7 +251,7 @@ function applyThemeColors(scene, themeConfig) {
         
         // Update grid line colors
         if (object.name === "gridLines" && object.material) {
-            object.material.color.set(themeConfig.colors.gridLines);
+            object.material.color.set(0x000000); // Always black for all themes
         }
         
         // Update border colors if they exist
@@ -347,13 +347,13 @@ export function getThemeBarrierModel() {
                         });                        // Adjust scale based on barrier type (can be customized per theme)
                         let scaleMultiplier = 1.0;
                         if (themeConfig.models.barrier.includes('neve')) {
-                            scaleMultiplier = 12.0; // Snow barriers much bigger
+                            scaleMultiplier = 9.23; // Snow barriers 1.3x smaller (from 12.0)
                         } else if (themeConfig.models.barrier.includes('deserto')) {
-                            scaleMultiplier = 3.3; // Desert barriers 3x bigger
+                            scaleMultiplier = 1.94; // Desert barriers 1.7x smaller (from 3.3)
                         } else if (themeConfig.models.barrier.includes('floresta')) {
-                            scaleMultiplier = 3.0; // Forest barriers 3x bigger
+                            scaleMultiplier = 1.5; // Forest barriers 2x smaller (from 3.0)
                         } else if (themeConfig.models.barrier.includes('madeira')) {
-                            scaleMultiplier = 3.9; // Farm barriers 3x bigger
+                            scaleMultiplier = 3.9; // Farm barriers unchanged
                         }
                         
                         // Apply the appropriate scale

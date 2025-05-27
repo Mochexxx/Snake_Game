@@ -296,11 +296,12 @@ export async function createEnvironmentalDecorations(scene) {
                 const model = await loadModel(basePath + modelFile);
                 console.log('Successfully loaded complex model:', modelFile, 'at position:', pos);
                 model.position.set(pos.x, 0, pos.z);
-                  // Theme-specific scaling
+                  
+                // Theme-specific scaling
                 if (theme === 'snow') {
-                    model.scale.set(30, 30, 30); // Igloos 10x bigger
+                    model.scale.set(45, 45, 45); // Igloos 45x bigger
                 } else if (theme === 'desert') {
-                    model.scale.set(2.5, 2.5, 2.5); // Camels medium
+                    model.scale.set(1.32, 1.32, 1.32); // Camels 1.9x smaller (from 2.5)
                 } else {
                     model.scale.set(2, 2, 2); // Barns standard
                 }
@@ -312,7 +313,9 @@ export async function createEnvironmentalDecorations(scene) {
                     mesh: model, 
                     type: 'complex', 
                     position: { x: pos.x, z: pos.z } 
-                });                // Place 4-6 simple objects around each complex object
+                });
+                
+                // Place 4-6 simple objects around each complex object
                 if (objects.simple && objects.simple.length > 0) {
                     const numSimple = 4 + Math.floor(Math.random() * 3); // 4-6 objects
                     
@@ -341,10 +344,13 @@ export async function createEnvironmentalDecorations(scene) {
                         
                         // Theme-specific scaling for simple objects
                         if (simpleFile.toLowerCase().includes('cow')) {
-                            simpleModel.scale.set(0.6, 0.6, 0.6); // Small cows                        } else if (simpleFile.toLowerCase().includes('snowman')) {
-                            simpleModel.scale.set(15, 15, 15); // Snowmen 10x bigger
-                        } else if (simpleFile.toLowerCase().includes('cactus')) {
-                            simpleModel.scale.set(1.0, 1.0, 1.0); // Medium cacti
+                            simpleModel.scale.set(0.6, 0.6, 0.6); // Small cows
+                        } else if (simpleFile.toLowerCase().includes('snowman')) {
+                            simpleModel.scale.set(7, 7, 7); // Snowmen 7x bigger (adjusted from 15x)
+                        } else if (simpleFile.toLowerCase().includes('cactus') || simpleFile.toLowerCase().includes('cacto')) {
+                            simpleModel.scale.set(3.0, 3.0, 3.0); // Cacti 3x bigger (was 1.0)
+                        } else if (theme === 'snow' && simpleFile.toLowerCase().includes('avore_neve')) {
+                            simpleModel.scale.set(45, 45, 45); // Pine trees 45x bigger
                         } else {
                             simpleModel.scale.set(1.2, 1.2, 1.2); // Default medium
                         }
@@ -366,7 +372,7 @@ export async function createEnvironmentalDecorations(scene) {
         } else if (theme === 'forest') {
             // For forest theme, place large trees at the X positions
             const tree = createTreeModel();
-            tree.scale.set(3, 3, 3); // Large trees for forest theme
+            tree.scale.set(2.0, 2.0, 2.0); // Original was 3.0, then 1.76, now 2.0 (1.5x smaller than 3.0)
             tree.position.set(pos.x, 0, pos.z);
             tree.rotation.y = Math.random() * Math.PI * 2;
             scene.add(tree);
@@ -374,7 +380,7 @@ export async function createEnvironmentalDecorations(scene) {
                 mesh: tree,
                 type: 'environmental-tree',
                 position: { x: pos.x, z: pos.z },
-                scale: 3
+                scale: 2.0
             });
               // Add some rocks around each tree
             // Lista para rastrear posições já ocupadas
