@@ -540,9 +540,9 @@ async function startGame() {
     // Criar barreiras aleatórias se o modo for "randomBarriers"
     if (gameMode === 'randomBarriers') {
         barriers = [];
-        if (typeof createRandomBarriers === 'function') {
-            await createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
-        }
+        // Import the enhanced barrier system
+        const { createRandomBarriers } = await import('./barriers.js');
+        await createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
     }        // Criar obstáculos se o modo for "obstacles"
         if (gameMode === 'obstacles') {
             obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos

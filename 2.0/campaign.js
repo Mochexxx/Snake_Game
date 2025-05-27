@@ -141,19 +141,22 @@ async function createCustomBarriers(scene, snakeBoard, hitboxes, count) {
 
 // Função para criar barreiras nos limites do tabuleiro
 async function createBoundaryBarriers(scene, barriers, hitboxes) {
-    const FENCE_MODEL_LENGTH_X = 2; // Assuming main length of the fence model is along its X-axis
+    const FENCE_MODEL_LENGTH = 2; // Base fence model length
     const BOARD_CELLS_PER_SIDE = 20;
-    const fenceScaleFactor = 1.05; // Scale factor to ensure fences connect seamlessly
+    const fenceScaleFactor = 1.3; // Further increased scale factor for bigger models
+    const heightScale = 1.5; // Make fences much taller
+    const thicknessScale = 1.3; // Make fences thicker
 
-    // North Wall (z=0 edge, fences horizontal along X-axis)
+    // North Wall (top edge, z=-1, fences rotated 90° for horizontal unity)
     const northFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
             const fence = await createWoodenFenceModel();
-            fence.position.set(i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2, 0, 0);
-            fence.rotation.y = 0; // Align model's X-axis with world X-axis
-            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
-            fence.scale.y *= 1.1; // Make fences taller
+            fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, -FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             northFences.push(fence);
         } catch (error) {
@@ -168,15 +171,16 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
         hitboxes: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: -1 }))
     });
 
-    // South Wall (z=40 edge, fences horizontal along X-axis)
+    // South Wall (bottom edge, z=20, fences rotated 90° for horizontal unity)
     const southFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
             const fence = await createWoodenFenceModel();
-            fence.position.set(i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2, 0, BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH_X);
-            fence.rotation.y = 0; // Align model's X-axis with world X-axis
-            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
-            fence.scale.y *= 1.1; // Make fences taller
+            fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             southFences.push(fence);
         } catch (error) {
@@ -191,15 +195,16 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
         hitboxes: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: BOARD_CELLS_PER_SIDE }))
     });
 
-    // West Wall (x=0 edge, fences vertical along Z-axis)
+    // West Wall (left edge, x=-1, fences normal orientation for vertical unity)
     const westFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
             const fence = await createWoodenFenceModel();
-            fence.position.set(0, 0, i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2);
-            fence.rotation.y = Math.PI / 2; // Rotate model's X-axis to align with world Z-axis
-            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
-            fence.scale.y *= 1.1; // Make fences taller
+            fence.position.set(-FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = 0; // Keep normal orientation for vertical placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             westFences.push(fence);
         } catch (error) {
@@ -214,15 +219,16 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
         hitboxes: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: -1, z: i }))
     });
     
-    // East Wall (x=40 edge, fences vertical along Z-axis)
+    // East Wall (right edge, x=20, fences normal orientation for vertical unity)
     const eastFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
             const fence = await createWoodenFenceModel();
-            fence.position.set(BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH_X, 0, i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2);
-            fence.rotation.y = Math.PI / 2; // Rotate model's X-axis to align with world Z-axis
-            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
-            fence.scale.y *= 1.1; // Make fences taller
+            fence.position.set(BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = 0; // Keep normal orientation for vertical placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             eastFences.push(fence);
         } catch (error) {
@@ -309,8 +315,8 @@ async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boar
         // Add slight random rotation for variety
         fence.rotation.y = (Math.random() - 0.5) * 0.4;
         
-        // Scale up the campaign barriers for better visibility
-        fence.scale.multiplyScalar(1.1);
+        // Scale up the campaign barriers to match the enhanced barrier system
+        fence.scale.multiplyScalar(1.4); // Increased to match barriers.js scaling
         
         // Add to scene
         scene.add(fence);
@@ -329,8 +335,8 @@ async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boar
     } catch (error) {
         console.warn('Failed to create wooden fence, using fallback cubes:', error);
         
-        // Fallback to original cube-based implementation with larger sizes
-        const baseSize = 2.0; // Increased from 1.8
+        // Fallback to original cube-based implementation with larger sizes to match barriers.js
+        const baseSize = 2.4; // Increased to match barriers.js fallback sizing
         const stackHeight = 2;
         const baseGroup = new THREE.Group();
         
@@ -346,7 +352,7 @@ async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boar
         
         // Criar a meia-laje no topo
         const slab = new THREE.Mesh(
-            new THREE.BoxGeometry(baseSize + 0.4, baseSize/2, baseSize + 0.4), // Increased slab size
+            new THREE.BoxGeometry(baseSize + 0.6, baseSize/2, baseSize + 0.6), // Increased slab size to match barriers.js
             slabMaterial
         );
         slab.position.set(0, stackHeight*baseSize + baseSize/4, 0);
