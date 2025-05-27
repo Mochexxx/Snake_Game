@@ -178,26 +178,51 @@ function checkBarriersIntegrity(barriers, hitboxes) {
     
     let hasCorrection = false;
     
-    // Verifica as barreiras complexas
     barriers.forEach(barrier => {
         if (barrier.type === 'complex' && barrier.boardPosition) {
             const { x, z } = barrier.boardPosition;
             
             // Verifica se a posição está fora dos limites
             if (x < 0 || x > 19 || z < 0 || z > 19) {
-                console.warn(`Barreira com posição inválida: ${x}, ${z}`);
+                console.warn(`Barreira complexa com posição inválida: ${x}, ${z}`);
                 // Corrige para uma posição válida
                 barrier.boardPosition.x = Math.max(0, Math.min(19, x));
                 barrier.boardPosition.z = Math.max(0, Math.min(19, z));
                 
                 // Atualiza a posição visual se a barreira tiver um mesh
-                if (barrier.mesh) {
+                if (barrier.mesh && barrier.mesh.position && hitboxes && hitboxes[barrier.boardPosition.x] && hitboxes[barrier.boardPosition.x][barrier.boardPosition.z]) {
                     const { centerX, centerZ } = hitboxes[barrier.boardPosition.x][barrier.boardPosition.z];
                     barrier.mesh.position.x = centerX;
                     barrier.mesh.position.z = centerZ;
                 }
                 
                 hasCorrection = true;
+            }
+        } else if (barrier.type === 'boundary') {
+            if (!barrier.meshes || !Array.isArray(barrier.meshes)) {
+                console.warn(`Barreira de limite '${barrier.position}' não possui array 'meshes'.`);
+                hasCorrection = true;
+            } else {
+                barrier.meshes.forEach((mesh_element, index) => {
+                    if (!mesh_element || typeof mesh_element.position === 'undefined') {
+                        console.warn(`Elemento de mesh inválido na barreira de limite '${barrier.position}' no índice ${index}.`);
+                        hasCorrection = true;
+                    }
+                });
+            }
+
+            if (!barrier.boardPositions || !Array.isArray(barrier.boardPositions)) {
+                console.warn(`Barreira de limite '${barrier.position}' não possui array 'boardPositions'.`);
+                hasCorrection = true;
+            } else {
+                barrier.boardPositions.forEach((pos, index) => {
+                    // Posições de limite podem ser -1 ou 20
+                    if (typeof pos.x !== 'number' || typeof pos.z !== 'number' ||
+                        pos.x < -1 || pos.x > 20 || pos.z < -1 || pos.z > 20) {
+                        console.warn(`Barreira de limite '${barrier.position}' com boardPosition inválida no índice ${index}: ${JSON.stringify(pos)}`);
+                        hasCorrection = true;
+                    }
+                });
             }
         }
     });

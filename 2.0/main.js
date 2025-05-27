@@ -452,7 +452,7 @@ function createInitialApple() {
 }
 
 // Função para iniciar o jogo
-function startGame() {
+async function startGame() {
     score = 0;
     snake = [];
     snakeBoard = [];
@@ -535,13 +535,13 @@ function startGame() {
     
     // Criar barreiras se o modo for "barriers"
     if (gameMode === 'barriers') {
-        barriers = createBarriers(scene, snakeBoard, hitboxes);
+        barriers = await createBarriers(scene, snakeBoard, hitboxes);
     }
     // Criar barreiras aleatórias se o modo for "randomBarriers"
     if (gameMode === 'randomBarriers') {
         barriers = [];
         if (typeof createRandomBarriers === 'function') {
-            createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
+            await createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
         }
     }        // Criar obstáculos se o modo for "obstacles"
         if (gameMode === 'obstacles') {
@@ -577,7 +577,7 @@ function startGame() {
         const levelInfo = getLevelInfo();
         
         // Criar barreiras baseadas no nível atual
-        barriers = createCampaignBarriers(scene, snakeBoard, hitboxes);
+        barriers = await createCampaignBarriers(scene, snakeBoard, hitboxes);
         
         // Expose barriers globally for testing
         window.barriers = barriers;

@@ -3,6 +3,7 @@
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 import { getBoardCellCenter } from './scene.js';
 import { createBarriers, removeBarriers } from './barriers.js';
+import { createWoodenFenceModel } from './model-loader.js';
 
 // Estrutura para armazenar definições dos níveis
 export const campaignLevels = [
@@ -110,105 +111,135 @@ export function resetCampaign() {
 // Função para obter informações do nível atual
 export function getLevelInfo() {
     const currentLevel = getCurrentLevel();
-    return campaignLevels[currentLevel - 1];
+    // Ensure currentLevel is within bounds
+    if (currentLevel > 0 && currentLevel <= campaignLevels.length) {
+        return campaignLevels[currentLevel - 1];
+    }
+    // Fallback to first level if currentLevel is invalid
+    console.warn(`Invalid campaign level: ${currentLevel}. Defaulting to level 1.`);
+    return campaignLevels[0];
 }
 
 // Função para gerar barreiras baseadas no nível atual
-export function createCampaignBarriers(scene, snakeBoard, hitboxes) {
+export async function createCampaignBarriers(scene, snakeBoard, hitboxes) {
     const levelInfo = getLevelInfo();
     return createCustomBarriers(scene, snakeBoard, hitboxes, levelInfo.barrierCount);
 }
 
 // Função para criar um número específico de barreiras complexas
-function createCustomBarriers(scene, snakeBoard, hitboxes, count) {
+async function createCustomBarriers(scene, snakeBoard, hitboxes, count) {
     const barriers = [];
     
     // Criar barreiras em torno do tabuleiro (limites do jogo)
-    createBoundaryBarriers(scene, barriers, hitboxes);
+    await createBoundaryBarriers(scene, barriers, hitboxes);
     
     // Criar obstáculos complexos dentro do tabuleiro
-    createCampaignComplexBarriers(scene, barriers, snakeBoard, hitboxes, count);
+    await createCampaignComplexBarriers(scene, barriers, snakeBoard, hitboxes, count);
     
     return barriers;
 }
 
 // Função para criar barreiras nos limites do tabuleiro
-function createBoundaryBarriers(scene, barriers, hitboxes) {
-    // Materiais para as barreiras
-    const barrierMaterial = new THREE.MeshStandardMaterial({
-        color: 0x444444,
-        roughness: 0.7,
-        metalness: 0.2,
-        emissive: 0x222222
-    });
-    
-    // Criar paredes nos limites do tabuleiro
-    const wallHeight = 3;
-    const wallThickness = 1;
-    
-    // Parede Norte (z = 0)
-    const northWall = new THREE.Mesh(
-        new THREE.BoxGeometry(40, wallHeight, wallThickness),
-        barrierMaterial
-    );
-    northWall.position.set(20, wallHeight / 2, -wallThickness / 2);
-    scene.add(northWall);
+async function createBoundaryBarriers(scene, barriers, hitboxes) {
+    const FENCE_MODEL_LENGTH_X = 2; // Assuming main length of the fence model is along its X-axis
+    const BOARD_CELLS_PER_SIDE = 20;
+    const fenceScaleFactor = 1.05; // Scale factor to ensure fences connect seamlessly
+
+    // North Wall (z=0 edge, fences horizontal along X-axis)
+    const northFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2, 0, 0);
+            fence.rotation.y = 0; // Align model's X-axis with world X-axis
+            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
+            fence.scale.y *= 1.1; // Make fences taller
+            scene.add(fence);
+            northFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create North fence segment for campaign:', error);
+        }
+    }
     barriers.push({ 
-        mesh: northWall, 
+        meshes: northFences, 
         type: 'boundary', 
         position: 'north',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: -1 })),
-        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: i, z: -1 })) // Add hitbox data
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: -1 })),
+        hitboxes: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: -1 }))
     });
-    
-    // Parede Sul (z = 20)
-    const southWall = new THREE.Mesh(
-        new THREE.BoxGeometry(40, wallHeight, wallThickness),
-        barrierMaterial
-    );
-    southWall.position.set(20, wallHeight / 2, 40 + wallThickness / 2);
-    scene.add(southWall);
+
+    // South Wall (z=40 edge, fences horizontal along X-axis)
+    const southFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2, 0, BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH_X);
+            fence.rotation.y = 0; // Align model's X-axis with world X-axis
+            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
+            fence.scale.y *= 1.1; // Make fences taller
+            scene.add(fence);
+            southFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create South fence segment for campaign:', error);
+        }
+    }
     barriers.push({ 
-        mesh: southWall, 
+        meshes: southFences, 
         type: 'boundary', 
         position: 'south',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: 20 })),
-        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: i, z: 20 })) // Add hitbox data
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: BOARD_CELLS_PER_SIDE })),
+        hitboxes: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: BOARD_CELLS_PER_SIDE }))
     });
-    
-    // Parede Leste (x = 20)
-    const eastWall = new THREE.Mesh(
-        new THREE.BoxGeometry(wallThickness, wallHeight, 40),
-        barrierMaterial
-    );
-    eastWall.position.set(40 + wallThickness / 2, wallHeight / 2, 20);
-    scene.add(eastWall);
+
+    // West Wall (x=0 edge, fences vertical along Z-axis)
+    const westFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(0, 0, i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2);
+            fence.rotation.y = Math.PI / 2; // Rotate model's X-axis to align with world Z-axis
+            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
+            fence.scale.y *= 1.1; // Make fences taller
+            scene.add(fence);
+            westFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create West fence segment for campaign:', error);
+        }
+    }
     barriers.push({ 
-        mesh: eastWall, 
-        type: 'boundary', 
-        position: 'east',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: 20, z: i })),
-        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: 20, z: i })) // Add hitbox data
-    });
-    
-    // Parede Oeste (x = 0)
-    const westWall = new THREE.Mesh(
-        new THREE.BoxGeometry(wallThickness, wallHeight, 40),
-        barrierMaterial
-    );
-    westWall.position.set(-wallThickness / 2, wallHeight / 2, 20);
-    scene.add(westWall);
-    barriers.push({ 
-        mesh: westWall, 
+        meshes: westFences, 
         type: 'boundary', 
         position: 'west',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: -1, z: i })),
-        hitboxes: Array.from({ length: 20 }, (_, i) => ({ x: -1, z: i })) // Add hitbox data
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: -1, z: i })),
+        hitboxes: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: -1, z: i }))
+    });
+    
+    // East Wall (x=40 edge, fences vertical along Z-axis)
+    const eastFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH_X, 0, i * FENCE_MODEL_LENGTH_X + FENCE_MODEL_LENGTH_X / 2);
+            fence.rotation.y = Math.PI / 2; // Rotate model's X-axis to align with world Z-axis
+            fence.scale.x *= fenceScaleFactor; // Scale along its local X-axis (length) for unity
+            fence.scale.y *= 1.1; // Make fences taller
+            scene.add(fence);
+            eastFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create East fence segment for campaign:', error);
+        }
+    }
+    barriers.push({ 
+        meshes: eastFences, 
+        type: 'boundary', 
+        position: 'east',
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: BOARD_CELLS_PER_SIDE, z: i })),
+        hitboxes: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: BOARD_CELLS_PER_SIDE, z: i }))
     });
 }
 
 // Função para criar barreiras complexas para o modo campanha
-function createCampaignComplexBarriers(scene, barriers, snakeBoard, hitboxes, count) {
+async function createCampaignComplexBarriers(scene, barriers, snakeBoard, hitboxes, count) {
     // Materiais para barreiras complexas
     const barrierBaseMaterial = new THREE.MeshStandardMaterial({
         color: 0x777777,
@@ -236,30 +267,25 @@ function createCampaignComplexBarriers(scene, barriers, snakeBoard, hitboxes, co
         const z = Math.floor(Math.random() * 20);
         
         // Verifica se a posição já está ocupada por outra barreira
-        if (barrierPositions.some(pos => pos.x === x && pos.z === z)) {
-            continue;
+        const isOccupiedByBarrier = barrierPositions.some(pos => pos.x === x && pos.z === z);
+        
+        // Verifica se a posição está na cobra
+        const isOnSnake = snakeBoard.some(seg => seg.x === x && seg.z === z);
+        
+        // Verifica se a posição está muito próxima da cabeça da cobra (para evitar barreiras iniciais impossíveis)
+        const snakeHeadPos = snakeBoard.length > 0 ? snakeBoard[0] : null; // Assume snakeBoard[0] is the head
+        const isNearHead = isPositionNearSnakeHead(snakeHeadPos, x, z, 3); // Check proximity (e.g., 3 cells)
+
+        if (!isOccupiedByBarrier && !isOnSnake && !isNearHead) {
+            // Posição válida, adiciona a barreira
+            barrierPositions.push({ x, z });
+            
+            // Obtém o centro da célula para posicionar a barreira
+            const { centerX, centerZ } = getBoardCellCenter(x, z, hitboxes);
+            
+            // Criar o conjunto de barreiras
+            await createComplexBarrierStack(scene, barriers, centerX, centerZ, x, z, barrierBaseMaterial, barrierSlabMaterial);
         }
-        
-        // Verifica se a posição está ocupada pela cobra
-        if (snakeBoard.some(segment => segment.x === x && segment.z === z)) {
-            continue;
-        }
-        
-        // Evita colocar barreiras muito próximas à cabeça da cobra
-        if (isPositionNearSnakeHead(snakeBoard[0], x, z, 3)) {
-            continue;
-        }
-        
-        barrierPositions.push({ x, z });
-    }
-    
-    // Cria as barreiras complexas nas posições geradas
-    for (const position of barrierPositions) {
-        const { x, z } = position;
-        const { centerX, centerZ } = hitboxes[x][z];
-        
-        // Criar o conjunto de cubos empilhados com meia-laje no topo
-        createComplexBarrierStack(scene, barriers, centerX, centerZ, x, z, barrierBaseMaterial, barrierSlabMaterial);
     }
 }
 
@@ -272,42 +298,75 @@ function isPositionNearSnakeHead(head, x, z, distance) {
 }
 
 // Função para criar uma barreira complexa (cubos empilhados com meia-laje no topo)
-function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, boardZ, baseMaterial, slabMaterial) {
-    const baseSize = 1.8; // Tamanho um pouco menor que a célula (2) para dar espaço visual
-    const stackHeight = 2; // Quantidade de cubos empilhados
-    const baseGroup = new THREE.Group();
-    
-    // Criar cubos empilhados
-    for (let i = 0; i < stackHeight; i++) {
-        const cube = new THREE.Mesh(
-            new THREE.BoxGeometry(baseSize, baseSize, baseSize),
-            baseMaterial
+async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, boardZ, baseMaterial, slabMaterial) {
+    try {
+        // Try to use wooden fence model first
+        const fence = await createWoodenFenceModel();
+        
+        // Position the fence at the center of the board cell
+        fence.position.set(centerX, 0, centerZ);
+        
+        // Add slight random rotation for variety
+        fence.rotation.y = (Math.random() - 0.5) * 0.4;
+        
+        // Scale up the campaign barriers for better visibility
+        fence.scale.multiplyScalar(1.1);
+        
+        // Add to scene
+        scene.add(fence);
+        
+        // Add to barriers array
+        barriers.push({
+            mesh: fence,
+            type: 'complex',
+            boardPosition: { x: boardX, z: boardZ },
+            hitbox: { x: boardX, z: boardZ },
+            centerX: centerX,
+            centerZ: centerZ,
+            model: 'wooden-fence'
+        });
+        
+    } catch (error) {
+        console.warn('Failed to create wooden fence, using fallback cubes:', error);
+        
+        // Fallback to original cube-based implementation with larger sizes
+        const baseSize = 2.0; // Increased from 1.8
+        const stackHeight = 2;
+        const baseGroup = new THREE.Group();
+        
+        // Criar cubos empilhados
+        for (let i = 0; i < stackHeight; i++) {
+            const cube = new THREE.Mesh(
+                new THREE.BoxGeometry(baseSize, baseSize, baseSize),
+                baseMaterial
+            );
+            cube.position.set(0, baseSize/2 + i*baseSize, 0);
+            baseGroup.add(cube);
+        }
+        
+        // Criar a meia-laje no topo
+        const slab = new THREE.Mesh(
+            new THREE.BoxGeometry(baseSize + 0.4, baseSize/2, baseSize + 0.4), // Increased slab size
+            slabMaterial
         );
-        cube.position.set(0, baseSize/2 + i*baseSize, 0);
-        baseGroup.add(cube);
+        slab.position.set(0, stackHeight*baseSize + baseSize/4, 0);
+        baseGroup.add(slab);
+        
+        // Posicionar o conjunto completo na célula correta do tabuleiro
+        baseGroup.position.set(centerX, 0, centerZ);
+        
+        // Adicionar à cena e ao array de barreiras
+        scene.add(baseGroup);
+        barriers.push({
+            mesh: baseGroup,
+            type: 'complex',
+            boardPosition: { x: boardX, z: boardZ },
+            hitbox: { x: boardX, z: boardZ },
+            centerX: centerX,
+            centerZ: centerZ,
+            model: 'fallback-cubes'
+        });
     }
-    
-    // Criar a meia-laje no topo
-    const slab = new THREE.Mesh(
-        new THREE.BoxGeometry(baseSize + 0.3, baseSize/2, baseSize + 0.3), // Um pouco maior que a base para destaque visual
-        slabMaterial
-    );
-    slab.position.set(0, stackHeight*baseSize + baseSize/4, 0);
-    baseGroup.add(slab);
-    
-    // Posicionar o conjunto completo na célula correta do tabuleiro
-    baseGroup.position.set(centerX, 0, centerZ);
-    
-    // Adicionar à cena e ao array de barreiras
-    scene.add(baseGroup);
-    barriers.push({
-        mesh: baseGroup,
-        type: 'complex',
-        boardPosition: { x: boardX, z: boardZ },
-        hitbox: { x: boardX, z: boardZ }, // Add specific hitbox data
-        centerX: centerX,
-        centerZ: centerZ
-    });
 }
 
 // Exibir informações do nível atual

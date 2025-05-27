@@ -4,6 +4,7 @@
 import { getBoardCellCenter } from './scene.js';
 import { randomPatterns } from './barrier-shapes.js';
 import * as THREE from 'three';
+import { createWoodenFenceModel } from './model-loader.js';
 
 // Criação das barreiras para o modo "barriers"
 export function createBarriers(scene, snakeBoard, hitboxes) {
@@ -187,78 +188,107 @@ function createRandomBarrierPieceInQuadrant(scene, barriers, usedPositions, hitb
 }
 
 // Função para criar barreiras nos limites do tabuleiro
-function createBoundaryBarriers(scene, barriers, hitboxes) {
-    // Materiais para as barreiras
-    const barrierMaterial = new THREE.MeshStandardMaterial({
-        color: 0x444444,
-        roughness: 0.7,
-        metalness: 0.2,
-        emissive: 0x222222
-    });
-    
-    // Criar paredes nos limites do tabuleiro
-    const wallHeight = 3;
-    const wallThickness = 1;
-    
-    // Parede Norte (z = 0)
-    const northWall = new THREE.Mesh(
-        new THREE.BoxGeometry(40, wallHeight, wallThickness),
-        barrierMaterial
-    );
-    northWall.position.set(20, wallHeight / 2, -wallThickness / 2);
-    scene.add(northWall);
+async function createBoundaryBarriers(scene, barriers, hitboxes) {
+    const FENCE_MODEL_LENGTH = 2; // Base fence model length
+    const BOARD_CELLS_PER_SIDE = 20;
+    const fenceScaleFactor = 1.15; // Increased scale factor for better unity and size
+    const heightScale = 1.3; // Make fences taller
+
+    // North Wall (top edge, z=-1, fences rotated 90° for horizontal unity)
+    const northFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, -FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make taller
+            fence.scale.z *= 1.1; // Slightly thicker
+            scene.add(fence);
+            northFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create North fence segment:', error);
+        }
+    }
     barriers.push({ 
-        mesh: northWall, 
+        meshes: northFences, 
         type: 'boundary', 
         position: 'north',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: -1 }))
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: -1 }))
     });
-    
-    // Parede Sul (z = 20)
-    const southWall = new THREE.Mesh(
-        new THREE.BoxGeometry(40, wallHeight, wallThickness),
-        barrierMaterial
-    );
-    southWall.position.set(20, wallHeight / 2, 40 + wallThickness / 2);
-    scene.add(southWall);
+
+    // South Wall (bottom edge, z=20, fences rotated 90° for horizontal unity)
+    const southFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make taller
+            fence.scale.z *= 1.1; // Slightly thicker
+            scene.add(fence);
+            southFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create South fence segment:', error);
+        }
+    }
     barriers.push({ 
-        mesh: southWall, 
+        meshes: southFences, 
         type: 'boundary', 
         position: 'south',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: i, z: 20 }))
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: BOARD_CELLS_PER_SIDE }))
     });
-    
-    // Parede Leste (x = 20)
-    const eastWall = new THREE.Mesh(
-        new THREE.BoxGeometry(wallThickness, wallHeight, 40),
-        barrierMaterial
-    );
-    eastWall.position.set(40 + wallThickness / 2, wallHeight / 2, 20);
-    scene.add(eastWall);
+
+    // West Wall (left edge, x=-1, fences normal orientation for vertical unity)
+    const westFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(-FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = 0; // Keep normal orientation for vertical placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make taller
+            fence.scale.z *= 1.1; // Slightly thicker
+            scene.add(fence);
+            westFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create West fence segment:', error);
+        }
+    }
     barriers.push({ 
-        mesh: eastWall, 
-        type: 'boundary', 
-        position: 'east',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: 20, z: i }))
-    });
-    
-    // Parede Oeste (x = 0)
-    const westWall = new THREE.Mesh(
-        new THREE.BoxGeometry(wallThickness, wallHeight, 40),
-        barrierMaterial
-    );
-    westWall.position.set(-wallThickness / 2, wallHeight / 2, 20);
-    scene.add(westWall);
-    barriers.push({ 
-        mesh: westWall, 
+        meshes: westFences, 
         type: 'boundary', 
         position: 'west',
-        boardPositions: Array.from({ length: 20 }, (_, i) => ({ x: -1, z: i }))
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: -1, z: i }))
+    });
+    
+    // East Wall (right edge, x=20, fences normal orientation for vertical unity)
+    const eastFences = [];
+    for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
+            fence.rotation.y = 0; // Keep normal orientation for vertical placement
+            fence.scale.x *= fenceScaleFactor; // Scale along length for unity
+            fence.scale.y *= heightScale; // Make taller
+            fence.scale.z *= 1.1; // Slightly thicker
+            scene.add(fence);
+            eastFences.push(fence);
+        } catch (error) {
+            console.warn('Failed to create East fence segment:', error);
+        }
+    }
+    barriers.push({ 
+        meshes: eastFences, 
+        type: 'boundary', 
+        position: 'east',
+        boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: BOARD_CELLS_PER_SIDE, z: i }))
     });
 }
 
 // Função para criar barreiras complexas dentro do tabuleiro
-function createComplexBarriers(scene, barriers, snakeBoard, hitboxes) {
+async function createComplexBarriers(scene, barriers, snakeBoard, hitboxes) {
     // Materiais para barreiras complexas
     const barrierBaseMaterial = new THREE.MeshStandardMaterial({
         color: 0x777777,
@@ -322,7 +352,7 @@ function createComplexBarriers(scene, barriers, snakeBoard, hitboxes) {
         ]
     ];
     
-    // Para cada padrão, crie o conjunto de barreiras complexas
+    // Para cada padrão, crie o conjunto de barreiras complexas usando fence models
     for (const pattern of barrierPatterns) {
         // Verifica se não colide com a cobra no início
         const isValidPattern = !pattern.some(pos => 
@@ -333,54 +363,43 @@ function createComplexBarriers(scene, barriers, snakeBoard, hitboxes) {
                 const { x, z } = position;
                 const { centerX, centerZ } = hitboxes[x][z];
                 
-                // Criar o conjunto de cubos empilhados com meia-laje no topo
-                createComplexBarrierStack(scene, barriers, centerX, centerZ, x, z, barrierBaseMaterial, barrierSlabMaterial);
+                // Create wooden fence barrier instead of cubes
+                await createWoodenFenceBarrier(scene, barriers, centerX, centerZ, x, z);
             }
         }
     }
 }
 
-// Função para criar uma barreira complexa (cubos empilhados com meia-laje no topo)
-function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, boardZ, baseMaterial, slabMaterial) {
-    const baseSize = 1.8; // Tamanho um pouco menor que a célula (2) para dar espaço visual
-    const stackHeight = 2; // Quantidade de cubos empilhados
-    const baseGroup = new THREE.Group();
-    // Criar cubos empilhados
-    for (let i = 0; i < stackHeight; i++) {
-        const cube = new THREE.Mesh(
-            new THREE.BoxGeometry(baseSize, baseSize, baseSize),
-            baseMaterial
+// Função para criar uma barreira de cerca de madeira
+async function createWoodenFenceBarrier(scene, barriers, centerX, centerZ, boardX, boardZ) {
+    try {
+        const fence = await createWoodenFenceModel();
+        
+        // Position the fence at the center of the board cell
+        fence.position.set(centerX, 0, centerZ);
+        
+        // Add random rotation for variety
+        fence.rotation.y = Math.random() * Math.PI * 2;
+        
+        // Add to scene
+        scene.add(fence);
+        
+        // Add to barriers array
+        barriers.push({
+            mesh: fence,
+            type: 'complex',
+            boardPosition: { x: boardX, z: boardZ },
+            model: 'wooden-fence'
+        });
+        
+    } catch (error) {
+        console.warn('Failed to create wooden fence barrier, using fallback:', error);
+        // Fallback to original cube-based barrier
+        createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, boardZ, 
+            new THREE.MeshStandardMaterial({ color: 0x777777 }),
+            new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
         );
-        cube.position.set(0, baseSize/2 + i*baseSize, 0);
-        baseGroup.add(cube);
     }
-    // Criar a meia-laje no topo
-    const slab = new THREE.Mesh(
-        new THREE.BoxGeometry(baseSize + 0.3, baseSize/2, baseSize + 0.3), // Um pouco maior que a base para destaque visual
-        slabMaterial
-    );
-    slab.position.set(0, stackHeight*baseSize + baseSize/4, 0);
-    baseGroup.add(slab);
-    // Adiciona hitbox invisível para a célula ocupada
-    const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
-    const hitboxMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 2, 2),
-        hitboxMaterial
-    );
-    hitboxMesh.position.set(0, 1, 0); // Centralizado na célula
-    baseGroup.add(hitboxMesh);
-    // Posicionar o conjunto completo na célula correta do tabuleiro
-    baseGroup.position.set(centerX, 0, centerZ);
-    // Adicionar à cena e ao array de barreiras
-    scene.add(baseGroup);
-    barriers.push({
-        mesh: baseGroup,
-        type: 'complex',
-        boardPosition: { x: boardX, z: boardZ },
-        hitboxes: [hitboxMesh]
-    });
-    // Adicionar pequena rotação aleatória para variedade visual
-    baseGroup.rotation.y = (Math.random() - 0.5) * 0.2;
 }
 
 // Função para verificar colisão entre a cobra e as barreiras
@@ -409,7 +428,11 @@ export function checkBarrierCollision(barriers, x, z) {
 // Função para remover as barreiras da cena
 export function removeBarriers(scene, barriers) {
     barriers.forEach(barrier => {
-        scene.remove(barrier.mesh);
+        if (barrier.mesh) { // For single mesh barriers
+            scene.remove(barrier.mesh);
+        } else if (barrier.meshes) { // For multi-mesh barriers (like boundary fences)
+            barrier.meshes.forEach(m => scene.remove(m));
+        }
     });
 }
 
@@ -421,7 +444,7 @@ export function animateBarriers(barriers, time) {
 }
 
 // Cria uma peça única de barreira composta por 2 cubos e 1 slab, bem alinhada
-export function createRandomBarrierPiece(scene, barriers, usedPositions, hitboxes, snakeBoard, pattern = null) {
+export async function createRandomBarrierPiece(scene, barriers, usedPositions, hitboxes, pattern = null) {
     // Materiais
     const baseMaterial = new THREE.MeshStandardMaterial({
         color: 0x777777,
@@ -473,16 +496,28 @@ export function createRandomBarrierPiece(scene, barriers, usedPositions, hitboxe
     const group = new THREE.Group();
     const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
     const hitboxMeshes = [];
-    // Para cada bloco da peça, cria um cubo do tamanho de uma célula
-    positions.forEach((pos, idx) => {
+    
+    // For each block of the piece, create a wooden fence
+    for (const pos of positions) {
         const {centerX, centerZ} = hitboxes[pos.x][pos.z];
-        const cube = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 2, 2),
-            baseMaterial
-        );
-        cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
-        group.add(cube);
-        // Adiciona hitbox invisível para cada célula
+        
+        try {
+            const fence = await createWoodenFenceModel();
+            fence.position.set(centerX - hitboxes[baseX][baseZ].centerX, 0, centerZ - hitboxes[baseX][baseZ].centerZ);
+            fence.rotation.y = Math.random() * Math.PI * 2; // Random rotation
+            fence.scale.multiplyScalar(1.2); // Make random barriers larger for better presence
+            group.add(fence);
+        } catch (error) {
+            // Fallback to cube if fence fails to load
+            const cube = new THREE.Mesh(
+                new THREE.BoxGeometry(2.4, 2.4, 2.4), // Further increased cube size
+                new THREE.MeshStandardMaterial({ color: 0x8B4513 }) // Brown color
+            );
+            cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1.2, centerZ - hitboxes[baseX][baseZ].centerZ);
+            group.add(cube);
+        }
+        
+        // Add hitbox for collision detection
         const hitbox = new THREE.Mesh(
             new THREE.BoxGeometry(2, 2, 2),
             hitboxMaterial
@@ -490,15 +525,15 @@ export function createRandomBarrierPiece(scene, barriers, usedPositions, hitboxe
         hitbox.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
         group.add(hitbox);
         hitboxMeshes.push(hitbox);
-    });
+    }
     // Opcional: adicionar uma slab no topo do primeiro bloco para variedade visual
     const {x: sx, z: sz} = positions[0];
     const {centerX: slabX, centerZ: slabZ} = hitboxes[sx][sz];
     const slab = new THREE.Mesh(
-        new THREE.BoxGeometry(2.1, 0.9, 2.1),
+        new THREE.BoxGeometry(2.3, 1.0, 2.3), // Increased slab size
         slabMaterial
     );
-    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 1.95, slabZ - hitboxes[baseX][baseZ].centerZ);
+    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 2.1, slabZ - hitboxes[baseX][baseZ].centerZ);
     group.add(slab);
     // Posiciona o grupo no tabuleiro
     group.position.set(hitboxes[baseX][baseZ].centerX, 0, hitboxes[baseX][baseZ].centerZ);
