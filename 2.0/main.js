@@ -135,9 +135,8 @@ modeClassic.addEventListener('click', () => {
     }
 });
 modeBarriers.addEventListener('click', () => {
-    if (gameMode !== 'barriers') {
-        selectMode('barriers');
-    }
+    // Show theme selection menu instead of directly selecting barriers mode
+    showThemeSelectionMenu();
 });
 if (modeRandomBarriers) {
     modeRandomBarriers.addEventListener('click', () => {
@@ -152,11 +151,11 @@ modeObstacles.addEventListener('click', () => {
     }
 });
 
-window.onload = function() {
-    // document.getElementById('mainMenu').style.display = 'flex'; // This will be handled by premenu.js
+window.onload = function() {    // document.getElementById('mainMenu').style.display = 'flex'; // This will be handled by premenu.js
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameModeMenu').style.display = 'none';
     document.getElementById('optionsMenu').style.display = 'none';
+    document.getElementById('themeSelectionMenu').style.display = 'none';
     
     // Initialize camera indicator
     initializeCameraIndicator();
@@ -1683,4 +1682,162 @@ window.addEventListener('resize', function() {
         camera = Scene.getCurrentCamera(); // Get the updated current camera
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
+});
+
+// Theme Selection Menu Functionality
+let selectedTheme = null;
+
+function showThemeSelectionMenu() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('themeSelectionMenu').style.display = 'flex';
+    
+    // Reset theme selection
+    selectedTheme = null;
+    updateThemeConfirmButton();
+    
+    // Reset theme title
+    document.getElementById('themeTitle').textContent = 'Selecione um Tema';
+    
+    // Remove any previous selections
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+}
+
+function hideThemeSelectionMenu() {
+    document.getElementById('themeSelectionMenu').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
+}
+
+function updateThemeConfirmButton() {
+    const confirmButton = document.getElementById('themeConfirmButton');
+    if (selectedTheme) {
+        confirmButton.disabled = false;
+        confirmButton.style.opacity = '1';
+        confirmButton.style.cursor = 'pointer';
+        confirmButton.style.filter = 'none';
+    } else {
+        confirmButton.disabled = true;
+        confirmButton.style.opacity = '0.5';
+        confirmButton.style.cursor = 'not-allowed';
+        confirmButton.style.filter = 'grayscale(100%)';
+    }
+}
+
+function selectTheme(theme) {
+    selectedTheme = theme;
+    
+    // Remove selection from all theme buttons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    // Add selection to clicked theme button with animation
+    const selectedButton = document.getElementById(`theme${theme.charAt(0).toUpperCase() + theme.slice(1)}`);
+    selectedButton.classList.add('selected');
+    
+    // Add a small animation effect
+    selectedButton.style.transform = 'scale(1.1)';
+    setTimeout(() => {
+        selectedButton.style.transform = '';
+    }, 200);
+    
+    // Update the theme title to show selected theme
+    const themeTitle = document.getElementById('themeTitle');
+    themeTitle.textContent = `Tema Selecionado: ${getThemeDisplayName(theme)}`;
+    
+    updateThemeConfirmButton();
+}
+
+function getThemeDisplayName(theme) {
+    const themeNames = {
+        'snow': 'Neve',
+        'forest': 'Floresta', 
+        'desert': 'Deserto',
+        'farm': 'Fazenda'
+    };
+    return themeNames[theme] || theme;
+}
+
+function startGameWithTheme() {
+    if (selectedTheme) {
+        // Set the barriers mode
+        selectMode('barriers');
+        
+        // Apply the selected theme (this would integrate with your existing theme system)
+        applyGameTheme(selectedTheme);
+        
+        // Hide theme menu and start the game
+        document.getElementById('themeSelectionMenu').style.display = 'none';
+        document.getElementById('startScreen').style.display = 'none';
+        startGame();
+    }
+}
+
+function applyGameTheme(theme) {
+    // Store the selected environmental theme
+    console.log(`Applying environmental theme: ${theme}`);
+    window.selectedGameTheme = theme;
+    
+    // Apply theme-specific visual changes
+    switch(theme) {
+        case 'snow':
+            // Apply snow theme styling
+            document.body.style.background = 'linear-gradient(135deg, #e3f2fd, #bbdefb)';
+            console.log('Snow theme applied - winter environment loaded');
+            break;
+        case 'forest':
+            // Apply forest theme styling
+            document.body.style.background = 'linear-gradient(135deg, #1b5e20, #2e7d32)';
+            console.log('Forest theme applied - woodland environment loaded');
+            break;
+        case 'desert':
+            // Apply desert theme styling
+            document.body.style.background = 'linear-gradient(135deg, #ff8a65, #ffab40)';
+            console.log('Desert theme applied - arid environment loaded');
+            break;
+        case 'farm':
+            // Apply farm theme styling
+            document.body.style.background = 'linear-gradient(135deg, #689f38, #8bc34a)';
+            console.log('Farm theme applied - rural environment loaded');
+            break;
+        default:
+            console.log('Default theme applied');
+            break;
+    }
+    
+    // Store theme preference for later use in 3D scene
+    localStorage.setItem('selectedEnvironmentalTheme', theme);
+}
+
+// Theme Selection Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme button event listeners
+    const themeButtons = [
+        { id: 'themeSnow', theme: 'snow' },
+        { id: 'themeForest', theme: 'forest' },
+        { id: 'themeDesert', theme: 'desert' },
+        { id: 'themeFarm', theme: 'farm' }
+    ];
+    
+    themeButtons.forEach(({ id, theme }) => {
+        const button = document.getElementById(id);
+        if (button) {
+            button.addEventListener('click', () => selectTheme(theme));
+        }
+    });
+    
+    // Theme navigation buttons
+    const themeBackButton = document.getElementById('themeBackButton');
+    if (themeBackButton) {
+        themeBackButton.addEventListener('click', hideThemeSelectionMenu);
+    }
+    
+    const themeConfirmButton = document.getElementById('themeConfirmButton');
+    if (themeConfirmButton) {
+        themeConfirmButton.addEventListener('click', startGameWithTheme);
+    }
+    
+    // Initialize the confirm button state
+    updateThemeConfirmButton();
 });

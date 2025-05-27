@@ -34,7 +34,7 @@
         
         /* Estilo comum para todos os botões de imagem */        .btn-image, #playButton, #playAgainButton, #startMenuButton, #optionsMenuButton, 
         #infinityButton, #campaignButton, #gameModeBackButton, #startScreenBackButton, 
-        #endScreenBackButton, #optionsBackButton {
+        #endScreenBackButton, #optionsBackButton, #themeBackButton, #themeConfirmButton {
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
@@ -45,25 +45,22 @@
             transition: all 0.2s ease;
             outline: none;
         }
-        
-        .btn-image:hover, #playButton:hover, #playAgainButton:hover, #startMenuButton:hover, 
+          .btn-image:hover, #playButton:hover, #playAgainButton:hover, #startMenuButton:hover, 
         #optionsMenuButton:hover, #infinityButton:hover, #campaignButton:hover, 
         #gameModeBackButton:hover, #startScreenBackButton:hover, 
-        #endScreenBackButton:hover, #optionsBackButton:hover {
+        #endScreenBackButton:hover, #optionsBackButton:hover, #themeBackButton:hover, #themeConfirmButton:hover {
             transform: scale(1.05);
             filter: brightness(1.1);
             box-shadow: 0 0 15px rgba(92, 219, 149, 0.5);
         }
-        
-        .btn-image:active, #playButton:active, #playAgainButton:active, #startMenuButton:active, 
+          .btn-image:active, #playButton:active, #playAgainButton:active, #startMenuButton:active, 
         #optionsMenuButton:active, #infinityButton:active, #campaignButton:active, 
         #gameModeBackButton:active, #startScreenBackButton:active, 
-        #endScreenBackButton:active, #optionsBackButton:active {
+        #endScreenBackButton:active, #optionsBackButton:active, #themeBackButton:active, #themeConfirmButton:active {
             transform: scale(0.98);
             filter: brightness(0.9);
         }
-        
-        #startScreen, #endScreen {
+          #startScreen, #endScreen, #themeSelectionMenu {
             position: absolute;
             width: 100%;
             height: 100%;
@@ -75,6 +72,55 @@
             align-items: center;
             justify-content: center;
             z-index: 2;
+        }        /* Theme Selection Menu Styles */
+        .theme-btn {
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .theme-btn:hover {
+            border-color: #8ee4af;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(92, 219, 149, 0.5);
+        }
+        
+        .theme-btn.selected {
+            border-color: #5cdb95 !important;
+            box-shadow: 0 0 20px rgba(92, 219, 149, 0.8);
+            transform: scale(1.02);
+        }
+        
+        .theme-label {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        
+        #themeConfirmButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+        
+        #themeConfirmButton:disabled:hover {
+            transform: none;
+            box-shadow: none;
+            filter: grayscale(100%);
         }
         #title {
             background: none;
@@ -315,8 +361,36 @@
         </div><div style="display:flex; flex-direction:row; gap:30px; align-items:center;">
             <button id="startScreenBackButton" class="btn-image" style="width:120px; height:60px; background-image:url('assets/Buttons/back_verde.png');">Voltar</button>
             <button id="playButton" class="btn-image" style="width:200px; height:100px; background-image:url('assets/Buttons/play_verde.png');">Jogar</button>
+        </div>    </div>
+
+    <!-- Theme Selection Menu -->
+    <div id="themeSelectionMenu" style="display:none;">
+        <div id="themeTitle" style="margin-bottom:30px; font-size:32px; color:white; text-align:center;">Selecione um Tema</div>        <div id="themeSelect" style="margin-bottom:35px; display:flex; gap:20px; flex-wrap:wrap; justify-content:center; max-width:680px;">
+            <button id="themeSnow" class="theme-btn btn-image" style="width:160px; height:120px; background: linear-gradient(135deg, #e6f7ff, #b3e5fc); background-position:center; background-size:cover; border-radius:10px; position:relative;">
+                <div style="font-size: 32px; color: #1565c0; margin-bottom: 5px;">❄️</div>
+                <div class="theme-label">Neve</div>
+            </button>
+            <button id="themeForest" class="theme-btn btn-image" style="width:160px; height:120px; background: linear-gradient(135deg, #2e7d32, #4caf50); background-position:center; background-size:cover; border-radius:10px; position:relative;">
+                <div style="font-size: 32px; color: #1b5e20; margin-bottom: 5px;">🌲</div>
+                <div class="theme-label">Floresta</div>
+            </button>
+            <button id="themeDesert" class="theme-btn btn-image" style="width:160px; height:120px; background: linear-gradient(135deg, #ff8a65, #ffab40); background-position:center; background-size:cover; border-radius:10px; position:relative;">
+                <div style="font-size: 32px; color: #d84315; margin-bottom: 5px;">🌵</div>
+                <div class="theme-label">Deserto</div>
+            </button>
+            <button id="themeFarm" class="theme-btn btn-image" style="width:160px; height:120px; background: linear-gradient(135deg, #8bc34a, #cddc39); background-position:center; background-size:cover; border-radius:10px; position:relative;">
+                <div style="font-size: 32px; color: #558b2f; margin-bottom: 5px;">🌾</div>
+                <div class="theme-label">Fazenda</div>
+            </button>
         </div>
-    </div>    <!-- Tela de fim de jogo -->
+
+        <div style="display:flex; flex-direction:row; gap:30px; align-items:center;">
+            <button id="themeBackButton" class="btn-image" style="width:120px; height:60px; background-image:url('assets/Buttons/back_verde.png');">Voltar</button>
+            <button id="themeConfirmButton" class="btn-image" style="width:200px; height:100px; background-image:url('assets/Buttons/play_verde.png');" disabled>Jogar</button>
+        </div>
+    </div>
+
+    <!-- Tela de fim de jogo -->
     <div id="endScreen">
         <div id="finalScore" style="font-size:32px; color:white; margin-bottom:15px;">Score: 0</div>
         <div id="highscoreEnd" style="font-size:24px; color:white; margin-bottom:40px;">Highscore: 0</div>
