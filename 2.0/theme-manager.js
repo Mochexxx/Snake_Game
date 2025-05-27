@@ -166,9 +166,6 @@ export function applyTheme(themeName) {
         '#pauseResumeButton': theme.buttons.resume,
         '#pauseMenuButton': theme.buttons.home,
         '#pauseRestartButton': theme.buttons.restart,
-        // Theme selection menu buttons
-        '#themeBackButton': theme.buttons.back,
-        '#themeConfirmButton': theme.buttons.play,
         // Botões do menu ESC
         '#resumeButton': theme.buttons.resume,
         '#resetButton': theme.buttons.restart,
@@ -189,7 +186,7 @@ export function applyTheme(themeName) {
         .btn-image:hover, #playButton:hover, #playAgainButton:hover, #startMenuButton:hover, 
         #optionsMenuButton:hover, #infinityButton:hover, #campaignButton:hover, 
         #gameModeBackButton:hover, #startScreenBackButton:hover, 
-        #endScreenBackButton:hover, #optionsBackButton:hover, #themeBackButton:hover, #themeConfirmButton:hover {
+        #endScreenBackButton:hover, #optionsBackButton:hover {
             transform: scale(1.05);
             filter: brightness(1.1);
             box-shadow: 0 0 10px ${theme.shadow};
@@ -210,23 +207,14 @@ export function applyTheme(themeName) {
             box-shadow: 0 0 10px ${theme.shadow};
             transform: scale(1.05);
         }
-          .theme-btn.active-theme {
+        
+        .theme-btn.active-theme {
             border: 3px solid white !important;
             box-shadow: 0 0 15px ${theme.highlight};
         }
         
         .theme-btn:hover {
             box-shadow: 0 0 12px ${theme.highlight};
-        }
-        
-        .theme-btn.selected {
-            border-color: ${theme.primary} !important;
-            box-shadow: 0 0 20px ${theme.shadow};
-        }
-        
-        .theme-btn:hover {
-            border-color: ${theme.highlight};
-            box-shadow: 0 0 15px ${theme.shadow};
         }
         
         .switch input:checked + span {
