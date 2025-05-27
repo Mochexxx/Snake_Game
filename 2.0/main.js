@@ -905,13 +905,6 @@ function animateCameraToPosition() {
 function animate(time) {
     requestAnimationFrame(animate);
 
-    // Anima as decorações ambientais em todos os modos
-    if (environmentalDecorations.length > 0) {
-        import('./obstacles.js').then(module => {
-            module.animateEnvironmentalDecorations(environmentalDecorations, time);
-        });
-    }
-
     // Anima os obstáculos mesmo se o jogo estiver pausado
     if (gameMode === 'obstacles' && obstacles.length > 0) {
         // Importa e executa as funções de animação e atualização dos obstáculos
@@ -1114,6 +1107,7 @@ function animate(time) {
                                 appleZ = availablePositions.z;
                                 const { centerX, centerZ } = hitboxes[appleX][appleZ];
                                 
+
                                 // Cria uma nova maçã na posição encontrada
                                 const appleGeometry = new THREE.SphereGeometry(1, 16, 16);
                                 const appleMaterial = new THREE.MeshStandardMaterial({ 
@@ -1627,6 +1621,7 @@ loadOptionsSettings();
 
 // Configuração inicial do tema
 initTheme();
+
 
 // Configura os botões de tema
 setupThemeButtons();

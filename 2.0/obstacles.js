@@ -216,8 +216,14 @@ export function createEnvironmentalDecorations(scene) {
     const decorations = [];
     
     // Configurações para as decorações
-    const gridSize = 40; // Tamanho do tabuleiro em unidades 3D
+    const gridSize = 40; // Tamanho do tabuleiro em unidades 3D (20x20 células * 2 unidades cada)
     const gridCenter = { x: 20, z: 20 }; // Centro do tabuleiro
+    const gridBounds = {
+        minX: 0,  // Limite esquerdo do tabuleiro
+        maxX: 40, // Limite direito do tabuleiro
+        minZ: 0,  // Limite superior do tabuleiro
+        maxZ: 40  // Limite inferior do tabuleiro
+    };
     
     // Criar 6 árvores grandes ao redor do tabuleiro
     for (let i = 0; i < 6; i++) {
@@ -227,9 +233,11 @@ export function createEnvironmentalDecorations(scene) {
         const scale = 1.5 + Math.random() * 1.0; // Entre 1.5 e 2.5
         tree.scale.set(scale, scale, scale);
         
-        // Posicionar ao redor do tabuleiro
+        // Posicionar bem fora do tabuleiro
         const angle = (i / 6) * Math.PI * 2;
-        const distance = 25 + Math.random() * 15; // Entre 25 e 40 unidades do centro
+        const minDistance = 50; // Distância mínima do centro para garantir que fique fora do grid
+        const maxDistance = 80; // Distância máxima
+        const distance = minDistance + Math.random() * (maxDistance - minDistance);
         
         const x = gridCenter.x + Math.cos(angle) * distance;
         const z = gridCenter.z + Math.sin(angle) * distance;
@@ -255,9 +263,11 @@ export function createEnvironmentalDecorations(scene) {
         const scale = 1.2 + Math.random() * 0.8; // Entre 1.2 e 2.0
         rock.scale.set(scale, scale * 0.8, scale);
         
-        // Posicionar em locais diferentes das árvores
+        // Posicionar em locais diferentes das árvores, mas também bem fora do grid
         const angle = (i / 5) * Math.PI * 2 + Math.PI / 5; // Offset para não coincidir com árvores
-        const distance = 20 + Math.random() * 20; // Entre 20 e 40 unidades do centro
+        const minDistance = 45; // Distância mínima do centro
+        const maxDistance = 70; // Distância máxima
+        const distance = minDistance + Math.random() * (maxDistance - minDistance);
         
         const x = gridCenter.x + Math.cos(angle) * distance;
         const z = gridCenter.z + Math.sin(angle) * distance;
@@ -295,14 +305,6 @@ export function removeEnvironmentalDecorations(scene, decorations) {
 
 // Animar decorações ambientais (rotação suave das pedras)
 export function animateEnvironmentalDecorations(decorations, time) {
-    if (!decorations || decorations.length === 0) return;
-    
-    decorations.forEach(decoration => {
-        if (!decoration || !decoration.mesh) return;
-        
-        // Apenas as pedras recebem rotação suave
-        if (decoration.type === 'environmental-rock') {
-            decoration.mesh.rotation.y += 0.001;
-        }
-    });
+    // Environmental decorations are now static - no animation
+    return;
 }
