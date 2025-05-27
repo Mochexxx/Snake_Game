@@ -57,22 +57,22 @@ export function createApple(scene, snake, isAppleOnSnake, snakeBoard, hitboxes, 
                 x = 0;
                 z = 0;
             }
-            break;
-        }
-    } while (isAppleOnSnake(snake, x, z, snakeBoard) || 
-             obstacles.some(obs => obs.boardPosition.x === x && obs.boardPosition.z === z) ||
-             barriers.some(barrier => { // Adiciona verificação de colisão com barreiras
+            break;        }    } while (isAppleOnSnake(snake, x, z, snakeBoard) || 
+             (obstacles && obstacles.length > 0 ? obstacles.some(obs => obs && obs.boardPosition && obs.boardPosition.x === x && obs.boardPosition.z === z) : false) || 
+             (barriers && barriers.length > 0 ? barriers.some(barrier => { // Adiciona verificação de colisão com barreiras
+                 if (!barrier) return false;
+                 
                  if (barrier.type === 'complex' && barrier.boardPosition) {
                      return barrier.boardPosition.x === x && barrier.boardPosition.z === z;
                  }
                  if (barrier.type === 'boundary' && barrier.boardPositions) {
-                     return barrier.boardPositions.some(pos => pos.x === x && pos.z === z);
+                     return barrier.boardPositions.some(pos => pos && pos.x === x && pos.z === z);
                  }
                  if (barrier.type === 'random-piece' && barrier.boardPositions) {
-                    return barrier.boardPositions.some(pos => pos.x === x && pos.z === z);
+                    return barrier.boardPositions.some(pos => pos && pos.x === x && pos.z === z);
                 }
                  return false;
-             }));
+             }) : false));
 
     // Garante que as coordenadas estejam dentro dos limites do tabuleiro
     x = Math.max(0, Math.min(19, x));
@@ -125,21 +125,21 @@ function animateApple(apple) {
 function findAvailablePositions(snakeBoard, obstacles = [], barriers = []) {
     const available = [];
     for (let i = 0; i < 20; i++) {
-        for (let j = 0; j < 20; j++) {
-            const isOnSnake = snakeBoard.some(seg => seg.x === i && seg.z === j);
-            const isOnObstacle = obstacles.some(obs => obs.boardPosition.x === i && obs.boardPosition.z === j);
-            const isOnBarrier = barriers.some(barrier => { // Adiciona verificação de colisão com barreiras
+        for (let j = 0; j < 20; j++) {            const isOnSnake = snakeBoard.some(seg => seg && seg.x === i && seg.z === j);
+            const isOnObstacle = obstacles && obstacles.length > 0 ? obstacles.some(obs => obs && obs.boardPosition && obs.boardPosition.x === i && obs.boardPosition.z === j) : false;const isOnBarrier = barriers && barriers.length > 0 ? barriers.some(barrier => { // Adiciona verificação de colisão com barreiras
+                if (!barrier) return false;
+                
                 if (barrier.type === 'complex' && barrier.boardPosition) {
                     return barrier.boardPosition.x === i && barrier.boardPosition.z === j;
                 }
                 if (barrier.type === 'boundary' && barrier.boardPositions) {
-                    return barrier.boardPositions.some(pos => pos.x === i && pos.z === j);
+                    return barrier.boardPositions.some(pos => pos && pos.x === i && pos.z === j);
                 }
                 if (barrier.type === 'random-piece' && barrier.boardPositions) {
-                    return barrier.boardPositions.some(pos => pos.x === i && pos.z === j);
+                    return barrier.boardPositions.some(pos => pos && pos.x === i && pos.z === j);
                 }
                 return false;
-            });
+            }) : false;
 
             if (!isOnSnake && !isOnObstacle && !isOnBarrier) {
                 available.push({ x: i, z: j });

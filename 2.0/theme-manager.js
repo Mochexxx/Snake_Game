@@ -127,11 +127,11 @@ export function applyTheme(themeName) {
     } catch (error) {
         console.log('Could not update campaign theme, continuing with theme update');
     }
-    
-    // Update title card images
+      // Update title card images
     document.querySelector('#title[style*="mainmenu_"]').style.backgroundImage = `url('${theme.titlecards.mainmenu}')`;
     document.querySelector('#gameModeTitle').style.backgroundImage = `url('${theme.titlecards.gamemodes}')`;
     document.querySelector('#optionsTitle').style.backgroundImage = `url('${theme.titlecards.options}')`;
+    document.querySelector('#boardThemeTitle').style.backgroundImage = `url('${theme.titlecards.options}')`;
     
     // Update 3D text color based on theme
     const title3dElement = document.getElementById('title3d');
@@ -165,11 +165,13 @@ export function applyTheme(themeName) {
         '#campaignMenuBtn': theme.buttons.home,
         '#pauseResumeButton': theme.buttons.resume,
         '#pauseMenuButton': theme.buttons.home,
-        '#pauseRestartButton': theme.buttons.restart,
-        // Botões do menu ESC
+        '#pauseRestartButton': theme.buttons.restart,        // Botões do menu ESC
         '#resumeButton': theme.buttons.resume,
         '#resetButton': theme.buttons.restart,
-        '#mainMenuButton': theme.buttons.home
+        '#mainMenuButton': theme.buttons.home,
+        // Botões do menu de seleção de temas de tabuleiro
+        '#boardThemeBackButton': theme.buttons.back,
+        '#boardThemeConfirmButton': theme.buttons.play
     };
     
     // Update all buttons with themed images
@@ -228,9 +230,24 @@ export function applyTheme(themeName) {
             border: 1px solid ${theme.primary};
             box-shadow: 0 0 10px ${theme.shadow};
         }
-        
-        #score {
+          #score {
             color: ${theme.highlight};
+        }
+        
+        .board-theme-btn {
+            border: 3px solid ${theme.primary} !important;
+        }
+        
+        .board-theme-btn:hover {
+            border-color: ${theme.highlight} !important;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px ${theme.shadow};
+        }
+        
+        .board-theme-btn.active-board-theme {
+            background-color: ${theme.active} !important;
+            border-color: ${theme.highlight} !important;
+            box-shadow: 0 0 20px ${theme.shadow};
         }
     `;
     

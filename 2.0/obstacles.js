@@ -11,9 +11,7 @@ const OBSTACLE_FADE_TIME = 1000; // 1 segundo para desaparecer
 
 // Criação dos obstáculos para o modo "obstacles"
 export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) {
-    const obstacles = [];
-    
-    // Função para criar um novo obstáculo em posição válida
+    const obstacles = [];    // Função para criar um novo obstáculo em posição válida
     function createNewObstacle() {
         // Posições dos obstáculos na matriz
         const obstaclePositions = obstacles.map(obs => obs.boardPosition);
@@ -76,9 +74,7 @@ export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) 
             
             // Posiciona a pedra um pouco acima do chão
             obstacle.position.set(centerX, 0.5, centerZ);
-        }
-        
-        // Adiciona propriedades para o sistema de vida
+        }        // Adiciona propriedades para o sistema de vida
         obstacle.boardPosition = { x, z };
         obstacle.creationTime = Date.now();
         obstacle.isTree = isTree;

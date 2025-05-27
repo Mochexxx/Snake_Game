@@ -5,6 +5,7 @@ import { getBoardCellCenter } from './scene.js';
 import { randomPatterns } from './barrier-shapes.js';
 import * as THREE from 'three';
 import { createWoodenFenceModel } from './model-loader.js';
+import { getThemeBarrierModel } from './board-theme-manager.js';
 
 // Criação das barreiras para o modo "barriers"
 export function createBarriers(scene, snakeBoard, hitboxes) {
@@ -374,7 +375,13 @@ async function createComplexBarriers(scene, barriers, snakeBoard, hitboxes) {
 // Função para criar uma barreira de cerca de madeira
 async function createWoodenFenceBarrier(scene, barriers, centerX, centerZ, boardX, boardZ) {
     try {
-        const fence = await createWoodenFenceModel();
+        // Try to load theme-specific barrier model first
+        let fence = await getThemeBarrierModel();
+        
+        // If no themed model is available, fallback to the default wooden fence
+        if (!fence) {
+            fence = await createWoodenFenceModel();
+        }
         
         // Position the fence at the center of the board cell
         fence.position.set(centerX, 0, centerZ);
@@ -390,11 +397,11 @@ async function createWoodenFenceBarrier(scene, barriers, centerX, centerZ, board
             mesh: fence,
             type: 'complex',
             boardPosition: { x: boardX, z: boardZ },
-            model: 'wooden-fence'
+            model: fence.userData.isThemeModel ? 'theme-barrier' : 'wooden-fence'
         });
         
     } catch (error) {
-        console.warn('Failed to create wooden fence barrier, using fallback:', error);
+        console.warn('Failed to create themed barrier, using fallback:', error);
         // Fallback to original cube-based barrier
         createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, boardZ, 
             new THREE.MeshStandardMaterial({ color: 0x777777 }),
@@ -497,19 +504,25 @@ export async function createRandomBarrierPiece(scene, barriers, usedPositions, h
     const group = new THREE.Group();
     const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
     const hitboxMeshes = [];
-    
-    // For each block of the piece, create a wooden fence
+      // For each block of the piece, create a themed barrier or wooden fence
     for (const pos of positions) {
         const {centerX, centerZ} = hitboxes[pos.x][pos.z];
         
         try {
-            const fence = await createWoodenFenceModel();
+            // Try to use theme-specific barrier first
+            let fence = await getThemeBarrierModel();
+            
+            // If no themed barrier available, use default wooden fence
+            if (!fence) {
+                fence = await createWoodenFenceModel();
+            }
+            
             fence.position.set(centerX - hitboxes[baseX][baseZ].centerX, 0, centerZ - hitboxes[baseX][baseZ].centerZ);
             fence.rotation.y = Math.random() * Math.PI * 2; // Random rotation
             fence.scale.multiplyScalar(1.4); // Make random barriers much larger
             group.add(fence);
         } catch (error) {
-            // Fallback to cube if fence fails to load
+            // Fallback to cube if fence loading fails
             const cube = new THREE.Mesh(
                 new THREE.BoxGeometry(2.8, 2.8, 2.8), // Much larger cube size
                 new THREE.MeshStandardMaterial({ color: 0x8B4513 }) // Brown color

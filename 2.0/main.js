@@ -27,6 +27,14 @@ import {
     getCurrentLevel
 } from './campaign-menu.js';
 import { initTheme, setupThemeButtons } from './theme-manager.js';
+import { 
+    initBoardThemeManager, 
+    setBoardTheme, 
+    getCurrentBoardTheme, 
+    applyBoardThemeToScene,
+    getThemeBarrierModel,
+    getThemeObstacleModel 
+} from './board-theme-manager.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { TextureLoader } from 'three';
 import { 
@@ -169,12 +177,17 @@ window.onload = function() {
             document.getElementById('mainMenu').style.display = 'flex';
         });
     }
-    
-    // Inicializa o modo debug se necessário
+      // Inicializa o modo debug se necessário
     initDebugMode();
     
     // Carrega as configurações de opções
     loadOptionsSettings();
+    
+    // Initialize board theme manager
+    initBoardThemeManager();
+    
+    // Initialize board theme UI
+    initBoardTheme();
 };
 
 document.getElementById('startMenuButton').addEventListener('click', function () {
@@ -182,10 +195,12 @@ document.getElementById('startMenuButton').addEventListener('click', function ()
     document.getElementById('gameModeMenu').style.display = 'flex';
 });
 
-// Game Mode Menu buttons
+// Game Mode Menu buttons - redirect to board theme menu instead of directly to game
 document.getElementById('infinityButton').addEventListener('click', function () {
     document.getElementById('gameModeMenu').style.display = 'none';
-    document.getElementById('startScreen').style.display = 'flex';
+    document.getElementById('boardThemeMenu').style.display = 'flex';
+    // Store the selected game mode for later use
+    window.selectedGameMode = 'infinity';
 });
 
 document.getElementById('campaignButton').addEventListener('click', function () {
@@ -511,8 +526,20 @@ async function startGame() {
     
     Scene.addBoard(scene);
     Scene.addLowPolyDecorations(scene);
-    
-    // Criar decorações ambientais para todos os modos de jogo
+      // Initialize board theme manager and apply board theme to the scene
+    try {
+        console.log('Initializing board theme manager...');
+        initBoardThemeManager();
+        
+        console.log('Applying board theme to scene...');
+        const selectedBoardTheme = getCurrentBoardTheme();
+        await applyBoardThemeToSceneLocal(selectedBoardTheme);
+        
+        // Store the theme globally so other modules can access it
+        window.currentBoardTheme = selectedBoardTheme;
+    } catch (error) {
+        console.warn('Failed to apply board theme:', error);
+    }    // Criar decorações ambientais para todos os modos de jogo
     import('./obstacles.js').then(module => {
         environmentalDecorations = module.createEnvironmentalDecorations(scene);
     });
@@ -1684,3 +1711,101 @@ window.addEventListener('resize', function() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 });
+
+// Board Theme Menu functionality
+let selectedBoardTheme = 'classic'; // Default board theme
+
+// Board theme selection buttons
+document.getElementById('classicThemeBtn').addEventListener('click', function() {
+    selectBoardTheme('classic');
+});
+
+document.getElementById('desertThemeBtn').addEventListener('click', function() {
+    selectBoardTheme('desert');
+});
+
+document.getElementById('forestThemeBtn').addEventListener('click', function() {
+    selectBoardTheme('forest');
+});
+
+document.getElementById('snowThemeBtn').addEventListener('click', function() {
+    selectBoardTheme('snow');
+});
+
+// Function to handle board theme selection
+function selectBoardTheme(theme) {
+    selectedBoardTheme = theme;
+    
+    // Update the board theme manager
+    setBoardTheme(theme);
+    
+    // Remove active class from all theme buttons
+    document.querySelectorAll('.board-theme-btn').forEach(btn => {
+        btn.classList.remove('active-board-theme');
+    });
+    
+    // Add active class to selected theme button
+    document.getElementById(theme + 'ThemeBtn').classList.add('active-board-theme');
+    
+    // Store selected theme in localStorage
+    localStorage.setItem('selectedBoardTheme', theme);
+}
+
+// Board theme menu navigation buttons
+document.getElementById('boardThemeBackButton').addEventListener('click', function() {
+    document.getElementById('boardThemeMenu').style.display = 'none';
+    document.getElementById('gameModeMenu').style.display = 'flex';
+});
+
+document.getElementById('boardThemeConfirmButton').addEventListener('click', function() {
+    document.getElementById('boardThemeMenu').style.display = 'none';
+    
+    // Set the game mode that was selected before coming to board theme menu
+    if (window.selectedGameMode === 'infinity') {
+        gameMode = 'classic'; // Infinity mode is classic mode
+        selectMode('classic');
+    }
+    
+    document.getElementById('startScreen').style.display = 'flex';
+});
+
+// Initialize board theme on page load
+function initBoardTheme() {
+    const savedTheme = localStorage.getItem('selectedBoardTheme');
+    if (savedTheme && ['classic', 'desert', 'forest', 'snow'].includes(savedTheme)) {
+        selectBoardTheme(savedTheme);
+    } else {
+        selectBoardTheme('classic');
+    }
+}
+
+// Function to get the current board theme (now uses board theme manager)
+function getCurrentBoardThemeLocal() {
+    return getCurrentBoardTheme();
+}
+
+// Function to apply board theme to the 3D scene (now uses board theme manager)
+async function applyBoardThemeToSceneLocal(themeName) {
+    if (scene) {
+        try {
+            // If a specific theme is provided, set it first
+            if (themeName) {
+                setBoardTheme(themeName);
+            }
+            
+            const success = await applyBoardThemeToScene(scene);
+            if (success) {
+                console.log('Board theme applied successfully:', getCurrentBoardTheme());
+            } else {
+                console.warn('Failed to apply board theme');
+            }
+            return success;
+        } catch (error) {
+            console.error('Error applying board theme:', error);
+            return false;
+        }
+    } else {
+        console.warn('Scene not initialized when trying to apply board theme');
+        return false;
+    }
+}
