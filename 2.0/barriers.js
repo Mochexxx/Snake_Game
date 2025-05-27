@@ -191,8 +191,9 @@ function createRandomBarrierPieceInQuadrant(scene, barriers, usedPositions, hitb
 async function createBoundaryBarriers(scene, barriers, hitboxes) {
     const FENCE_MODEL_LENGTH = 2; // Base fence model length
     const BOARD_CELLS_PER_SIDE = 20;
-    const fenceScaleFactor = 1.15; // Increased scale factor for better unity and size
-    const heightScale = 1.3; // Make fences taller
+    const fenceScaleFactor = 1.3; // Further increased scale factor for bigger models
+    const heightScale = 1.5; // Make fences much taller
+    const thicknessScale = 1.3; // Make fences thicker
 
     // North Wall (top edge, z=-1, fences rotated 90° for horizontal unity)
     const northFences = [];
@@ -202,8 +203,8 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
             fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, -FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
-            fence.scale.y *= heightScale; // Make taller
-            fence.scale.z *= 1.1; // Slightly thicker
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             northFences.push(fence);
         } catch (error) {
@@ -225,8 +226,8 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
             fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
-            fence.scale.y *= heightScale; // Make taller
-            fence.scale.z *= 1.1; // Slightly thicker
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             southFences.push(fence);
         } catch (error) {
@@ -248,8 +249,8 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
             fence.position.set(-FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = 0; // Keep normal orientation for vertical placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
-            fence.scale.y *= heightScale; // Make taller
-            fence.scale.z *= 1.1; // Slightly thicker
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             westFences.push(fence);
         } catch (error) {
@@ -271,8 +272,8 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
             fence.position.set(BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = 0; // Keep normal orientation for vertical placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
-            fence.scale.y *= heightScale; // Make taller
-            fence.scale.z *= 1.1; // Slightly thicker
+            fence.scale.y *= heightScale; // Make much taller
+            fence.scale.z *= thicknessScale; // Make thicker
             scene.add(fence);
             eastFences.push(fence);
         } catch (error) {
@@ -505,15 +506,15 @@ export async function createRandomBarrierPiece(scene, barriers, usedPositions, h
             const fence = await createWoodenFenceModel();
             fence.position.set(centerX - hitboxes[baseX][baseZ].centerX, 0, centerZ - hitboxes[baseX][baseZ].centerZ);
             fence.rotation.y = Math.random() * Math.PI * 2; // Random rotation
-            fence.scale.multiplyScalar(1.2); // Make random barriers larger for better presence
+            fence.scale.multiplyScalar(1.4); // Make random barriers much larger
             group.add(fence);
         } catch (error) {
             // Fallback to cube if fence fails to load
             const cube = new THREE.Mesh(
-                new THREE.BoxGeometry(2.4, 2.4, 2.4), // Further increased cube size
+                new THREE.BoxGeometry(2.8, 2.8, 2.8), // Much larger cube size
                 new THREE.MeshStandardMaterial({ color: 0x8B4513 }) // Brown color
             );
-            cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1.2, centerZ - hitboxes[baseX][baseZ].centerZ);
+            cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1.4, centerZ - hitboxes[baseX][baseZ].centerZ);
             group.add(cube);
         }
         
@@ -530,10 +531,10 @@ export async function createRandomBarrierPiece(scene, barriers, usedPositions, h
     const {x: sx, z: sz} = positions[0];
     const {centerX: slabX, centerZ: slabZ} = hitboxes[sx][sz];
     const slab = new THREE.Mesh(
-        new THREE.BoxGeometry(2.3, 1.0, 2.3), // Increased slab size
+        new THREE.BoxGeometry(2.6, 1.2, 2.6), // Much larger slab size
         slabMaterial
     );
-    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 2.1, slabZ - hitboxes[baseX][baseZ].centerZ);
+    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 2.4, slabZ - hitboxes[baseX][baseZ].centerZ);
     group.add(slab);
     // Posiciona o grupo no tabuleiro
     group.position.set(hitboxes[baseX][baseZ].centerX, 0, hitboxes[baseX][baseZ].centerZ);
