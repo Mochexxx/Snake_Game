@@ -236,9 +236,9 @@ function applyThemeColors(scene, themeConfig) {
             object.material.color.set(themeConfig.colors.floor);
         }
         
-        // Update grid line colors
+        // Always keep grid lines black regardless of theme settings
         if (object.name === "gridLines" && object.material) {
-            object.material.color.set(themeConfig.colors.gridLines);
+            object.material.color.set(0x000000);
         }
         
         // Update border colors if they exist
