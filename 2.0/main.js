@@ -43,6 +43,7 @@ let apple = null;
 let obstacles = [];
 let barriers = [];
 let hitboxVisuals = [];
+let environmentalDecorations = []; // Add environmental decorations array
 let isPaused = true;
 let gameRunning = false;
 let lightingSystemAvailable = false; // Track if lighting system is available
@@ -458,6 +459,7 @@ function startGame() {
     obstacles = [];
     barriers = [];
     hitboxVisuals = [];
+    environmentalDecorations = []; // Reset environmental decorations
     isPaused = false; // Default to not paused; camera animation will set it true
     
     // Reset camera animation state
@@ -509,6 +511,11 @@ function startGame() {
     
     Scene.addBoard(scene);
     Scene.addLowPolyDecorations(scene);
+    
+    // Criar decorações ambientais para todos os modos de jogo
+    import('./obstacles.js').then(module => {
+        environmentalDecorations = module.createEnvironmentalDecorations(scene);
+    });
     
     // Gera a matriz de hitboxes para o tabuleiro
     hitboxes = Scene.generateBoardHitboxes();
@@ -732,6 +739,14 @@ function resetGame() {
     applesCollected = 0;
     moveInterval = 200; // Reset da velocidade do jogo
     
+    // Limpar decorações ambientais
+    if (environmentalDecorations.length > 0) {
+        import('./obstacles.js').then(module => {
+            module.removeEnvironmentalDecorations(scene, environmentalDecorations);
+            environmentalDecorations = [];
+        });
+    }
+    
     // Se existir uma campanha em andamento, resetá-la
     if (gameMode === 'campaign') {
         resetCampaign();
@@ -888,7 +903,16 @@ function animateCameraToPosition() {
 
 // Animação
 function animate(time) {
-    requestAnimationFrame(animate);    // Anima os obstáculos mesmo se o jogo estiver pausado
+    requestAnimationFrame(animate);
+
+    // Anima as decorações ambientais em todos os modos
+    if (environmentalDecorations.length > 0) {
+        import('./obstacles.js').then(module => {
+            module.animateEnvironmentalDecorations(environmentalDecorations, time);
+        });
+    }
+
+    // Anima os obstáculos mesmo se o jogo estiver pausado
     if (gameMode === 'obstacles' && obstacles.length > 0) {
         // Importa e executa as funções de animação e atualização dos obstáculos
         import('./obstacles.js').then(module => {

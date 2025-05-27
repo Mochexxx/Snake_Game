@@ -12,10 +12,20 @@ const COLORS = {
 };
 
 /**
- * Cria um modelo de árvore low poly
+ * Cria um modelo de árvore low poly com suporte a tema
+ * @param {string} theme - Tema de cores (opcional)
  * @returns {THREE.Group} Grupo contendo o modelo da árvore
  */
-export function createTreeModel() {    // Criar tronco da árvore
+export function createTreeModel(theme = null) {
+    // Determina a cor do topo da árvore baseada no tema
+    let treeTopColor = COLORS.treeTop;
+    if (theme === 'purple') {
+        treeTopColor = 0x7d55a0;
+    } else if (theme === 'orange') {
+        treeTopColor = 0xd46100;
+    }
+    
+    // Criar tronco da árvore
     const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 1.8, 5);
     const trunkMaterial = new THREE.MeshStandardMaterial({ 
         color: COLORS.trunk,
@@ -26,7 +36,7 @@ export function createTreeModel() {    // Criar tronco da árvore
     // Criar topo da árvore (cone) - mais alto
     const topGeometry = new THREE.ConeGeometry(0.8, 3, 6);
     const topMaterial = new THREE.MeshStandardMaterial({ 
-        color: COLORS.treeTop,
+        color: treeTopColor,
         flatShading: true
     });
     const top = new THREE.Mesh(topGeometry, topMaterial);
