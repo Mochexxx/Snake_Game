@@ -221,56 +221,161 @@ export function createEnvironmentalDecorations(scene) {
         maxZ: 40  // Limite inferior do tabuleiro
     };
     
-    // Criar 6 árvores grandes ao redor do tabuleiro
-    for (let i = 0; i < 6; i++) {
-        const tree = createTreeModel();
+    // Locais especialmente posicionados para câmeras
+    const cameraFriendlyPositions = [
+        // Os principais pontos cardeais (visíveis de todas as perspectivas)
+        { angle: 0, distanceMultiplier: 1.2 },         // Leste
+        { angle: Math.PI / 2, distanceMultiplier: 1.0 }, // Sul
+        { angle: Math.PI, distanceMultiplier: 1.2 },     // Oeste
+        { angle: Math.PI * 1.5, distanceMultiplier: 1.0 }, // Norte
         
-        // Escala maior para árvores ambientais
-        const scale = 1.5 + Math.random() * 1.0; // Entre 1.5 e 2.5
-        tree.scale.set(scale, scale, scale);
+        // Pontos intermediários espaçados de forma irregular
+        { angle: Math.PI / 4, distanceMultiplier: 1.1 },     // Sudeste
+        { angle: Math.PI * 0.75, distanceMultiplier: 1.3 },  // Sudoeste
+        { angle: Math.PI * 1.25, distanceMultiplier: 1.1 },  // Noroeste
+        { angle: Math.PI * 1.75, distanceMultiplier: 1.3 },  // Nordeste
         
-        // Posicionar bem fora do tabuleiro
-        const angle = (i / 6) * Math.PI * 2;
-        const minDistance = 50; // Distância mínima do centro para garantir que fique fora do grid
+        // Posições extras com distâncias variadas
+        { angle: Math.PI / 6, distanceMultiplier: 1.4 },
+        { angle: Math.PI / 3, distanceMultiplier: 1.2 },
+        { angle: Math.PI * 0.6, distanceMultiplier: 1.5 },
+        { angle: Math.PI * 0.9, distanceMultiplier: 1.3 },
+        { angle: Math.PI * 1.1, distanceMultiplier: 1.4 },
+        { angle: Math.PI * 1.4, distanceMultiplier: 1.2 },
+        { angle: Math.PI * 1.6, distanceMultiplier: 1.5 },
+        { angle: Math.PI * 1.9, distanceMultiplier: 1.3 }
+    ];
+    
+    // Array para acompanhar todas as posições usadas
+    const usedPositions = [];
+    
+    // Função para verificar se uma nova posição está longe o suficiente das usadas
+    function isPositionValid(newPos, minDistance) {
+        return !usedPositions.some(pos => {
+            const dx = newPos.x - pos.x;
+            const dz = newPos.z - pos.z;
+            const distance = Math.sqrt(dx * dx + dz * dz);
+            return distance < minDistance;
+        });
+    }
+    
+    // Função para encontrar uma posição válida
+    function findValidPosition(baseAngle, distanceMultiplier) {
+        // Adicionar uma pequena variação ao ângulo para criar mais diversidade
+        const angleVariation = (Math.random() * 0.2 - 0.1); // ±0.1 radianos (~5.7°)
+        const angle = baseAngle + angleVariation;
+        
+        // Base para distância
+        const minDistance = 50; // Distância mínima do centro
         const maxDistance = 80; // Distância máxima
-        const distance = minDistance + Math.random() * (maxDistance - minDistance);
         
+        // Aplicar multiplicador com pequena variação aleatória
+        const variableFactor = 0.9 + Math.random() * 0.2; // 0.9 a 1.1
+        const effectiveMultiplier = distanceMultiplier * variableFactor;
+        
+        // Calcular distância final
+        const distance = (minDistance + Math.random() * (maxDistance - minDistance)) * effectiveMultiplier;
+        
+        // Calcular posição
         const x = gridCenter.x + Math.cos(angle) * distance;
         const z = gridCenter.z + Math.sin(angle) * distance;
         
-        tree.position.set(x, 0, z);
+        return { x, z, distance };
+    }
+    
+    // Criar árvores usando posições estratégicas para visibilidade nas câmeras
+    const treePositions = [];
+    const numTrees = 8; // Aumentado de 6 para 8
+    
+    // Distribuir árvores nas posições principais e secundárias
+    for (let i = 0; i < numTrees; i++) {
+        // Escolher uma posição da lista ou criar uma nova se já usamos todas
+        const posIndex = i % cameraFriendlyPositions.length;
+        const { angle, distanceMultiplier } = cameraFriendlyPositions[posIndex];
+        
+        let position;
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        // Tentar encontrar uma posição válida
+        do {
+            position = findValidPosition(angle, distanceMultiplier);
+            attempts++;
+        } while (!isPositionValid(position, 15) && attempts < maxAttempts);
+        
+        // Se não encontrou posição válida após tentativas, pular esta árvore
+        if (!isPositionValid(position, 15)) continue;
+        
+        // Marcar posição como usada
+        usedPositions.push(position);
+        treePositions.push(position);
+        
+        const tree = createTreeModel();
+        
+        // Escala variada para árvores ambientais - alguns gigantes, alguns médios
+        const baseScale = i % 3 === 0 ? 2.0 : 1.5; // Algumas árvores maiores
+        const scale = baseScale + Math.random() * 0.8;
+        tree.scale.set(scale, scale, scale);
+        
+        // Posicionar na posição encontrada
+        tree.position.set(position.x, 0, position.z);
         
         // Rotação aleatória
         tree.rotation.y = Math.random() * Math.PI * 2;
+        
+        // Inclinação sutil para quebrar a uniformidade
+        const tiltAngle = Math.random() * 0.05; // Inclinação máxima de 0.05 radianos (~2.9°)
+        const tiltDirection = Math.random() * Math.PI * 2;
+        tree.rotation.x = Math.cos(tiltDirection) * tiltAngle;
+        tree.rotation.z = Math.sin(tiltDirection) * tiltAngle;
         
         scene.add(tree);
         decorations.push({
             mesh: tree,
             type: 'environmental-tree',
-            position: { x, z }
+            position: { x: position.x, z: position.z },
+            scale: scale
         });
     }
     
-    // Criar 5 pedras médias ao redor do tabuleiro
-    for (let i = 0; i < 5; i++) {
+    // Criar pedras em posições estratégicas
+    const numRocks = 6; // Aumentado de 5 para 6
+    
+    for (let i = 0; i < numRocks; i++) {
+        // Escolher posição, evitando as usadas pelas árvores
+        const posIndex = (i + numTrees / 2) % cameraFriendlyPositions.length; // Deslocamento para distribuir diferente das árvores
+        const { angle, distanceMultiplier } = cameraFriendlyPositions[posIndex];
+        
+        let position;
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        // Tentar encontrar uma posição válida
+        do {
+            position = findValidPosition(angle, distanceMultiplier * 0.9); // Pedras um pouco mais próximas que árvores
+            attempts++;
+        } while (!isPositionValid(position, 12) && attempts < maxAttempts);
+        
+        // Se não encontrou posição válida após tentativas, pular esta pedra
+        if (!isPositionValid(position, 12)) continue;
+        
+        // Marcar posição como usada
+        usedPositions.push(position);
+        
         const rock = createRockModel();
         
         // Escala média para pedras ambientais
-        const scale = 1.2 + Math.random() * 0.8; // Entre 1.2 e 2.0
+        const scale = 1.0 + Math.random() * 1.0; // Entre 1.0 e 2.0
         rock.scale.set(scale, scale * 0.8, scale);
         
-        // Posicionar em locais diferentes das árvores, mas também bem fora do grid
-        const angle = (i / 5) * Math.PI * 2 + Math.PI / 5; // Offset para não coincidir com árvores
-        const minDistance = 45; // Distância mínima do centro
-        const maxDistance = 70; // Distância máxima
-        const distance = minDistance + Math.random() * (maxDistance - minDistance);
+        // Alguns blocos ficam em "mini-colinas" para variação de altura
+        const useElevation = Math.random() > 0.5;
+        const elevation = useElevation ? 1.5 + Math.random() * 1.0 : 0.8;
         
-        const x = gridCenter.x + Math.cos(angle) * distance;
-        const z = gridCenter.z + Math.sin(angle) * distance;
+        // Posicionar na posição encontrada com altura variável
+        rock.position.set(position.x, elevation, position.z);
         
-        rock.position.set(x, 0.8, z);
-        
-        // Rotação aleatória
+        // Rotação aleatória mais pronunciada
         rock.rotation.set(
             Math.random() * 0.5,
             Math.random() * Math.PI * 2,
@@ -281,7 +386,9 @@ export function createEnvironmentalDecorations(scene) {
         decorations.push({
             mesh: rock,
             type: 'environmental-rock',
-            position: { x, z }
+            position: { x: position.x, z: position.z },
+            elevation: elevation,
+            scale: scale
         });
     }
     
@@ -299,8 +406,39 @@ export function removeEnvironmentalDecorations(scene, decorations) {
     });
 }
 
-// Animar decorações ambientais (rotação suave das pedras)
+// Animar decorações ambientais (rotação suave das pedras e leve ondulação das árvores)
 export function animateEnvironmentalDecorations(decorations, time) {
-    // Environmental decorations are now static - no animation
-    return;
+    if (!decorations || decorations.length === 0) return;
+    
+    const now = time || performance.now() * 0.001; // Converter para segundos se for timestamp
+    
+    decorations.forEach(decoration => {
+        if (!decoration || !decoration.mesh) return;
+        
+        // Aplicar animações diferentes para tipos diferentes
+        if (decoration.type === 'environmental-rock') {
+            // Rotação muito lenta para as pedras
+            decoration.mesh.rotation.y += 0.0005;
+        } 
+        else if (decoration.type === 'environmental-tree') {
+            // Movimento de ondulação leve para árvores baseado em seno
+            // Isso simula uma brisa leve movendo as árvores
+            const waveAmount = Math.sin(now * 0.5 + decoration.position.x * 0.1) * 0.005;
+            
+            // Aplicar ondulação na inclinação da árvore
+            const rotationSpeed = 0.0005;
+            decoration.mesh.rotation.x = Math.sin(now * 0.3) * 0.01;
+            decoration.mesh.rotation.z = Math.cos(now * 0.4 + decoration.position.z * 0.1) * 0.01;
+            
+            // Cada árvore tem seu próprio padrão de movimento sutil
+            if (!decoration.animOffset) {
+                decoration.animOffset = Math.random() * Math.PI * 2;
+            }
+            
+            // Movimento muito sutil para cima e para baixo
+            const originalY = 0;
+            const heightOffset = Math.sin(now * 0.2 + decoration.animOffset) * 0.1;
+            decoration.mesh.position.y = originalY + heightOffset;
+        }
+    });
 }
