@@ -301,10 +301,31 @@ export async function getThemeBarrierModel() {
     
     if (themeConfig.models.barrier) {
         try {
+            console.log(`Loading theme barrier: ${basePath}${themeConfig.models.barrier} for theme ${currentBoardTheme}`);
             const model = await loadModel(basePath + themeConfig.models.barrier);
             if (model) {
                 model.userData.isThemeModel = true;
                 model.userData.themeType = 'barrier';
+                model.userData.themeBarrier = themeConfig.models.barrier;
+                
+                // Adjust scale based on barrier type (can be customized per theme)
+                let scaleMultiplier = 1.0;
+                if (themeConfig.models.barrier.includes('neve')) {
+                    scaleMultiplier = 1.2; // Snow barriers slightly larger
+                } else if (themeConfig.models.barrier.includes('deserto')) {
+                    scaleMultiplier = 1.1; // Desert barriers slightly larger
+                } else if (themeConfig.models.barrier.includes('floresta')) {
+                    scaleMultiplier = 1.0; // Forest barriers normal size
+                } else if (themeConfig.models.barrier.includes('madeira')) {
+                    scaleMultiplier = 1.3; // Farm barriers larger
+                }
+                
+                model.scale.set(
+                    model.scale.x * scaleMultiplier,
+                    model.scale.y * scaleMultiplier,
+                    model.scale.z * scaleMultiplier
+                );
+                
                 return model;
             }
         } catch (error) {

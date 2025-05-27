@@ -195,12 +195,21 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
     const fenceScaleFactor = 1.3; // Further increased scale factor for bigger models
     const heightScale = 1.5; // Make fences much taller
     const thicknessScale = 1.3; // Make fences thicker
+    
+    // Try to get theme-specific barrier model first
+    let themeBarrier = null;
+    try {
+        themeBarrier = await getThemeBarrierModel();
+    } catch (error) {
+        console.warn('Could not load theme barrier for boundaries, will use default:', error);
+    }
 
     // North Wall (top edge, z=-1, fences rotated 90° for horizontal unity)
     const northFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
-            const fence = await createWoodenFenceModel();
+            // Use theme barrier if available, otherwise fallback to wooden fence
+            const fence = themeBarrier ? themeBarrier.clone() : await createWoodenFenceModel();
             fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, -FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
@@ -217,13 +226,12 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
         type: 'boundary', 
         position: 'north',
         boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: -1 }))
-    });
-
-    // South Wall (bottom edge, z=20, fences rotated 90° for horizontal unity)
+    });    // South Wall (bottom edge, z=20, fences rotated 90° for horizontal unity)
     const southFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
-            const fence = await createWoodenFenceModel();
+            // Use theme barrier if available, otherwise fallback to wooden fence
+            const fence = themeBarrier ? themeBarrier.clone() : await createWoodenFenceModel();
             fence.position.set(i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = Math.PI / 2; // Rotate 90° for horizontal placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
@@ -240,13 +248,12 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
         type: 'boundary', 
         position: 'south',
         boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: i, z: BOARD_CELLS_PER_SIDE }))
-    });
-
-    // West Wall (left edge, x=-1, fences normal orientation for vertical unity)
+    });    // West Wall (left edge, x=-1, fences normal orientation for vertical unity)
     const westFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
-            const fence = await createWoodenFenceModel();
+            // Use theme barrier if available, otherwise fallback to wooden fence
+            const fence = themeBarrier ? themeBarrier.clone() : await createWoodenFenceModel();
             fence.position.set(-FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = 0; // Keep normal orientation for vertical placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
@@ -264,12 +271,12 @@ async function createBoundaryBarriers(scene, barriers, hitboxes) {
         position: 'west',
         boardPositions: Array.from({ length: BOARD_CELLS_PER_SIDE }, (_, i) => ({ x: -1, z: i }))
     });
-    
-    // East Wall (right edge, x=20, fences normal orientation for vertical unity)
+      // East Wall (right edge, x=20, fences normal orientation for vertical unity)
     const eastFences = [];
     for (let i = 0; i < BOARD_CELLS_PER_SIDE; i++) {
         try {
-            const fence = await createWoodenFenceModel();
+            // Use theme barrier if available, otherwise fallback to wooden fence
+            const fence = themeBarrier ? themeBarrier.clone() : await createWoodenFenceModel();
             fence.position.set(BOARD_CELLS_PER_SIDE * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2, 0, i * FENCE_MODEL_LENGTH + FENCE_MODEL_LENGTH / 2);
             fence.rotation.y = 0; // Keep normal orientation for vertical placement
             fence.scale.x *= fenceScaleFactor; // Scale along length for unity
@@ -377,17 +384,27 @@ async function createWoodenFenceBarrier(scene, barriers, centerX, centerZ, board
     try {
         // Try to load theme-specific barrier model first
         let fence = await getThemeBarrierModel();
+        let barrierType = 'theme-barrier';
         
         // If no themed model is available, fallback to the default wooden fence
         if (!fence) {
             fence = await createWoodenFenceModel();
+            barrierType = 'wooden-fence';
         }
         
         // Position the fence at the center of the board cell
         fence.position.set(centerX, 0, centerZ);
         
-        // Add random rotation for variety
-        fence.rotation.y = Math.random() * Math.PI * 2;
+        // Add random rotation for variety - less variation for more consistency
+        fence.rotation.y = (Math.random() - 0.5) * Math.PI; // +/- 90 degrees
+        
+        // Apply shadow settings
+        fence.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
         
         // Add to scene
         scene.add(fence);
@@ -397,7 +414,11 @@ async function createWoodenFenceBarrier(scene, barriers, centerX, centerZ, board
             mesh: fence,
             type: 'complex',
             boardPosition: { x: boardX, z: boardZ },
-            model: fence.userData.isThemeModel ? 'theme-barrier' : 'wooden-fence'
+            hitbox: { x: boardX, z: boardZ },
+            centerX: centerX,
+            centerZ: centerZ,
+            model: barrierType,
+            themeBarrier: fence.userData.themeBarrier || null
         });
         
     } catch (error) {
@@ -507,27 +528,49 @@ export async function createRandomBarrierPiece(scene, barriers, usedPositions, h
       // For each block of the piece, create a themed barrier or wooden fence
     for (const pos of positions) {
         const {centerX, centerZ} = hitboxes[pos.x][pos.z];
-        
-        try {
+          try {
             // Try to use theme-specific barrier first
             let fence = await getThemeBarrierModel();
+            let barrierType = 'theme-barrier';
             
             // If no themed barrier available, use default wooden fence
             if (!fence) {
                 fence = await createWoodenFenceModel();
+                barrierType = 'wooden-fence';
             }
             
+            // Position at cell center
             fence.position.set(centerX - hitboxes[baseX][baseZ].centerX, 0, centerZ - hitboxes[baseX][baseZ].centerZ);
-            fence.rotation.y = Math.random() * Math.PI * 2; // Random rotation
-            fence.scale.multiplyScalar(1.4); // Make random barriers much larger
+            
+            // Add controlled random rotation for more consistency
+            fence.rotation.y = Math.PI * 0.5 * Math.floor(Math.random() * 4); // 0, 90, 180, or 270 degrees
+            
+            // Set appropriate scale based on barrier type
+            if (!fence.userData.themeBarrier) {
+                // For default barriers, use standard scaling
+                fence.scale.multiplyScalar(1.3);
+            }
+            // Theme-specific barriers already have their scale set in getThemeBarrierModel
+            
+            // Apply shadow settings
+            fence.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
             group.add(fence);
         } catch (error) {
             // Fallback to cube if fence loading fails
+            console.warn('Failed to create themed random barrier piece, using cube fallback:', error);
             const cube = new THREE.Mesh(
                 new THREE.BoxGeometry(2.8, 2.8, 2.8), // Much larger cube size
                 new THREE.MeshStandardMaterial({ color: 0x8B4513 }) // Brown color
             );
             cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1.4, centerZ - hitboxes[baseX][baseZ].centerZ);
+            cube.castShadow = true;
+            cube.receiveShadow = true;
             group.add(cube);
         }
         
