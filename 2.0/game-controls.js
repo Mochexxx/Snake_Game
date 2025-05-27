@@ -1,4 +1,4 @@
-// Funções para visualização dos controles do jogo
+// Funções para visualização e controles do jogo
 
 // Função para mostrar um popup com os controles
 export function showControlsHelp() {
@@ -24,15 +24,14 @@ export function showControlsHelp() {
     popup.style.textAlign = 'left';
     popup.style.fontSize = '14px';
     popup.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.2)';
-    
-    // Conteúdo do popup
+      // Conteúdo do popup
     popup.innerHTML = `
         <h3 style="margin-top: 0; color: #4CAF50;">Controles do Jogo</h3>
-        <p><strong>Movimento:</strong></p>
+        <p><strong>Movimento (baseado na perspectiva da câmera):</strong></p>
         <ul style="padding-left: 20px; margin-top: 5px;">
-            <li>Setas direcionais: ⬆️ ⬇️ ⬅️ ➡️</li>
-            <li>WASD: W (cima), A (esquerda), S (baixo), D (direita)</li>
-            <li>Teclado numérico: 8, 4, 2, 6</li>
+            <li>Setas direcionais: ⬆️ (para longe da câmera), ⬇️ (para perto da câmera), ⬅️ (esquerda), ➡️ (direita)</li>
+            <li>WASD: W (para longe da câmera), A (esquerda), S (para perto da câmera), D (direita)</li>
+            <li>Teclado numérico: 8 (para longe da câmera), 4 (esquerda), 2 (para perto da câmera), 6 (direita)</li>
         </ul>
         <p><strong>Jogo:</strong></p>
         <ul style="padding-left: 20px; margin-top: 5px;">

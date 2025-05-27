@@ -111,3 +111,99 @@ export function animateObstacles(obstacles, time) {
         }
     });
 }
+
+// Criar decorações ambientais ao redor do tabuleiro
+export function createEnvironmentalDecorations(scene) {
+    const decorations = [];
+    
+    // Configurações para as decorações
+    const gridSize = 40; // Tamanho do tabuleiro em unidades 3D
+    const gridCenter = { x: 20, z: 20 }; // Centro do tabuleiro
+    
+    // Criar 6 árvores grandes ao redor do tabuleiro
+    for (let i = 0; i < 6; i++) {
+        const tree = createTreeModel();
+        
+        // Escala maior para árvores ambientais
+        const scale = 1.5 + Math.random() * 1.0; // Entre 1.5 e 2.5
+        tree.scale.set(scale, scale, scale);
+        
+        // Posicionar ao redor do tabuleiro
+        const angle = (i / 6) * Math.PI * 2;
+        const distance = 25 + Math.random() * 15; // Entre 25 e 40 unidades do centro
+        
+        const x = gridCenter.x + Math.cos(angle) * distance;
+        const z = gridCenter.z + Math.sin(angle) * distance;
+        
+        tree.position.set(x, 0, z);
+        
+        // Rotação aleatória
+        tree.rotation.y = Math.random() * Math.PI * 2;
+        
+        scene.add(tree);
+        decorations.push({
+            mesh: tree,
+            type: 'environmental-tree',
+            position: { x, z }
+        });
+    }
+    
+    // Criar 5 pedras médias ao redor do tabuleiro
+    for (let i = 0; i < 5; i++) {
+        const rock = createRockModel();
+        
+        // Escala média para pedras ambientais
+        const scale = 1.2 + Math.random() * 0.8; // Entre 1.2 e 2.0
+        rock.scale.set(scale, scale * 0.8, scale);
+        
+        // Posicionar em locais diferentes das árvores
+        const angle = (i / 5) * Math.PI * 2 + Math.PI / 5; // Offset para não coincidir com árvores
+        const distance = 20 + Math.random() * 20; // Entre 20 e 40 unidades do centro
+        
+        const x = gridCenter.x + Math.cos(angle) * distance;
+        const z = gridCenter.z + Math.sin(angle) * distance;
+        
+        rock.position.set(x, 0.8, z);
+        
+        // Rotação aleatória
+        rock.rotation.set(
+            Math.random() * 0.5,
+            Math.random() * Math.PI * 2,
+            Math.random() * 0.5
+        );
+        
+        scene.add(rock);
+        decorations.push({
+            mesh: rock,
+            type: 'environmental-rock',
+            position: { x, z }
+        });
+    }
+    
+    return decorations;
+}
+
+// Remover decorações ambientais
+export function removeEnvironmentalDecorations(scene, decorations) {
+    if (!decorations || decorations.length === 0) return;
+    
+    decorations.forEach(decoration => {
+        if (decoration && decoration.mesh) {
+            scene.remove(decoration.mesh);
+        }
+    });
+}
+
+// Animar decorações ambientais (rotação suave das pedras)
+export function animateEnvironmentalDecorations(decorations, time) {
+    if (!decorations || decorations.length === 0) return;
+    
+    decorations.forEach(decoration => {
+        if (!decoration || !decoration.mesh) return;
+        
+        // Apenas as pedras recebem rotação suave
+        if (decoration.type === 'environmental-rock') {
+            decoration.mesh.rotation.y += 0.001;
+        }
+    });
+}

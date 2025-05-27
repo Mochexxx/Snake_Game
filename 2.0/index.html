@@ -3,13 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jogo da Cobra 3D</title>
-    <style>
-        body {
+    <title>Jogo da Cobra 3D</title>    <style>        body {
             margin: 0;
             padding: 0;
             overflow: hidden;
         }
+        /* Global transitions for smooth theme changes */
+        * {
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .theme-transitioning * {
+            transition: all 0.4s ease;
+        }
+
+        @keyframes rotateOut {
+            from {
+                transform: rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: rotate(360deg) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .rotating-out {
+            animation: rotateOut 0.7s forwards;
+        }
+        
+        /* Estilo comum para todos os botões de imagem */        .btn-image, #playButton, #playAgainButton, #startMenuButton, #optionsMenuButton, 
+        #infinityButton, #campaignButton, #gameModeBackButton, #startScreenBackButton, 
+        #endScreenBackButton, #optionsBackButton {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            color: transparent;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        
+        .btn-image:hover, #playButton:hover, #playAgainButton:hover, #startMenuButton:hover, 
+        #optionsMenuButton:hover, #infinityButton:hover, #campaignButton:hover, 
+        #gameModeBackButton:hover, #startScreenBackButton:hover, 
+        #endScreenBackButton:hover, #optionsBackButton:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+            box-shadow: 0 0 15px rgba(92, 219, 149, 0.5);
+        }
+        
+        .btn-image:active, #playButton:active, #playAgainButton:active, #startMenuButton:active, 
+        #optionsMenuButton:active, #infinityButton:active, #campaignButton:active, 
+        #gameModeBackButton:active, #startScreenBackButton:active, 
+        #endScreenBackButton:active, #optionsBackButton:active {
+            transform: scale(0.98);
+            filter: brightness(0.9);
+        }
+        
         #startScreen, #endScreen {
             position: absolute;
             width: 100%;
@@ -32,7 +85,7 @@
             align-items: center;
             justify-content: center;
         }        #playButton, #playAgainButton {
-            background-image: url('assets/butoes/start.png');
+            background-image: url('assets/Buttons/play_verde.png');
             background-size: contain;
             background-repeat: no-repeat;
             width: 200px;
@@ -66,54 +119,303 @@
             font-size: 24px;
             color: white;
             margin-bottom: 20px;
-        }        #modeSelect button {
-            background: #222;
-            color: #fff;
+        }        /* Game mode button styling */
+        #modeSelect button {
             border: 2px solid #5cdb95;
             border-radius: 10px;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
         }
+        
         #modeSelect button:hover {
-            background: #444;
             border-color: #8ee4af;
             transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(92, 219, 149, 0.5);
         }
+        
         #modeSelect button.active {
-            background: #379683;
-            border-color: #8ee4af;
+            background-color: rgba(55,150,131,0.6) !important;
+            border-color: #8ee4af !important;
+            box-shadow: 0 0 15px rgba(92, 219, 149, 0.7);
+        }
+          /* Toggle switch styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        /* Estilo para o menu de ESC */
+        #escMenu button {
+            transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        #escMenu button:hover {
+            transform: scale(1.1);
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px rgba(92, 219, 149, 0.7);
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .switch span {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .switch span:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        .switch input:checked + span {
+            background-color: #4e8d77;
+        }
+        
+        .switch input:focus + span {
+            box-shadow: 0 0 1px #4e8d77;
+        }
+        
+        .switch input:checked + span:before {
+            transform: translateX(26px);
+        }
+          /* Improved theme settings section */
+        .settings-section {
+            background-color: rgba(0,0,0,0.6);
+            padding: 30px;
+            border-radius: 15px;
+            width: 400px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        
+        .settings-section h2 {
+            color: white;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 24px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        .settings-section h3 {
+            color: white;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .settings-label {
+            color: white;
+            font-size: 18px;
+        }
+        
+        .settings-control {
+            width: 200px;
+        }
+          /* Estilos para botões de tema */        /* Improved theme button styling */
+        .theme-btn {
+            transition: all 0.3s ease;
+            padding: 0;
+            width: 80px;
+            height: 80px;
+            border: 3px solid transparent;
+            border-radius: 50%;
+            cursor: pointer;
+            background-color: transparent;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+        
+        .theme-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+        }
+        
+        .theme-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-btn:hover img {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+        
+        .theme-btn.active-theme {
+            border: 3px solid white !important;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
         }
     </style>
 </head>
 <body>
-    <!-- Tela de menu principal -->    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:url('assets/images.png');background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
-        <div id="title"></div>
-        <button id="startMenuButton" style="background-image:url('assets/butoes/start.png');background-size:contain;background-repeat:no-repeat;background-color:transparent;width:200px;height:100px;border:none;cursor:pointer;margin-top:20px;color:transparent;">Jogar</button>
-    </div>
-
-    <!-- Tela inicial -->
-    <div id="startScreen" style="display:none;">
-        <div id="title"></div>        <div id="modeSelect" style="margin-top: 30px; display: flex; gap: 20px;">
-            <button id="modeClassic" class="active" style="width: 160px; height: 60px; font-size: 18px; cursor: pointer; background-image: url('assets/butoes/palette-green.png'); background-size: cover; color: #333;">Clássico (Teleporte)</button>
-            <button id="modeBarriers" style="width: 160px; height: 60px; font-size: 18px; cursor: pointer; background-image: url('assets/butoes/palette-lilac.png'); background-size: cover; color: #333;">Barreiras Laterais</button>
-            <button id="modeObstacles" style="width: 160px; height: 60px; font-size: 18px; cursor: pointer; background-image: url('assets/butoes/palette-orange.png'); background-size: cover; color: #333;">Obstáculos</button>
+    <!-- Tela de pré-menu -->
+    <div id="preMainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:4;">
+        <div id="animatedTitleContainer" style="display: flex; flex-direction: column; align-items: center; justify-content: center; /* font-size, color, text-shadow removed as SVGs will handle visuals */">
+            <div id="snakeText" style="margin-bottom: 1vw; display:flex; flex-direction:row; align-items:center; justify-content:center;"></div>
+            <div id="gameText" style="display:flex; flex-direction:row; align-items:center; justify-content:center;"></div>
         </div>
-        <button id="playButton" style="display:none;"></button>
+        <p id="pressKeyMessage" style="color: rgb(255, 0, 0); margin-top: 40px; font-size: 2.5vw; font-family: 'Consolas', 'Courier New', monospace; opacity: 0; transition: opacity 1s ease; text-shadow: 1px 1px #333;">Press any key to continue</p>
+    </div>    <!-- Tela de menu principal -->
+    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">        <div id="titleContainer" style="position:relative;width:500px;max-width:90%;height:auto;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;">
+            <div id="title" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-position:center;background-repeat:no-repeat;width:100%;height:0;padding-bottom:40%;"></div>
+        </div>
+        
+        <div style="display:flex;flex-direction:column;align-items:center;gap:30px;">
+            <button id="startMenuButton" class="btn-image" style="width:200px;height:100px;background-image:url('assets/Buttons/play_verde.png');">Jogar</button>
+            <button id="optionsMenuButton" class="btn-image" style="width:200px;height:80px;background-image:url('assets/Buttons/settings_verde.png');">Opções</button>
+        </div>
+    </div><!-- Tela de modos de jogo -->
+    <div id="gameModeMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+        <div id="gameModeTitle" style="background-image:url('assets/Titlecards/gamemodes_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:60px;"></div>
+        
+        <div style="display:flex;flex-direction:row;gap:40px;justify-content:center;margin-bottom:50px;">
+            <button id="infinityButton" class="btn-image" style="width:200px;height:100px;background-image:url('assets/Gamemodes/infinity_verde.png');background-position:center;"><!--Infinity--></button>
+            <button id="campaignButton" class="btn-image" style="width:200px;height:100px;background-image:url('assets/Gamemodes/campaign_verde.png');background-position:center;"><!--Campaign--></button>
+        </div>
+        
+        <button id="gameModeBackButton" class="btn-image" style="width:120px;height:60px;background-image:url('assets/Buttons/back_verde.png');">Voltar</button>
+    </div>    <!-- Tela inicial -->
+    <div id="startScreen" style="display:none;">
+        <div id="title" style="margin-bottom:30px;"></div>
+        
+        <div id="modeSelect" style="margin-bottom:35px; display:flex; gap:20px; flex-wrap:wrap; justify-content:center; max-width:680px;">
+            <button id="modeClassic" class="btn-image active" style="width:160px; height:60px; background-image:url('assets/Gamemodes/casual_verde.png'); background-position:center;"><!--Teleporte--></button>
+            <button id="modeBarriers" class="btn-image" style="width:160px; height:60px; background-image:url('assets/Gamemodes/barrier_verde.png'); background-position:center;"><!--Barreiras--></button>
+            <button id="modeRandomBarriers" class="btn-image" style="width:160px; height:60px; background-image:url('assets/Gamemodes/middlebarrier_verde.png'); background-position:center;"><!--Labirinto--></button>
+            <button id="modeObstacles" class="btn-image" style="width:160px; height:60px; background-image:url('assets/Gamemodes/obstacles_verde.png'); background-position:center;"><!--Obstáculos--></button>
+        </div><div style="display:flex; flex-direction:row; gap:30px; align-items:center;">
+            <button id="startScreenBackButton" class="btn-image" style="width:120px; height:60px; background-image:url('assets/Buttons/back_verde.png');">Voltar</button>
+            <button id="playButton" class="btn-image" style="width:200px; height:100px; background-image:url('assets/Buttons/play_verde.png');">Jogar</button>
+        </div>
     </div>    <!-- Tela de fim de jogo -->
     <div id="endScreen">
-        <div id="finalScore">Score: 0</div>
-        <div id="highscoreEnd">Highscore: 0</div>
-        <div style="text-align: center; margin-top: 20px;">
-            <button id="playAgainButton" aria-label="Play Again"></button>
+        <div id="finalScore" style="font-size:32px; color:white; margin-bottom:15px;">Score: 0</div>
+        <div id="highscoreEnd" style="font-size:24px; color:white; margin-bottom:40px;">Highscore: 0</div>
+        
+        <div style="display:flex; flex-direction:row; gap:30px; justify-content:center; align-items:center;">
+            <button id="endScreenBackButton" class="btn-image" style="width:120px; height:60px; background-image:url('assets/Buttons/home_verde.png');">Menu</button>
+            <button id="playAgainButton" class="btn-image" style="width:200px; height:100px; background-image:url('assets/Buttons/restart_verde.png');" aria-label="Play Again"></button>
         </div>
     </div>
 
-    <!-- Placar durante o jogo -->    <div id="scoreBoard">
-        <span id="score">Score: 0</span><br>
-        <span id="highscore">Highscore: 0</span><br>
-        <span id="currentMode">Mode: Classic</span>
+    <!-- Tela de opções -->
+    <div id="optionsMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+        <div id="optionsTitle" style="background-image:url('assets/Titlecards/options_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:50px;"></div>
+          <!-- Configurações de som -->
+        <div class="settings-section">
+            <h2>Configurações de Som</h2>
+            
+            <div class="settings-row">
+                <label for="musicVolume" class="settings-label">Volume da Música:</label>
+                <input type="range" id="musicVolume" min="0" max="100" value="70" class="settings-control">
+            </div>
+            
+            <div class="settings-row">
+                <label for="sfxVolume" class="settings-label">Volume dos Efeitos:</label>
+                <input type="range" id="sfxVolume" min="0" max="100" value="80" class="settings-control">
+            </div>
+              <div class="settings-row">
+                <span class="settings-label">Mudo:</span>
+                <label class="switch">
+                    <input type="checkbox" id="muteToggle">
+                    <span></span>
+                </label>
+            </div>
+        </div>
+          <!-- Configurações de gráficos -->
+        <div class="settings-section">
+            <h2>Configurações de Gráficos</h2>
+            
+            <div class="settings-row">
+                <span class="settings-label">Qualidade Gráfica:</span>
+                <select id="graphicsQuality" class="settings-control" style="padding:8px;border-radius:5px;">
+                    <option value="low">Baixa</option>
+                    <option value="medium" selected>Média</option>
+                    <option value="high">Alta</option>
+                </select>
+            </div>
+              <div class="settings-row">
+                <span class="settings-label">Mostrar FPS:</span>
+                <label class="switch">
+                    <input type="checkbox" id="showFPSToggle">
+                    <span></span>
+                </label>
+            </div>
+              
+            <!-- Seleção de tema de cores -->
+            <div style="margin-top:25px;">
+                <h3>Theme Color</h3>                <div style="display:flex;justify-content:center;gap:20px;margin-top:10px;">
+                    <button id="greenThemeBtn" class="theme-btn active-theme" aria-label="Green Theme">
+                        <img src="assets/cores/palette-green.png" alt="Green Theme">
+                    </button>
+                    <button id="purpleThemeBtn" class="theme-btn" aria-label="Purple Theme">
+                        <img src="assets/cores/palette-lilac.png" alt="Purple Theme">
+                    </button>
+                    <button id="orangeThemeBtn" class="theme-btn" aria-label="Orange Theme">
+                        <img src="assets/cores/palette-orange.png" alt="Orange Theme">
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <button id="optionsBackButton" class="btn-image" style="width:120px;height:60px;background-image:url('assets/Buttons/back_verde.png');margin-top:30px;">Voltar</button>
+    </div>    <!-- Placar durante o jogo -->
+    <div id="scoreBoard" style="position:absolute; top:15px; left:15px; background-color:rgba(0,0,0,0.5); padding:10px 15px; border-radius:10px; color:white; font-size:18px; z-index:1; box-shadow:0 0 10px rgba(0,0,0,0.3);">
+        <span id="score" style="display:block; margin-bottom:5px; font-weight:bold;">Score: 0</span>
+        <span id="highscore" style="display:block; margin-bottom:5px;">Highscore: 0</span>
+        <span id="currentMode" style="display:block; margin-bottom:5px;">Mode: Classic</span>
+        <span style="display:block; font-size:14px; opacity:0.8;">Press ESC for menu</span>
+    </div>
+    
+    <!-- Menu de Escape (ESC) -->
+    <div id="escMenu" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:2000; flex-direction:column; justify-content:center; align-items:center;">
+        <h2 style="color:white; font-size:36px; margin-bottom:40px;">Pause</h2>
+        <div style="display:flex; flex-direction:column; gap:20px; align-items:center;">
+            <button id="resumeButton" class="btn-image" style="width:150px; height:80px; background-image:url('assets/Buttons/resume_verde.png');">Retomar</button>
+            <button id="resetButton" class="btn-image" style="width:150px; height:80px; background-image:url('assets/Buttons/restart_verde.png');">Reiniciar</button>
+            <button id="mainMenuButton" class="btn-image" style="width:150px; height:80px; background-image:url('assets/Buttons/home_verde.png');">Menu Principal</button>
+        </div>
     </div>
 
-    <script type="module" src="main.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.min.js",
+        "three/examples/jsm/geometries/RoundedBoxGeometry.js": "https://unpkg.com/three@0.128.0/examples/jsm/geometries/RoundedBoxGeometry.js"
+      }
+    }
+    </script>    <script type="module" src="main.js"></script>
+    <script type="module" src="premenu.js"></script>
+    <script src="3d-effect.js"></script>
     <!-- <script src="main.js"></script> -->
 </body>
 </html>

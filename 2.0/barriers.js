@@ -1,19 +1,189 @@
 // barriers.js
 // Responsável por criar e gerenciar barreiras no modo "barriers"
-import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+
+import { getBoardCellCenter } from './scene.js';
+import { randomPatterns } from './barrier-shapes.js';
+import * as THREE from 'three';
 
 // Criação das barreiras para o modo "barriers"
 export function createBarriers(scene, snakeBoard, hitboxes) {
     const barriers = [];
     
     // Criar barreiras em torno do tabuleiro (limites do jogo)
-    // Paredes norte, sul, leste e oeste
     createBoundaryBarriers(scene, barriers, hitboxes);
     
-    // Criar alguns obstáculos complexos dentro do tabuleiro
-    createComplexBarriers(scene, barriers, snakeBoard, hitboxes);
+    // Remover barreiras no meio para modo padrão
+    // createComplexBarriers(scene, barriers, snakeBoard, hitboxes);
     
     return barriers;
+}
+
+// Criação das barreiras para o modo "barreiras aleatórias" (apenas peças únicas)
+export function createRandomBarriers(scene, barriers, snakeBoard, hitboxes, count = 12) {
+    const usedPositions = [];
+    const allBlocks = [];
+    let tentativas = 0;
+    let criadas = 0;
+    const maxPecas = count;
+    // Embaralha a pool de padrões para cada partida
+    const shuffledPatterns = randomPatterns.slice().sort(() => Math.random() - 0.5);
+    let patternIndex = 0;
+    
+    // Divide o tabuleiro em quadrantes para garantir uma melhor distribuição
+    const quadrants = [
+        {minX: 0, maxX: 9, minZ: 0, maxZ: 9},     // Canto superior esquerdo
+        {minX: 10, maxX: 19, minZ: 0, maxZ: 9},   // Canto superior direito
+        {minX: 0, maxX: 9, minZ: 10, maxZ: 19},   // Canto inferior esquerdo
+        {minX: 10, maxX: 19, minZ: 10, maxZ: 19}  // Canto inferior direito
+    ];
+    let quadrantIndex = 0;
+    
+    while (criadas < maxPecas && tentativas < maxPecas * 30) {
+        tentativas++;
+        // Seleciona padrão embaralhado
+        const pattern = shuffledPatterns[patternIndex % shuffledPatterns.length];
+        patternIndex++;
+        
+        // Tenta colocar barreiras em quadrantes diferentes para melhor distribuição
+        const targetQuadrant = quadrants[quadrantIndex % quadrants.length];
+        
+        // Gera uma peça candidata
+        const tempBarriers = [];
+        const ok = createRandomBarrierPieceInQuadrant(scene, tempBarriers, usedPositions, hitboxes, snakeBoard, pattern, targetQuadrant);
+        if (!ok) {
+            // Se não conseguir colocar no quadrante alvo, tenta em qualquer lugar
+            const fallbackOk = createRandomBarrierPiece(scene, tempBarriers, usedPositions, hitboxes, snakeBoard, pattern);
+            if (!fallbackOk) continue;
+        }
+        
+        // Checa se todos os blocos da peça estão a pelo menos 3 de distância de Manhattan de todos os blocos já aceitos
+        const posicoes = tempBarriers[0].boardPositions;
+        const isDistante = posicoes.every(pos =>
+            allBlocks.every(b => Math.abs(b.x - pos.x) + Math.abs(b.z - pos.z) >= 3)
+        );
+        // Checa se todos os blocos da peça não estão colados (nem ortogonal nem diagonalmente) a nenhum bloco já aceito
+        const isIsolada = posicoes.every(pos =>
+            allBlocks.every(b =>
+                Math.abs(b.x - pos.x) > 1 || Math.abs(b.z - pos.z) > 1 || (b.x === pos.x && b.z === pos.z)
+            )
+        );
+        // Além disso, impede sobreposição direta
+        const isSobreposta = posicoes.some(pos =>
+            allBlocks.some(b => b.x === pos.x && b.z === pos.z)
+        );
+        if (isIsolada && !isSobreposta) {
+            barriers.push(...tempBarriers);
+            allBlocks.push(...posicoes);
+            criadas++;
+            quadrantIndex++; // Avança para o próximo quadrante para melhor distribuição
+        } else {
+            tempBarriers.forEach(b => scene.remove(b.mesh));
+        }
+    }
+}
+
+// Função auxiliar para criar barreiras em quadrantes específicos
+function createRandomBarrierPieceInQuadrant(scene, barriers, usedPositions, hitboxes, snakeBoard, pattern, quadrant) {
+    // Materiais
+    const baseMaterial = new THREE.MeshStandardMaterial({
+        color: 0x777777,
+        roughness: 0.5,
+        metalness: 0.5
+    });
+    const slabMaterial = new THREE.MeshStandardMaterial({
+        color: 0xaaaaaa,
+        roughness: 0.3,
+        metalness: 0.7,
+        emissive: 0x222222
+    });
+
+    // Usa pool centralizada de padrões
+    if (!pattern) {
+        pattern = randomPatterns[Math.floor(Math.random() * randomPatterns.length)];
+    }
+
+    // Tenta encontrar uma posição válida dentro do quadrante especificado
+    let attempts = 0;
+    let baseX, baseZ;
+    let positions;
+    // Calcula limites para baseX/baseZ para padrões com dx/dz negativos
+    const minDx = Math.min(...pattern.map(p => p.dx));
+    const maxDx = Math.max(...pattern.map(p => p.dx));
+    const minDz = Math.min(...pattern.map(p => p.dz));
+    const maxDz = Math.max(...pattern.map(p => p.dz));
+    
+    do {
+        // Gera posição dentro do quadrante especificado
+        const availableX = quadrant.maxX - quadrant.minX - (maxDx - minDx);
+        const availableZ = quadrant.maxZ - quadrant.minZ - (maxDz - minDz);
+        
+        if (availableX < 0 || availableZ < 0) {
+            return false; // O padrão não cabe neste quadrante
+        }
+        
+        baseX = quadrant.minX + Math.floor(Math.random() * (availableX + 1)) - minDx;
+        baseZ = quadrant.minZ + Math.floor(Math.random() * (availableZ + 1)) - minDz;
+        positions = pattern.map(p => ({x: baseX + p.dx, z: baseZ + p.dz}));
+        attempts++;
+        
+        // Verifica se todas as posições estão livres e dentro do quadrante
+    } while (
+        attempts < 50 && (
+            positions.some(pos =>
+                pos.x < quadrant.minX || pos.x > quadrant.maxX || 
+                pos.z < quadrant.minZ || pos.z > quadrant.maxZ ||
+                usedPositions.some(u => u.x === pos.x && u.z === pos.z) ||
+                snakeBoard.some(seg => seg.x === pos.x && seg.z === pos.z)
+            )
+        )
+    );
+    
+    if (attempts >= 50) return false; // Não conseguiu posicionar no quadrante
+
+    // Marca posições como usadas
+    positions.forEach(pos => usedPositions.push({x: pos.x, z: pos.z}));
+
+    // Cria o grupo 3D
+    const group = new THREE.Group();
+    const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
+    const hitboxMeshes = [];
+    // Para cada bloco da peça, cria um cubo do tamanho de uma célula
+    positions.forEach((pos, idx) => {
+        const {centerX, centerZ} = hitboxes[pos.x][pos.z];
+        const cube = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            baseMaterial
+        );
+        cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
+        group.add(cube);
+        // Adiciona hitbox invisível para cada célula
+        const hitbox = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            hitboxMaterial
+        );
+        hitbox.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
+        group.add(hitbox);
+        hitboxMeshes.push(hitbox);
+    });
+    // Opcional: adicionar uma slab no topo do primeiro bloco para variedade visual
+    const {x: sx, z: sz} = positions[0];
+    const {centerX: slabX, centerZ: slabZ} = hitboxes[sx][sz];
+    const slab = new THREE.Mesh(
+        new THREE.BoxGeometry(2.1, 0.9, 2.1),
+        slabMaterial
+    );
+    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 1.95, slabZ - hitboxes[baseX][baseZ].centerZ);
+    group.add(slab);
+    // Posiciona o grupo no tabuleiro
+    group.position.set(hitboxes[baseX][baseZ].centerX, 0, hitboxes[baseX][baseZ].centerZ);
+    scene.add(group);
+    barriers.push({
+        mesh: group,
+        type: 'random-piece',
+        boardPositions: positions, // hitbox: cada célula ocupada
+        hitboxes: hitboxMeshes
+    });
+    return true;
 }
 
 // Função para criar barreiras nos limites do tabuleiro
@@ -175,7 +345,6 @@ function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, bo
     const baseSize = 1.8; // Tamanho um pouco menor que a célula (2) para dar espaço visual
     const stackHeight = 2; // Quantidade de cubos empilhados
     const baseGroup = new THREE.Group();
-    
     // Criar cubos empilhados
     for (let i = 0; i < stackHeight; i++) {
         const cube = new THREE.Mesh(
@@ -185,7 +354,6 @@ function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, bo
         cube.position.set(0, baseSize/2 + i*baseSize, 0);
         baseGroup.add(cube);
     }
-    
     // Criar a meia-laje no topo
     const slab = new THREE.Mesh(
         new THREE.BoxGeometry(baseSize + 0.3, baseSize/2, baseSize + 0.3), // Um pouco maior que a base para destaque visual
@@ -193,18 +361,24 @@ function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, bo
     );
     slab.position.set(0, stackHeight*baseSize + baseSize/4, 0);
     baseGroup.add(slab);
-    
+    // Adiciona hitbox invisível para a célula ocupada
+    const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
+    const hitboxMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 2, 2),
+        hitboxMaterial
+    );
+    hitboxMesh.position.set(0, 1, 0); // Centralizado na célula
+    baseGroup.add(hitboxMesh);
     // Posicionar o conjunto completo na célula correta do tabuleiro
     baseGroup.position.set(centerX, 0, centerZ);
-    
     // Adicionar à cena e ao array de barreiras
     scene.add(baseGroup);
     barriers.push({
         mesh: baseGroup,
         type: 'complex',
-        boardPosition: { x: boardX, z: boardZ }
+        boardPosition: { x: boardX, z: boardZ },
+        hitboxes: [hitboxMesh]
     });
-    
     // Adicionar pequena rotação aleatória para variedade visual
     baseGroup.rotation.y = (Math.random() - 0.5) * 0.2;
 }
@@ -240,18 +414,100 @@ export function removeBarriers(scene, barriers) {
 }
 
 // Função para adicionar pequenas animações às barreiras (opcional)
+// Agora configurada para não ter animação (barreiras estáticas)
 export function animateBarriers(barriers, time) {
-    if (!barriers || barriers.length === 0) return;
-    
-    // Anima apenas as barreiras complexas
-    barriers.forEach(barrier => {
-        if (barrier.type === 'complex' && barrier.mesh) {
-            // Pulso sutil na altura
-            const pulseFactor = Math.sin(time * 0.002) * 0.1;
-            barrier.mesh.scale.y = 1 + pulseFactor;
-            
-            // Pequena rotação
-            barrier.mesh.rotation.y += 0.001;
-        }
+    // Função mantida para compatibilidade, mas as barreiras agora são estáticas
+    return;
+}
+
+// Cria uma peça única de barreira composta por 2 cubos e 1 slab, bem alinhada
+export function createRandomBarrierPiece(scene, barriers, usedPositions, hitboxes, snakeBoard, pattern = null) {
+    // Materiais
+    const baseMaterial = new THREE.MeshStandardMaterial({
+        color: 0x777777,
+        roughness: 0.5,
+        metalness: 0.5
     });
+    const slabMaterial = new THREE.MeshStandardMaterial({
+        color: 0xaaaaaa,
+        roughness: 0.3,
+        metalness: 0.7,
+        emissive: 0x222222
+    });
+
+    // Usa pool centralizada de padrões
+    if (!pattern) {
+        pattern = randomPatterns[Math.floor(Math.random() * randomPatterns.length)];
+    }
+
+    // Tenta encontrar uma posição válida
+    let attempts = 0;
+    let baseX, baseZ;
+    let positions;
+    // Calcula limites para baseX/baseZ para padrões com dx/dz negativos
+    const minDx = Math.min(...pattern.map(p => p.dx));
+    const maxDx = Math.max(...pattern.map(p => p.dx));
+    const minDz = Math.min(...pattern.map(p => p.dz));
+    const maxDz = Math.max(...pattern.map(p => p.dz));
+    do {
+        baseX = Math.floor(Math.random() * (20 - (maxDx - minDx))) - minDx;
+        baseZ = Math.floor(Math.random() * (20 - (maxDz - minDz))) - minDz;
+        positions = pattern.map(p => ({x: baseX + p.dx, z: baseZ + p.dz})); // Fixed: use baseZ instead of baseX for z coordinate
+        attempts++;
+        // Verifica se todas as posições estão livres e dentro do tabuleiro
+    } while (
+        attempts < 100 && (
+            positions.some(pos =>
+                pos.x < 0 || pos.x > 19 || pos.z < 0 || pos.z > 19 ||
+                usedPositions.some(u => u.x === pos.x && u.z === pos.z) ||
+                snakeBoard.some(seg => seg.x === pos.x && seg.z === pos.z)
+            )
+        )
+    );
+    if (attempts >= 100) return false; // Não conseguiu posicionar
+
+    // Marca posições como usadas
+    positions.forEach(pos => usedPositions.push({x: pos.x, z: pos.z}));
+
+    // Cria o grupo 3D
+    const group = new THREE.Group();
+    const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
+    const hitboxMeshes = [];
+    // Para cada bloco da peça, cria um cubo do tamanho de uma célula
+    positions.forEach((pos, idx) => {
+        const {centerX, centerZ} = hitboxes[pos.x][pos.z];
+        const cube = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            baseMaterial
+        );
+        cube.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
+        group.add(cube);
+        // Adiciona hitbox invisível para cada célula
+        const hitbox = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            hitboxMaterial
+        );
+        hitbox.position.set(centerX - hitboxes[baseX][baseZ].centerX, 1, centerZ - hitboxes[baseX][baseZ].centerZ);
+        group.add(hitbox);
+        hitboxMeshes.push(hitbox);
+    });
+    // Opcional: adicionar uma slab no topo do primeiro bloco para variedade visual
+    const {x: sx, z: sz} = positions[0];
+    const {centerX: slabX, centerZ: slabZ} = hitboxes[sx][sz];
+    const slab = new THREE.Mesh(
+        new THREE.BoxGeometry(2.1, 0.9, 2.1),
+        slabMaterial
+    );
+    slab.position.set(slabX - hitboxes[baseX][baseZ].centerX, 1.95, slabZ - hitboxes[baseX][baseZ].centerZ);
+    group.add(slab);
+    // Posiciona o grupo no tabuleiro
+    group.position.set(hitboxes[baseX][baseZ].centerX, 0, hitboxes[baseX][baseZ].centerZ);
+    scene.add(group);
+    barriers.push({
+        mesh: group,
+        type: 'random-piece',
+        boardPositions: positions, // hitbox: cada célula ocupada
+        hitboxes: hitboxMeshes
+    });
+    return true;
 }
