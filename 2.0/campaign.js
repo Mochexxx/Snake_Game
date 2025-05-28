@@ -305,6 +305,11 @@ function isPositionNearSnakeHead(head, x, z, distance) {
 
 // Função para criar uma barreira complexa (cubos empilhados com meia-laje no topo)
 async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boardX, boardZ, baseMaterial, slabMaterial) {
+    // recalculates center coordinates to ensure correct placement
+    const CELL_SIZE = 2;
+    centerX = boardX * CELL_SIZE + CELL_SIZE / 2;
+    centerZ = boardZ * CELL_SIZE + CELL_SIZE / 2;
+    // use farm model at board center
     try {
         // Try to use wooden fence model first
         const fence = await createWoodenFenceModel();
