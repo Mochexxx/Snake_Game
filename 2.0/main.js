@@ -3,7 +3,7 @@ import * as THREE from 'three'; // Importa o módulo three
 import * as Scene from './scene.js';
 import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
 import { createApple } from './apple.js';
-import { createObstacles, checkObstacleCollision, removeObstacles, animateEnvironmentalDecorations } from './obstacles.js';
+import { checkObstacleCollision, removeObstacles, animateEnvironmentalDecorations } from './obstacles.js';
 import { createBarriers, createRandomBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
 import { createHitboxVisualization, toggleHitboxVisualization, toggleDebugMode } from './debug.js';
 import { showTutorial } from './tutorial.js';
@@ -593,11 +593,14 @@ function startGame() {
         import('./barriers.js').then(module => {
             module.createRandomBarriers(scene, barriers, snakeBoard, hitboxes, 8);
         });
-    }
-    
-    // Criar obstáculos se o modo for "obstacles"
+    }    // Criar obstáculos se o modo for "obstacles"
     if (gameMode === 'obstacles') {
-        obstacles = createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos
+        // Import obstacles module and create obstacles asynchronously
+        import('./obstacles.js').then(async module => {
+            // Pre-load obstacle models first
+            await module.preloadObstacleModels();
+            obstacles = await module.createObstacles(scene, snake, snakeBoard, hitboxes, 18); // Aumentado para 18 obstáculos
+        });
         
         // Menu de obstáculos só aparece no modo debug
         const existingButtons = document.getElementById('obstacle-buttons');
@@ -962,14 +965,12 @@ function animateCameraToPosition() {
 
 // Animação
 function animate(time) {
-    requestAnimationFrame(animate);
-
-    // Anima os obstáculos mesmo se o jogo estiver pausado
+    requestAnimationFrame(animate);    // Anima os obstáculos mesmo se o jogo estiver pausado
     if (gameMode === 'obstacles' && obstacles.length > 0) {
         // Importa e executa as funções de animação e atualização dos obstáculos
-        import('./obstacles.js').then(module => {
+        import('./obstacles.js').then(async module => {
             module.animateObstacles(obstacles, time);
-            module.updateObstacles(scene, obstacles, snake, snakeBoard, hitboxes);
+            await module.updateObstacles(scene, obstacles, snake, snakeBoard, hitboxes);
         });
     }
     
@@ -1469,11 +1470,11 @@ function clearAllObstacles() {
     });
     
     // Limpa o array de obstáculos
-    obstacles = [];
-    
-    // Regenera obstáculos básicos
-    import('./obstacles.js').then(module => {
-        obstacles = module.createObstacles(scene, snake, snakeBoard, hitboxes, 18);
+    obstacles = [];    // Regenera obstáculos básicos
+    import('./obstacles.js').then(async module => {
+        // Pre-load obstacle models first
+        await module.preloadObstacleModels();
+        obstacles = await module.createObstacles(scene, snake, snakeBoard, hitboxes, 18);
     });
 }
 

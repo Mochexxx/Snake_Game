@@ -11,10 +11,39 @@ import { loadModel } from './model-loader.js';
 const OBSTACLE_LIFETIME = 10000; // 10 segundos em milissegundos
 const OBSTACLE_FADE_TIME = 1000; // 1 segundo para desaparecer
 
+// Model cache for pre-loaded obstacles
+const obstacleModelCache = new Map();
+
+// Pre-load obstacle models for better performance
+export async function preloadObstacleModels() {
+    const modelPaths = {
+        'snow_bush': 'assets/temas_models/neve/bush_obstaculo.glb',
+        'snow_tree': 'assets/temas_models/neve/avore_neve_obstaculo.glb',
+        'desert_cactus': 'assets/temas_models/desert/cacto_obstaculo.glb',
+        'farm_hay': 'assets/temas_models/quinta/hay_obstaculo.glb'
+    };
+    
+    console.log('Pre-loading obstacle models...');
+    
+    for (const [key, path] of Object.entries(modelPaths)) {
+        try {
+            const model = await loadModel(path);
+            if (model) {
+                obstacleModelCache.set(key, model);
+                console.log(`✓ Loaded ${key} obstacle model`);
+            }
+        } catch (error) {
+            console.warn(`Failed to pre-load ${key} obstacle model:`, error);
+        }
+    }
+    
+    console.log(`Pre-loaded ${obstacleModelCache.size} obstacle models`);
+}
+
 // Criação dos obstáculos para o modo "obstacles"
-export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) {
+export async function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) {
     const obstacles = [];    // Função para criar um novo obstáculo em posição válida
-    function createNewObstacle() {
+    async function createNewObstacle() {
         // Posições dos obstáculos na matriz
         const obstaclePositions = obstacles.map(obs => obs.boardPosition);
         
@@ -41,46 +70,122 @@ export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) 
             console.warn("Não foi possível encontrar posição válida para o obstáculo");
             return null;
         }
-        
-        // Obtém as coordenadas 3D para a posição do tabuleiro
+          // Obtém as coordenadas 3D para a posição do tabuleiro
         const { centerX, centerZ } = hitboxes[x][z];
-        
-        // Escolhe aleatoriamente entre árvore ou pedra
+          // Try to use a theme-specific obstacle model
         let obstacle;
-        const isTree = Math.random() > 0.5;
+        let isTree = false;
+        const theme = getCurrentBoardTheme();
+        let useThemeObstacle = false;        try {
+            // Use pre-loaded models for better performance
+            let modelKey = null;
+            
+            if (theme === 'snow') {
+                // Snow theme: only bush_obstaculo.glb and avore_neve_obstaculo.glb
+                const snowModels = ['snow_bush', 'snow_tree'];
+                modelKey = snowModels[Math.floor(Math.random() * snowModels.length)];
+            } else if (theme === 'desert') {
+                // Desert theme: only cacto_obstaculo.glb
+                modelKey = 'desert_cactus';
+            } else if (theme === 'farm' || theme === 'classic') {
+                // Farm theme: only hay_obstaculo.glb
+                modelKey = 'farm_hay';
+            }
+            
+            if (modelKey && obstacleModelCache.has(modelKey)) {
+                // Clone the pre-loaded model
+                const cachedModel = obstacleModelCache.get(modelKey);
+                obstacle = cachedModel.clone();
+                
+                if (obstacle) {
+                    useThemeObstacle = true;
+                    
+                    // Apply theme-specific scaling factors
+                    let scale = 1.0; // Default scale
+                    
+                    // Apply specific scaling based on model key
+                    if (theme === 'snow') {
+                        if (modelKey === 'snow_tree') {
+                            scale = 10.0; // 10x bigger for snow trees
+                            isTree = true;
+                        } else if (modelKey === 'snow_bush') {
+                            scale = 2.0;  // 2x bigger for snow bushes
+                            isTree = false;
+                        }
+                    } else if (theme === 'desert' && modelKey === 'desert_cactus') {
+                        scale = 3.0;  // 3x bigger for desert cacti
+                        isTree = false;
+                    } else if ((theme === 'classic' || theme === 'farm') && modelKey === 'farm_hay') {
+                        scale = 10.0; // 10x bigger for farm hay
+                        isTree = false;
+                    }
+                    
+                    // Apply the scale (no rotation)
+                    obstacle.scale.set(scale, scale, scale);
+                    
+                    // Position at the cell center (no rotation)
+                    obstacle.position.set(centerX, 0, centerZ);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load theme obstacle:', error);
+            useThemeObstacle = false;
+        }
         
-        if (isTree) {
-            // Cria uma árvore como obstáculo
-            obstacle = createTreeModel();
-         
-            // Ajusta a escala para ficar maior
-            const scale = 0.7 + Math.random() * 0.3;
-            obstacle.scale.set(scale, scale, scale);
+        // If theme obstacle failed, fall back to default trees/rocks
+        if (!useThemeObstacle) {
+            // Escolhe aleatoriamente entre árvore ou pedra
+            isTree = Math.random() > 0.5;
             
-            // Posiciona a árvore no chão
-            obstacle.position.set(centerX, 0, centerZ);
-        } else {
-            // Cria uma pedra como obstáculo
-            obstacle = createRockModel();
-            
-            // Ajusta a escala da pedra
-            const scale = 0.8 + Math.random() * 0.4;
-            obstacle.scale.set(scale, scale * 0.7, scale);
-            
-            // Rotação aleatória para as pedras
-            obstacle.rotation.set(
-                Math.random() * 0.3,
-                Math.random() * Math.PI * 2,
-                Math.random() * 0.3
-            );
-            
-            // Posiciona a pedra um pouco acima do chão
-            obstacle.position.set(centerX, 0.5, centerZ);
+            if (isTree) {
+                // Cria uma árvore como obstáculo
+                obstacle = createTreeModel();
+                
+                // Ajusta a escala para ficar maior
+                const scale = 0.7 + Math.random() * 0.3;
+                obstacle.scale.set(scale, scale, scale);
+                
+                // Posiciona a árvore no chão
+                obstacle.position.set(centerX, 0, centerZ);            } else {
+                // Cria uma pedra como obstáculo
+                obstacle = createRockModel();
+                
+                // Ajusta a escala da pedra
+                const scale = 0.8 + Math.random() * 0.4;
+                obstacle.scale.set(scale, scale * 0.7, scale);
+                
+                // No rotation for obstacles
+                
+                // Posiciona a pedra um pouco acima do chão
+                obstacle.position.set(centerX, 0.5, centerZ);
+            }
         }        // Adiciona propriedades para o sistema de vida
         obstacle.boardPosition = { x, z };
         obstacle.creationTime = Date.now();
         obstacle.isTree = isTree;
         obstacle.isFading = false;
+        
+        // Add spawn animation properties
+        obstacle.isSpawning = true;
+        obstacle.spawnStartTime = Date.now();
+        obstacle.originalScale = obstacle.scale.clone(); // Store original scale
+        obstacle.targetScale = obstacle.scale.clone();   // Store target scale
+        
+        // Start with zero scale and opacity for spawn animation
+        obstacle.scale.set(0, 0, 0);
+        obstacle.traverse(child => {
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(mat => {
+                        mat.transparent = true;
+                        mat.opacity = 0;
+                    });
+                } else {
+                    child.material.transparent = true;
+                    child.material.opacity = 0;
+                }
+            }
+        });
         
         // Adiciona à cena
         scene.add(obstacle);
@@ -88,12 +193,15 @@ export function createObstacles(scene, snake, snakeBoard, hitboxes, count = 10) 
         // Retorna o obstáculo
         return obstacle;
     }
-    
-    // Cria os obstáculos iniciais
+      // Cria os obstáculos iniciais
     for (let i = 0; i < count; i++) {
-        const obstacle = createNewObstacle();
-        if (obstacle) {
-            obstacles.push(obstacle);
+        try {
+            const obstacle = await createNewObstacle();
+            if (obstacle) {
+                obstacles.push(obstacle);
+            }
+        } catch (error) {
+            console.warn('Failed to create obstacle:', error);
         }
     }
     
@@ -130,7 +238,7 @@ export function removeObstacles(scene, obstacles) {
 }
 
 // Gerencia o tempo de vida dos obstáculos e regenera quando necessário
-export function updateObstacles(scene, obstacles, snake, snakeBoard, hitboxes) {
+export async function updateObstacles(scene, obstacles, snake, snakeBoard, hitboxes) {
     if (!obstacles || obstacles.length === 0 || !obstacles.createNewObstacle) return;
     
     const currentTime = Date.now();
@@ -168,9 +276,13 @@ export function updateObstacles(scene, obstacles, snake, snakeBoard, hitboxes) {
     
     // Cria novos obstáculos para substituir os removidos
     for (let i = 0; i < obstaclesRemoved; i++) {
-        const newObstacle = obstacles.createNewObstacle();
-        if (newObstacle) {
-            obstacles.push(newObstacle);
+        try {
+            const newObstacle = await obstacles.createNewObstacle();
+            if (newObstacle) {
+                obstacles.push(newObstacle);
+            }
+        } catch (error) {
+            console.warn('Failed to create replacement obstacle:', error);
         }
     }
 }
@@ -198,12 +310,66 @@ function setObstacleOpacity(obstacle, opacity) {
 export function animateObstacles(obstacles, time) {
     if (!obstacles || obstacles.length === 0) return;
     
+    const currentTime = Date.now();
+    const SPAWN_DURATION = 800; // 800ms spawn animation
+    
     obstacles.forEach(obstacle => {
         // Ignora objetos sem propriedades específicas (como a função createNewObstacle)
         if (!obstacle || typeof obstacle !== 'object' || !obstacle.boardPosition) return;
         
-        // Apenas as pedras (não grupos/árvores) recebem rotação mínima
-        if (!obstacle.isTree) {
+        // Handle spawn animation
+        if (obstacle.isSpawning) {
+            const spawnElapsed = currentTime - obstacle.spawnStartTime;
+            const spawnProgress = Math.min(spawnElapsed / SPAWN_DURATION, 1);
+            
+            // Easing function for smooth animation (ease-out cubic)
+            const easeOut = 1 - Math.pow(1 - spawnProgress, 3);
+            
+            // Animate scale from 0 to target scale
+            const currentScale = easeOut * obstacle.targetScale.x;
+            obstacle.scale.set(currentScale, currentScale, currentScale);
+            
+            // Animate opacity from 0 to 1
+            const currentOpacity = easeOut;
+            obstacle.traverse(child => {
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => {
+                            mat.opacity = currentOpacity;
+                        });
+                    } else {
+                        child.material.opacity = currentOpacity;
+                    }
+                }
+            });
+            
+            // Add a slight bounce effect at the end
+            if (spawnProgress >= 0.7) {
+                const bounceProgress = (spawnProgress - 0.7) / 0.3;
+                const bounceScale = 1 + Math.sin(bounceProgress * Math.PI) * 0.1;
+                obstacle.scale.multiplyScalar(bounceScale);
+            }
+            
+            // End spawn animation
+            if (spawnProgress >= 1) {
+                obstacle.isSpawning = false;
+                obstacle.scale.copy(obstacle.targetScale);
+                obstacle.traverse(child => {
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(mat => {
+                                mat.opacity = 1;
+                            });
+                        } else {
+                            child.material.opacity = 1;
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Existing rotation animation (only for rocks, not during spawn)
+        if (!obstacle.isTree && !obstacle.isSpawning) {
             obstacle.rotation.y += 0.002;
         }
     });
