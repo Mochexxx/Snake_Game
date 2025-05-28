@@ -71,12 +71,13 @@ export async function createObstacles(scene, snake, snakeBoard, hitboxes, count 
             return null;
         }
           // Obtém as coordenadas 3D para a posição do tabuleiro
-        const { centerX, centerZ } = hitboxes[x][z];
-          // Try to use a theme-specific obstacle model
+        const { centerX, centerZ } = hitboxes[x][z];        // Try to use a theme-specific obstacle model
         let obstacle;
         let isTree = false;
         const theme = getCurrentBoardTheme();
-        let useThemeObstacle = false;        try {
+        let useThemeObstacle = false;
+        
+        try {
             // Use pre-loaded models for better performance
             let modelKey = null;
             

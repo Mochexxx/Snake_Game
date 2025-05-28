@@ -15,7 +15,11 @@ const BOARD_THEMES = {
             floor: 0x90EE90,      // Light green
             background: 0x87CEEB,  // Sky blue
             border: 0x8B4513,     // Saddle brown
-            gridLines: 0x228B22   // Forest green
+            gridLines: 0x228B22,   // Forest green
+            // Sky dome colors
+            skyTop: 0x4A90E2,     // Bright blue sky
+            skyBottom: 0xB3E5FC,  // Light blue/white
+            skyIntensity: 1.0
         },
         models: {
             decoration: ['Big Barn.glb', 'Cow.glb', 'silo.glb'],
@@ -31,7 +35,11 @@ const BOARD_THEMES = {
             floor: 0xDEB887,      // Burlywood
             background: 0xFFD700,  // Gold
             border: 0x8B4513,     // Saddle brown
-            gridLines: 0xCD853F   // Peru
+            gridLines: 0xCD853F,   // Peru
+            // Sky dome colors - desert sunset/sunrise
+            skyTop: 0xFF6B35,     // Orange/red desert sky
+            skyBottom: 0xFFE4B5,  // Light orange/peach
+            skyIntensity: 0.95
         },
         models: {
             decoration: ['Camel.glb'],
@@ -47,7 +55,11 @@ const BOARD_THEMES = {
             floor: 0x228B22,      // Forest green
             background: 0x90EE90,  // Light green
             border: 0x8B4513,     // Saddle brown
-            gridLines: 0x006400   // Dark green
+            gridLines: 0x006400,   // Dark green
+            // Sky dome colors - forest canopy look
+            skyTop: 0x4A8BC2,     // Forest blue sky
+            skyBottom: 0x87CEEB,  // Light sky blue
+            skyIntensity: 0.8
         },
         models: {
             decoration: [],
@@ -63,7 +75,11 @@ const BOARD_THEMES = {
             floor: 0xF0F8FF,      // Alice blue
             background: 0xE6E6FA,  // Lavender
             border: 0x4682B4,     // Steel blue
-            gridLines: 0x191970   // Midnight blue
+            gridLines: 0x191970,   // Midnight blue
+            // Sky dome colors - winter sky
+            skyTop: 0x87CEEB,     // Winter sky blue
+            skyBottom: 0xF0F8FF,  // Alice blue/white
+            skyIntensity: 0.7
         },
         models: {
             decoration: ['Snowman.glb', 'Igloo.glb', 'Pine Tree with Snow.glb'],
@@ -242,6 +258,9 @@ function applyThemeColors(scene, themeConfig) {
     // Update scene colors using the scene module's function
     setTheme('green'); // Use base green theme structure but override colors
     
+    // Update sky dome with theme-specific colors
+    updateSkyDomeWithBoardTheme(scene, themeConfig);
+    
     // Override colors with theme-specific colors
     scene.traverse((object) => {
         // Update floor/terrain colors
@@ -261,13 +280,97 @@ function applyThemeColors(scene, themeConfig) {
             }
         }
         
-        // Update fog color
+        // Update fog color (fallback for scenes without sky dome)
         if (scene.fog) {
             scene.fog.color.set(themeConfig.colors.background);
         }
     });
     
     console.log('Applied theme colors for:', themeConfig.name);
+}
+
+// Update sky dome with board theme colors
+function updateSkyDomeWithBoardTheme(scene, themeConfig) {
+    // Find the sky dome in the scene
+    const skyDome = scene.getObjectByName("skyDome");
+    
+    if (skyDome && skyDome.material && skyDome.material.uniforms) {
+        // Update sky dome colors using theme configuration
+        const skyTop = themeConfig.colors.skyTop || themeConfig.colors.background;
+        const skyBottom = themeConfig.colors.skyBottom || themeConfig.colors.background;
+        const skyIntensity = themeConfig.colors.skyIntensity || 1.0;
+        
+        skyDome.material.uniforms.topColor.value.set(skyTop);
+        skyDome.material.uniforms.bottomColor.value.set(skyBottom);
+        
+        // Update scene background as fallback
+        scene.background = new THREE.Color(skyTop);
+        
+        console.log(`Updated sky dome for ${themeConfig.name}: top=${skyTop.toString(16)}, bottom=${skyBottom.toString(16)}`);
+    } else {
+        // Create sky dome if it doesn't exist
+        console.log('Sky dome not found, creating new one with board theme colors');
+        createSkyDomeWithBoardTheme(scene, themeConfig);
+    }
+}
+
+// Create sky dome with board theme colors
+function createSkyDomeWithBoardTheme(scene, themeConfig) {
+    // Remove any existing sky dome
+    const existingSkyDome = scene.getObjectByName("skyDome");
+    if (existingSkyDome) {
+        scene.remove(existingSkyDome);
+        existingSkyDome.geometry.dispose();
+        existingSkyDome.material.dispose();
+    }
+    
+    // Create sky dome geometry
+    const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+    
+    // Get theme colors with fallbacks
+    const skyTop = themeConfig.colors.skyTop || themeConfig.colors.background;
+    const skyBottom = themeConfig.colors.skyBottom || themeConfig.colors.background;
+    const skyIntensity = themeConfig.colors.skyIntensity || 1.0;
+    
+    // Create gradient material for sky
+    const skyMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            topColor: { value: new THREE.Color(skyTop) },
+            bottomColor: { value: new THREE.Color(skyBottom) },
+            offset: { value: 10 },
+            exponent: { value: 0.6 }
+        },
+        vertexShader: `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            uniform float offset;
+            uniform float exponent;
+            varying vec3 vWorldPosition;
+            void main() {
+                float h = normalize(vWorldPosition + offset).y;
+                gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+            }
+        `,
+        side: THREE.BackSide // Render inside faces
+    });
+    
+    const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
+    skyDome.name = "skyDome";
+    scene.add(skyDome);
+    
+    // Also set scene background as fallback
+    scene.background = new THREE.Color(skyTop);
+    
+    console.log(`Created new sky dome for ${themeConfig.name}`);
+    return skyDome;
 }
 
 // Apply complete board theme to scene
@@ -537,6 +640,9 @@ export function getThemeDisplayInfo(themeName) {
 
 // Export theme configurations for other modules
 export { BOARD_THEMES };
+
+// Export sky dome update functions for external use
+export { updateSkyDomeWithBoardTheme, createSkyDomeWithBoardTheme };
 
 // Get theme-specific middle barrier model (for middle barrier game mode)
 export async function getThemeMiddleBarrierModel() {

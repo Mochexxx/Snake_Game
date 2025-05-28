@@ -11,21 +11,33 @@ const THEME_COLORS = {
         floor: 0x5cdb95,
         border: 0x00ffff,
         gridLines: 0xaaffcc,
-        treeTop: 0x2e8b57
+        treeTop: 0x2e8b57,
+        // Sky colors for gradient sky dome
+        skyTop: 0x87CEEB,    // Bright sky blue
+        skyBottom: 0xE0F6FF, // Light blue/white
+        skyIntensity: 1.0
     },
     purple: {
         background: 0xd2c4e2,
         floor: 0x9b59b6,
         border: 0xbb8cce,
         gridLines: 0xd6b0fd,
-        treeTop: 0x7d55a0
+        treeTop: 0x7d55a0,
+        // Sky colors for gradient sky dome
+        skyTop: 0x9B59B6,     // Purple theme sky
+        skyBottom: 0xE8D5F2,  // Light purple
+        skyIntensity: 0.9
     },
     orange: {
         background: 0xffeac9,
         floor: 0xff8c42,
         border: 0xffac42,
         gridLines: 0xffd1a3,
-        treeTop: 0xd46100
+        treeTop: 0xd46100,
+        // Sky colors for gradient sky dome
+        skyTop: 0xFF8C00,     // Orange theme sky
+        skyBottom: 0xFFE4B5,  // Light orange/peach
+        skyIntensity: 0.95
     }
 };
 
@@ -40,11 +52,78 @@ let currentCameraType = 'perspective'; // 'perspective' ou 'orthographic'
 let perspectiveCamera = null;
 let orthographicCamera = null;
 
+// Referência para o domo do céu atual
+let currentSkyDome = null;
+
 export function createScene() {
     const scene = new THREE.Scene();
-    // Use fog to create depth and distance effect
-    scene.fog = new THREE.FogExp2(COLORS.background, 0.01);
+    // Create a sky dome instead of fog for better visual effect
+    // The sky dome will be updated by the board theme manager when themes are applied
+    createSkyDome(scene);
     return scene;
+}
+
+// Create sky dome with gradient colors
+export function createSkyDome(scene) {
+    // Remove existing sky dome if it exists
+    if (currentSkyDome) {
+        scene.remove(currentSkyDome);
+        currentSkyDome.geometry.dispose();
+        currentSkyDome.material.dispose();
+        currentSkyDome = null;
+    }
+    
+    // Create sky dome geometry
+    const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+    
+    // Create gradient material for sky
+    const skyMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            topColor: { value: new THREE.Color(COLORS.skyTop || COLORS.background) },
+            bottomColor: { value: new THREE.Color(COLORS.skyBottom || COLORS.background) },
+            offset: { value: 10 },
+            exponent: { value: 0.6 }
+        },
+        vertexShader: `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            uniform float offset;
+            uniform float exponent;
+            varying vec3 vWorldPosition;
+            void main() {
+                float h = normalize(vWorldPosition + offset).y;
+                gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+            }
+        `,
+        side: THREE.BackSide // Render inside faces
+    });
+    
+    currentSkyDome = new THREE.Mesh(skyGeometry, skyMaterial);
+    currentSkyDome.name = "skyDome";
+    scene.add(currentSkyDome);
+    
+    // Also set scene background as fallback
+    scene.background = new THREE.Color(COLORS.skyTop || COLORS.background);
+    
+    return currentSkyDome;
+}
+
+// Update sky dome colors for theme changes
+export function updateSkyDome(scene) {
+    if (currentSkyDome && currentSkyDome.material) {
+        currentSkyDome.material.uniforms.topColor.value.set(COLORS.skyTop || COLORS.background);
+        currentSkyDome.material.uniforms.bottomColor.value.set(COLORS.skyBottom || COLORS.background);
+        // Also update scene background
+        scene.background = new THREE.Color(COLORS.skyTop || COLORS.background);
+    }
 }
 
 export function createCamera() {
@@ -382,10 +461,8 @@ export function setTheme(themeName) {
 
 // Atualiza as cores da cena conforme o tema
 export function updateSceneTheme(scene) {
-    // Atualiza a cor de fundo e fog
-    if (scene.fog) {
-        scene.fog.color.set(COLORS.background);
-    }
+    // Update sky dome instead of fog
+    updateSkyDome(scene);
     
     // Procura e atualiza as cores de todos os elementos temáticos
     scene.traverse(object => {        
