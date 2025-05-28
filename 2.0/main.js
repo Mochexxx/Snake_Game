@@ -44,6 +44,7 @@ import {
     createLights 
 } from './lighting-system.js';
 import { animateSky } from './sky-system.js';
+import { audioSystem, addButtonSounds } from './audio-system.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -163,6 +164,15 @@ modeObstacles.addEventListener('click', () => {
 });
 
 window.onload = function() {
+    // Initialize audio system first
+    audioSystem.initialize().then(() => {
+        console.log('Audio system ready');
+        // Add sound effects to all buttons
+        addButtonSounds('.btn-image, button, #playButton, #playAgainButton, #startMenuButton, #optionsMenuButton, #infinityButton, #campaignButton, #gameModeBackButton, #startScreenBackButton, #endScreenBackButton, #optionsBackButton, #resumeButton, #resetButton, #mainMenuButton');
+    }).catch(error => {
+        console.warn('Audio system initialization failed:', error);
+    });
+    
     // document.getElementById('mainMenu').style.display = 'flex'; // This will be handled by premenu.js
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameModeMenu').style.display = 'none';
@@ -470,6 +480,9 @@ function createInitialApple() {
 
 // Função para iniciar o jogo
 function startGame() {
+    // Start background music when game starts
+    audioSystem.startBackgroundMusic();
+    
     score = 0;
     snake = [];
     snakeBoard = [];
@@ -717,6 +730,16 @@ function endGame(gameCompleted = false) {
         return;
     }
     
+    // Play game over sound
+    if (gameCompleted) {
+        audioSystem.playSound('levelComplete');
+    } else {
+        audioSystem.playSound('gameOver');
+    }
+    
+    // Stop background music
+    audioSystem.stopBackgroundMusic();
+    
     // Remove a informação de campanha se existir
     const campaignInfo = document.getElementById('campaign-info');
     if (campaignInfo) {
@@ -791,6 +814,9 @@ document.getElementById('endScreenBackButton').addEventListener('click', functio
 
 // Função para resetar o jogo completamente
 function resetGame() {
+    // Stop background music when resetting
+    audioSystem.stopBackgroundMusic();
+    
     score = 0;
     gameRunning = false;
     isPaused = true;
@@ -1108,9 +1134,11 @@ function animate(time) {
                 });
                 
                 return apple;
-            },            () => {
-                // Aumenta o score e atualiza o placar
+            },            () => {                // Aumenta o score e atualiza o placar
                 score += 10;
+                
+                // Play apple eat sound
+                audioSystem.playSound('appleEat');
                 
                 // Tratamento especial para o modo campanha
                 if (gameMode === 'campaign') {
@@ -1498,14 +1526,17 @@ document.getElementById('optionsBackButton').addEventListener('click', function(
 // Save options settings to localStorage
 document.getElementById('musicVolume').addEventListener('change', function() {
     localStorage.setItem('musicVolume', this.value);
+    audioSystem.setMusicVolume(parseInt(this.value));
 });
 
 document.getElementById('sfxVolume').addEventListener('change', function() {
     localStorage.setItem('sfxVolume', this.value);
+    audioSystem.setSfxVolume(parseInt(this.value));
 });
 
 document.getElementById('muteToggle').addEventListener('change', function() {
     localStorage.setItem('muted', this.checked);
+    audioSystem.setMuted(this.checked);
 });
 
 document.getElementById('graphicsQuality').addEventListener('change', function() {
@@ -1521,15 +1552,18 @@ function loadOptionsSettings() {
     const musicVolume = localStorage.getItem('musicVolume');
     if (musicVolume !== null) {
         document.getElementById('musicVolume').value = musicVolume;
+        audioSystem.setMusicVolume(parseInt(musicVolume));
     }
     
     const sfxVolume = localStorage.getItem('sfxVolume');
     if (sfxVolume !== null) {
         document.getElementById('sfxVolume').value = sfxVolume;
+        audioSystem.setSfxVolume(parseInt(sfxVolume));
     }
     
     const muted = localStorage.getItem('muted') === 'true';
     document.getElementById('muteToggle').checked = muted;
+    audioSystem.setMuted(muted);
     
     const graphicsQuality = localStorage.getItem('graphicsQuality');
     if (graphicsQuality !== null) {
@@ -1554,10 +1588,14 @@ setupThemeButtons();
 function togglePause() {
     isPaused = !isPaused;
     
-    // Se pausou o jogo, mostra um indicador visual (opcional)
+    // Handle background music pause/resume
     if (isPaused) {
+        audioSystem.pauseBackgroundMusic();
+        audioSystem.playSound('menuOpen');
         console.log("Jogo pausado");
     } else {
+        audioSystem.resumeBackgroundMusic();
+        audioSystem.playSound('menuClose');
         console.log("Jogo resumido");
     }
 }
