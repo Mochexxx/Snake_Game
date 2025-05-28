@@ -6,71 +6,165 @@ import { SphereGeometry } from 'three';
 import { TextureLoader } from 'three';
 import { createPlaydohMaterial, getThemeColors } from './scene.js';
 import { createApple } from './apple.js';
+import { getCurrentBoardTheme, getThemeConfig } from './board-theme-manager.js';
 
 // Snake.js
 // Responsável por criar e controlar a cobra
 
-// Load snake texture with error handling
+// Enhanced snake texture system
 const textureLoader = new TextureLoader();
-let snakeTexture = null;
+let snakeHeadTexture = null;
 
-// Try to load the texture, but continue without it if not found
-textureLoader.load(
-    'assets/textures/snake_texture.png',
-    (texture) => {
-        snakeTexture = texture;
-        console.log('Snake texture loaded successfully');
-    },
-    undefined,
-    (error) => {
-        console.warn('Snake texture not found, using solid color material instead:', error);
-        snakeTexture = null;
+// Create procedural snake texture for entire body
+function createSnakeTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    
+    // Create gradient background
+    const gradient = context.createRadialGradient(256, 256, 0, 256, 256, 256);
+    gradient.addColorStop(0, '#4a7c59'); // Darker green center
+    gradient.addColorStop(0.7, '#2d5016'); // Medium green
+    gradient.addColorStop(1, '#1a3009'); // Dark green edges
+    
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 512, 512);
+    
+    // Add scale pattern
+    context.strokeStyle = '#1a3009';
+    context.lineWidth = 2;
+    
+    for (let i = 0; i < 512; i += 32) {
+        for (let j = 0; j < 512; j += 32) {
+            context.beginPath();
+            context.arc(i + 16, j + 16, 12, 0, Math.PI * 2);
+            context.stroke();
+        }
     }
-);
+    
+    // Add subtle highlights
+    context.strokeStyle = '#7fb069';
+    context.lineWidth = 1;
+    
+    for (let i = 16; i < 512; i += 64) {
+        for (let j = 16; j < 512; j += 64) {
+            context.beginPath();
+            context.arc(i, j, 6, 0, Math.PI * 2);
+            context.stroke();
+        }
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.generateMipmaps = true;
+    return texture;
+}
 
-// Replace materials to use texture
-const HEAD_MATERIAL = new MeshStandardMaterial({ 
-    map: snakeTexture,
-    roughness: 0.5,
-    metalness: 0.2 
-});
-const SEGMENT_MATERIAL = new MeshStandardMaterial({ 
-    map: snakeTexture,
-    roughness: 0.5,
-    metalness: 0.2 
+// Create the texture for entire snake body
+snakeHeadTexture = createSnakeTexture();
+
+// Expose to global scope for main.js
+window.snakeTexture = snakeHeadTexture;
+
+// Enhanced materials with better properties
+let HEAD_MATERIAL = new MeshStandardMaterial({ 
+    map: snakeHeadTexture,
+    roughness: 0.3,
+    metalness: 0.1,
+    bumpMap: snakeHeadTexture,
+    bumpScale: 0.1,
+    normalScale: new THREE.Vector2(0.5, 0.5)
 });
 
-// Update material creation to handle missing texture
-function createSnakeMaterial() {
-    if (snakeTexture) {
+let SEGMENT_MATERIAL = new MeshStandardMaterial({ 
+    map: snakeHeadTexture,
+    roughness: 0.4,
+    metalness: 0.05,
+    envMapIntensity: 0.3
+});
+
+// Function to update materials when theme changes
+function updateSnakeMaterials(themeColors) {
+    if (themeColors && snakeHeadTexture) {
+        const themeColor = new THREE.Color(themeColors.floor);
+        
+        // Update head material
+        HEAD_MATERIAL.color.copy(themeColor);
+        HEAD_MATERIAL.needsUpdate = true;
+        
+        // Update segment material (slightly darker)
+        SEGMENT_MATERIAL.color.copy(themeColor.clone().multiplyScalar(0.9));
+        SEGMENT_MATERIAL.needsUpdate = true;
+    }
+}
+
+// Enhanced material creation with theme support
+function createSnakeMaterial(isHead = false, themeColors = null) {
+    // Use the same procedural head texture for both head and body
+    // but apply theme color tinting based on selected theme
+    const baseTexture = snakeHeadTexture;
+    
+    // Get theme color for tinting
+    const themeColor = themeColors ? new THREE.Color(themeColors.floor) : new THREE.Color(0x32cd32);
+    
+    if (isHead) {
         return new THREE.MeshStandardMaterial({
-            map: snakeTexture,
-            roughness: 0.5,
-            metalness: 0.2
+            map: baseTexture,
+            color: themeColor, // Apply theme color as tint
+            roughness: 0.3,
+            metalness: 0.1,
+            bumpMap: baseTexture,
+            bumpScale: 0.1,
+            normalScale: new THREE.Vector2(0.5, 0.5),
+            envMapIntensity: 0.5
         });
     } else {
-        // Fallback to solid color material
+        // Body segments use same texture but slightly different properties
         return new THREE.MeshStandardMaterial({
-            color: 0x32cd32, // Lime green
-            roughness: 0.5,
-            metalness: 0.2
+            map: baseTexture,
+            color: themeColor.clone().multiplyScalar(0.9), // Slightly darker for body
+            roughness: 0.4,
+            metalness: 0.05,
+            bumpMap: baseTexture,
+            bumpScale: 0.05,
+            envMapIntensity: 0.3
         });
     }
 }
 
-// Function to create a new snake segment with consistent style
+// Function to create a new snake segment with enhanced styling
 function createSnakeSegment(scene, x, z, hitboxes, isHead = false) {
     const cubeSize = 1.8; // Same size as initial snake segments
     
-    // Use the same geometry and material as initial snake creation
-    const segmentGeom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 8, 0.3);
-    const segmentMaterialInstance = isHead ? HEAD_MATERIAL.clone() : SEGMENT_MATERIAL.clone();
-    const segment = new THREE.Mesh(segmentGeom, segmentMaterialInstance);
+    // Enhanced geometry with more rounded edges for smoother appearance
+    const segmentGeom = new RoundedBoxGeometry(
+        cubeSize, 
+        cubeSize, 
+        cubeSize, 
+        12, // More segments for smoother curves
+        0.4  // More pronounced rounding
+    );
+    
+    // Get theme colors for material creation
+    const themeColors = getThemeColors();
+    const segmentMaterial = createSnakeMaterial(isHead, themeColors);
+    
+    const segment = new THREE.Mesh(segmentGeom, segmentMaterial);
     
     const { centerX, centerZ } = hitboxes[x][z];
-    segment.position.set(centerX, 1, centerZ); // Same Y position as initial segments
+    segment.position.set(centerX, 1, centerZ);
+    
+    // Enhanced shadow properties
     segment.castShadow = true;
     segment.receiveShadow = true;
+    
+    // Add subtle scale variation for organic feel
+    if (!isHead) {
+        const scaleVariation = 0.95 + Math.random() * 0.1; // 95% to 105%
+        segment.scale.setScalar(scaleVariation);
+    }
     
     scene.add(segment);
     return segment;
@@ -129,52 +223,127 @@ export function createSnake(scene) {
     const snake = [];
     const cubeSize = 1.8; // Slightly smaller to create visual separation between segments
     
-    const hitboxes = generateBoardHitboxes();    // Começa no centro do tabuleiro (matriz 9,9) para 20x20
+    const hitboxes = generateBoardHitboxes();
+    // Começa no centro do tabuleiro (matriz 9,9) para 20x20
     const startX = 9;
     const startZ = 9;
     // Guarda as coordenadas do tabuleiro para cada segmento
-    const snakeBoard = [];    // Criação da cabeça da cobra (cubo vermelho)
-    // Primeiro criamos o cubo principal da cabeça
-    const headGeometry = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 8, 0.3);
-    const headMaterialInstance = HEAD_MATERIAL.clone();
-    const head = new THREE.Mesh(headGeometry, headMaterialInstance);
+    const snakeBoard = [];
+    
+    // Enhanced snake head creation with better geometry and materials
+    const headGeometry = new RoundedBoxGeometry(
+        cubeSize, 
+        cubeSize, 
+        cubeSize, 
+        12, // More segments for smoother appearance
+        0.4  // More pronounced rounding
+    );
+    
+    // Get theme colors and create enhanced head material
+    const themeColors = getThemeColors();
+    const headMaterial = createSnakeMaterial(true, themeColors);
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    
+    // Enhanced shadow properties
+    head.castShadow = true;
+    head.receiveShadow = true;
     
     // Posicionar a cabeça no tabuleiro
     const { centerX: cx, centerZ: cz } = hitboxes[startX][startZ];
     head.position.set(cx, 1, cz);
     scene.add(head);
 
-    // add eyes and mouth aesthetic
-    const leftEye = new THREE.Mesh(
-        new SphereGeometry(0.5, 8, 8),
-        new MeshStandardMaterial({ color: 0xffffff })
-    );
-    leftEye.scale.set(0.5, 0.5, 0.5);
-    leftEye.position.set(cubeSize*0.25, cubeSize*0.25, cubeSize*0.5);
-    const leftEyeHole = new THREE.Mesh(
-        new SphereGeometry(0.35, 8, 8),
-        new MeshStandardMaterial({ color: 0x333333 })
-    );
-    leftEyeHole.scale.set(1, 0.6, 0.6);
-    leftEyeHole.position.set(0.1, 0, 0);
-    leftEye.add(leftEyeHole);
+    // Enhanced eyes with better materials and positioning
+    const eyeGeometry = new SphereGeometry(0.15, 12, 12);
+    const eyeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff,
+        roughness: 0.1,
+        metalness: 0.1,
+        envMapIntensity: 1.0
+    });
+    
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(cubeSize * 0.2, cubeSize * 0.3, cubeSize * 0.45);
+    
+    // Enhanced pupil
+    const pupilGeometry = new SphereGeometry(0.08, 8, 8);
+    const pupilMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x111111,
+        roughness: 0.0,
+        metalness: 0.0
+    });
+    const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+    leftPupil.position.set(0, 0, 0.05);
+    leftEye.add(leftPupil);
+    
+    // Enhanced eye highlight
+    const highlightGeometry = new SphereGeometry(0.03, 6, 6);
+    const highlightMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.3
+    });
+    const leftHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
+    leftHighlight.position.set(0.02, 0.02, 0.08);
+    leftEye.add(leftHighlight);
+    
     const rightEye = leftEye.clone();
     rightEye.position.x = -leftEye.position.x;
-    rightEye.rotation.y = Math.PI;
-    const mouth = new THREE.Mesh(
-        new RoundedBoxGeometry(cubeSize * 0.8, cubeSize * 0.2, cubeSize * 0.4, 5, 0.05),
-        new MeshStandardMaterial({ color: 0x550000 })
+    
+    // Enhanced mouth/snout
+    const mouthGeometry = new RoundedBoxGeometry(
+        cubeSize * 0.6, 
+        cubeSize * 0.15, 
+        cubeSize * 0.3, 
+        8, 
+        0.05
     );
-    mouth.rotation.x = -Math.PI * 0.1;
-    mouth.position.set(0, -cubeSize * 0.2, cubeSize * 0.6);
+    const mouthMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2d1b14,
+        roughness: 0.6,
+        metalness: 0.0
+    });
+    const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
+    mouth.rotation.x = -Math.PI * 0.05;
+    mouth.position.set(0, -cubeSize * 0.15, cubeSize * 0.5);
+    
+    // Add nostril details
+    const nostrilGeometry = new SphereGeometry(0.03, 6, 6);
+    const nostrilMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    
+    const leftNostril = new THREE.Mesh(nostrilGeometry, nostrilMaterial);
+    leftNostril.position.set(0.1, 0.05, 0.08);
+    mouth.add(leftNostril);
+    
+    const rightNostril = leftNostril.clone();
+    rightNostril.position.x = -leftNostril.position.x;
+    mouth.add(rightNostril);
+    
     head.add(leftEye, rightEye, mouth);
 
     snake.push(head);
-    snakeBoard.push({ x: startX, z: startZ });    // Corpo inicial para a esquerda
+    snakeBoard.push({ x: startX, z: startZ });
+    
+    // Enhanced body segments with new material system
     for (let i = 1; i < 5; i++) {
-        const segmentGeom = new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 8, 0.3);
-        const segmentMaterialInstance = SEGMENT_MATERIAL.clone();
-        const segment = new THREE.Mesh(segmentGeom, segmentMaterialInstance);
+        const segmentGeom = new RoundedBoxGeometry(
+            cubeSize, 
+            cubeSize, 
+            cubeSize, 
+            12, // More segments for smoother curves
+            0.4  // More pronounced rounding
+        );
+        const segmentMaterial = createSnakeMaterial(false, themeColors);
+        const segment = new THREE.Mesh(segmentGeom, segmentMaterial);
+        
+        // Enhanced shadow properties
+        segment.castShadow = true;
+        segment.receiveShadow = true;
+        
+        // Add subtle scale variation for organic feel
+        const scaleVariation = 0.95 + Math.random() * 0.1; // 95% to 105%
+        segment.scale.setScalar(scaleVariation);
+        
         const { centerX: bx, centerZ: bz } = hitboxes[startX - i][startZ];
         segment.position.set(bx, 1, bz);
         scene.add(segment);
@@ -410,6 +579,71 @@ export function moveSnake(snake, snakeHead, snakeDirection, apple, gameMode, end
     snakeHead.rotation.y = angle;
     
     return true;
+}
+
+// Snake animation system for subtle breathing effect
+export function animateSnake(snake, time) {
+    if (!snake || !Array.isArray(snake) || snake.length === 0) return;
+    
+    // Subtle breathing effect - only apply to head
+    const head = snake[0];
+    if (head) {
+        const breathingScale = 1 + Math.sin(time * 0.003) * 0.02; // Very subtle scaling
+        head.scale.setScalar(breathingScale);
+        
+        // Subtle head bob
+        const originalY = 1;
+        const bobAmount = 0.05;
+        head.position.y = originalY + Math.sin(time * 0.004) * bobAmount;
+    }
+    
+    // Subtle segment animation - wave effect through body
+    for (let i = 1; i < snake.length; i++) {
+        const segment = snake[i];
+        if (segment) {
+            const waveOffset = i * 0.5; // Offset for wave propagation
+            const waveIntensity = 0.02; // Very subtle
+            const originalY = 1;
+            
+            segment.position.y = originalY + Math.sin(time * 0.002 + waveOffset) * waveIntensity;
+            
+            // Subtle rotation for more organic feel
+            const rotationIntensity = 0.01;
+            segment.rotation.y = Math.sin(time * 0.001 + waveOffset) * rotationIntensity;
+        }
+    }
+}
+
+// Export function to get current snake materials for theme updates
+export function updateSnakeTheme(snake, themeColors) {
+    if (!snake || !Array.isArray(snake) || snake.length === 0 || !themeColors) return;
+    
+    const themeColor = new THREE.Color(themeColors.floor);
+    
+    // Update head material
+    const head = snake[0];
+    if (head && head.material) {
+        head.material.color.copy(themeColor);
+        head.material.needsUpdate = true;
+    }
+    
+    // Update body segment materials
+    const bodyColor = themeColor.clone().multiplyScalar(0.9); // Slightly darker for body
+    for (let i = 1; i < snake.length; i++) {
+        const segment = snake[i];
+        if (segment && segment.material) {
+            segment.material.color.copy(bodyColor);
+            segment.material.needsUpdate = true;
+        }
+    }
+    
+    // Update global materials for new segments
+    updateSnakeMaterials(themeColors);
+}
+
+// Export function to apply theme to newly created snake
+export function applyThemeToSnake(snake, themeColors) {
+    updateSnakeTheme(snake, themeColors);
 }
 
 // Função para depuração das colisões

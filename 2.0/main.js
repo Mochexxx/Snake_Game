@@ -1,7 +1,7 @@
 import * as THREE from 'three'; // Importa o módulo three
 // main.js
 import * as Scene from './scene.js';
-import { createSnake, moveSnake, isAppleOnSnake, debugCollisions } from './Snake.js';
+import { createSnake, moveSnake, isAppleOnSnake, debugCollisions, animateSnake, updateSnakeTheme } from './Snake.js';
 import { createApple } from './apple.js';
 import { checkObstacleCollision, removeObstacles, animateEnvironmentalDecorations } from './obstacles.js';
 import { createBarriers, createRandomBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
@@ -1076,27 +1076,50 @@ function animate(time) {
                 
                 // Verifica se as coordenadas estão nos limites do tabuleiro
                 const validX = Math.max(0, Math.min(19, x));
-                const validZ = Math.max(0, Math.min(19, z));
-                
-                // Primeiro cria o segmento visual 3D
+                const validZ = Math.max(0, Math.min(19, z));                // Primeiro cria o segmento visual 3D usando o sistema aprimorado
                 // Obtém as coordenadas 3D corretas para o novo segmento
                 const { centerX, centerZ } = hitboxes[validX][validZ];
-                  // Materiais e geometria consistentes para todos os segmentos
-                const segmentMaterial = new THREE.MeshStandardMaterial({
-                    map: snakeTexture,
-                    roughness: 0.5,
-                    metalness: 0.2
-                });
-                  // Cria um novo segmento visual com geometria e material consistentes
+                
+                // Cria um novo segmento usando a função aprimorada do Snake.js
                 const segmentSize = 1.8; // Igual ao valor usado em Snake.js
-                const newSegment = new THREE.Mesh(
-                    new RoundedBoxGeometry(segmentSize, segmentSize, segmentSize, 8, 0.3),
-                    segmentMaterial
+                
+                // Enhanced geometry with more rounded edges
+                const segmentGeom = new RoundedBoxGeometry(
+                    segmentSize, 
+                    segmentSize, 
+                    segmentSize, 
+                    12, // More segments for smoother curves
+                    0.4  // More pronounced rounding
                 );
+                
+                // Use the same texture system as Snake.js with theme coloring
+                const themeColors = Scene.getThemeColors();
+                const themeColor = new THREE.Color(themeColors.floor).multiplyScalar(0.9); // Slightly darker for body
+                
+                const segmentMaterial = new THREE.MeshStandardMaterial({
+                    map: window.snakeTexture, // Use the procedural snake texture
+                    color: themeColor, // Apply theme color as tint
+                    roughness: 0.4,
+                    metalness: 0.05,
+                    bumpMap: window.snakeTexture,
+                    bumpScale: 0.05,
+                    envMapIntensity: 0.3
+                });
+                
+                const newSegment = new THREE.Mesh(segmentGeom, segmentMaterial);
+                
+                // Enhanced shadow properties
+                newSegment.castShadow = true;
+                newSegment.receiveShadow = true;
+                
+                // Add subtle scale variation for organic feel
+                const scaleVariation = 0.95 + Math.random() * 0.1; // 95% to 105%
+                newSegment.scale.setScalar(scaleVariation);
                 
                 // Define a posição correta no espaço 3D
                 newSegment.position.set(centerX, 1, centerZ);
-                  // Adiciona o segmento à cena e ao array de segmentos
+                
+                // Adiciona o segmento à cena e ao array de segmentos
                 snake.push(newSegment);
                 scene.add(newSegment);
                 
@@ -1186,11 +1209,15 @@ function animate(time) {
     if (environmentalDecorations && environmentalDecorations.length > 0) {
         animateEnvironmentalDecorations(environmentalDecorations, time);
     }
-    
-    // Animate sky system (clouds and sky colors)
+      // Animate sky system (clouds and sky colors)
     const deltaTime = (time - previousTime) / 1000; // Convert to seconds
     animateSky(deltaTime);
     previousTime = time;
+    
+    // Animate snake for subtle breathing and wave effects
+    if (snake && snake.length > 0) {
+        animateSnake(snake, time);
+    }
     
     // Get current camera in case it was switched
     camera = Scene.getCurrentCamera();
