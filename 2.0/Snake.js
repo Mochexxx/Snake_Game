@@ -6,7 +6,7 @@ import { SphereGeometry } from 'three';
 import { TextureLoader } from 'three';
 import { createPlaydohMaterial, getThemeColors } from './scene.js';
 import { createApple } from './apple.js';
-import { getCurrentBoardTheme, getThemeConfig } from './board-theme-manager.js';
+import { getCurrentTheme } from './theme-manager.js';
 
 // Snake.js
 // Responsável por criar e controlar a cobra
@@ -87,8 +87,29 @@ let SEGMENT_MATERIAL = new MeshStandardMaterial({
 
 // Function to update materials when theme changes
 function updateSnakeMaterials(themeColors) {
-    if (themeColors && snakeHeadTexture) {
-        const themeColor = new THREE.Color(themeColors.floor);
+    if (snakeHeadTexture) {
+        let themeColor;
+        try {
+            const currentTheme = getCurrentTheme();
+            
+            // Map theme colors to snake colors
+            switch(currentTheme) {
+                case 'green':
+                    themeColor = new THREE.Color(0x32cd32); // Lime green
+                    break;
+                case 'purple':
+                    themeColor = new THREE.Color(0x9b59b6); // Purple
+                    break;
+                case 'orange':
+                    themeColor = new THREE.Color(0xe67e22); // Orange
+                    break;
+                default:
+                    themeColor = new THREE.Color(0x32cd32); // Default to green
+            }
+        } catch (error) {
+            // Fallback to green if theme system is not available
+            themeColor = new THREE.Color(0x32cd32);
+        }
         
         // Update head material
         HEAD_MATERIAL.color.copy(themeColor);
@@ -103,11 +124,32 @@ function updateSnakeMaterials(themeColors) {
 // Enhanced material creation with theme support
 function createSnakeMaterial(isHead = false, themeColors = null) {
     // Use the same procedural head texture for both head and body
-    // but apply theme color tinting based on selected theme
+    // but apply theme color tinting based on selected color theme (green, purple, orange)
     const baseTexture = snakeHeadTexture;
     
-    // Get theme color for tinting
-    const themeColor = themeColors ? new THREE.Color(themeColors.floor) : new THREE.Color(0x32cd32);
+    // Get current color theme and apply appropriate snake color
+    let themeColor;
+    try {
+        const currentTheme = getCurrentTheme();
+        
+        // Map theme colors to snake colors
+        switch(currentTheme) {
+            case 'green':
+                themeColor = new THREE.Color(0x32cd32); // Lime green
+                break;
+            case 'purple':
+                themeColor = new THREE.Color(0x9b59b6); // Purple
+                break;
+            case 'orange':
+                themeColor = new THREE.Color(0xe67e22); // Orange
+                break;
+            default:
+                themeColor = new THREE.Color(0x32cd32); // Default to green
+        }
+    } catch (error) {
+        // Fallback to green if theme system is not available
+        themeColor = new THREE.Color(0x32cd32);
+    }
     
     if (isHead) {
         return new THREE.MeshStandardMaterial({
@@ -135,7 +177,7 @@ function createSnakeMaterial(isHead = false, themeColors = null) {
 }
 
 // Function to create a new snake segment with enhanced styling
-function createSnakeSegment(scene, x, z, hitboxes, isHead = false) {
+export function createSnakeSegment(scene, x, z, hitboxes, isHead = false) {
     const cubeSize = 1.8; // Same size as initial snake segments
     
     // Enhanced geometry with more rounded edges for smoother appearance
@@ -616,9 +658,30 @@ export function animateSnake(snake, time) {
 
 // Export function to get current snake materials for theme updates
 export function updateSnakeTheme(snake, themeColors) {
-    if (!snake || !Array.isArray(snake) || snake.length === 0 || !themeColors) return;
+    if (!snake || !Array.isArray(snake) || snake.length === 0) return;
     
-    const themeColor = new THREE.Color(themeColors.floor);
+    let themeColor;
+    try {
+        const currentTheme = getCurrentTheme();
+        
+        // Map theme colors to snake colors
+        switch(currentTheme) {
+            case 'green':
+                themeColor = new THREE.Color(0x32cd32); // Lime green
+                break;
+            case 'purple':
+                themeColor = new THREE.Color(0x9b59b6); // Purple
+                break;
+            case 'orange':
+                themeColor = new THREE.Color(0xe67e22); // Orange
+                break;
+            default:
+                themeColor = new THREE.Color(0x32cd32); // Default to green
+        }
+    } catch (error) {
+        // Fallback to green if theme system is not available
+        themeColor = new THREE.Color(0x32cd32);
+    }
     
     // Update head material
     const head = snake[0];

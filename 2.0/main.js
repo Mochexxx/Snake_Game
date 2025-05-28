@@ -1,7 +1,7 @@
 import * as THREE from 'three'; // Importa o módulo three
 // main.js
 import * as Scene from './scene.js';
-import { createSnake, moveSnake, isAppleOnSnake, debugCollisions, animateSnake, updateSnakeTheme } from './Snake.js';
+import { createSnake, moveSnake, isAppleOnSnake, debugCollisions, animateSnake, updateSnakeTheme, createSnakeSegment } from './Snake.js';
 import { createApple } from './apple.js';
 import { checkObstacleCollision, removeObstacles, animateEnvironmentalDecorations } from './obstacles.js';
 import { createBarriers, createRandomBarriers, checkBarrierCollision, removeBarriers, animateBarriers } from './barriers.js';
@@ -572,14 +572,15 @@ function startGame() {
     });
     
     // Gera a matriz de hitboxes para o tabuleiro
-    hitboxes = Scene.generateBoardHitboxes();
-
-    // Cria a cobra
+    hitboxes = Scene.generateBoardHitboxes();    // Cria a cobra
     const snakeObj = createSnake(scene);
     snake = snakeObj.snake;
     snakeHead = snakeObj.snakeHead;
     snakeDirection = snakeObj.snakeDirection;
     snakeBoard = snakeObj.snakeBoard;
+    
+    // Expose snake globally for theme system
+    window.snake = snake;
     
     // Initialize smooth animation positions
     initializeSnakeAnimationPositions();
@@ -1076,61 +1077,19 @@ function animate(time) {
                 
                 // Verifica se as coordenadas estão nos limites do tabuleiro
                 const validX = Math.max(0, Math.min(19, x));
-                const validZ = Math.max(0, Math.min(19, z));                // Primeiro cria o segmento visual 3D usando o sistema aprimorado
-                // Obtém as coordenadas 3D corretas para o novo segmento
-                const { centerX, centerZ } = hitboxes[validX][validZ];
+                const validZ = Math.max(0, Math.min(19, z));
                 
-                // Cria um novo segmento usando a função aprimorada do Snake.js
-                const segmentSize = 1.8; // Igual ao valor usado em Snake.js
+                // Use the proper addSegment function from Snake.js that handles theme colors correctly
+                const newSegment = createSnakeSegment(scene, validX, validZ, hitboxes, false);
                 
-                // Enhanced geometry with more rounded edges
-                const segmentGeom = new RoundedBoxGeometry(
-                    segmentSize, 
-                    segmentSize, 
-                    segmentSize, 
-                    12, // More segments for smoother curves
-                    0.4  // More pronounced rounding
-                );
-                
-                // Use the same texture system as Snake.js with theme coloring
-                const themeColors = Scene.getThemeColors();
-                const themeColor = new THREE.Color(themeColors.floor).multiplyScalar(0.9); // Slightly darker for body
-                
-                const segmentMaterial = new THREE.MeshStandardMaterial({
-                    map: window.snakeTexture, // Use the procedural snake texture
-                    color: themeColor, // Apply theme color as tint
-                    roughness: 0.4,
-                    metalness: 0.05,
-                    bumpMap: window.snakeTexture,
-                    bumpScale: 0.05,
-                    envMapIntensity: 0.3
-                });
-                
-                const newSegment = new THREE.Mesh(segmentGeom, segmentMaterial);
-                
-                // Enhanced shadow properties
-                newSegment.castShadow = true;
-                newSegment.receiveShadow = true;
-                
-                // Add subtle scale variation for organic feel
-                const scaleVariation = 0.95 + Math.random() * 0.1; // 95% to 105%
-                newSegment.scale.setScalar(scaleVariation);
-                
-                // Define a posição correta no espaço 3D
-                newSegment.position.set(centerX, 1, centerZ);
-                
-                // Adiciona o segmento à cena e ao array de segmentos
+                // Add to arrays
                 snake.push(newSegment);
-                scene.add(newSegment);
+                snakeBoard.push({ x: validX, z: validZ });
                 
                 // Add animation positions for the new segment
                 const newSegmentPos = newSegment.position.clone();
                 snakeTargetPositions.push(newSegmentPos.clone());
                 snakeStartPositions.push(newSegmentPos.clone());
-                
-                // Só depois que garantimos que o objeto visual foi criado, atualizamos a matriz
-                // Adiciona a posição à matriz do tabuleiro com coordenadas validadas
-                snakeBoard.push({ x: validX, z: validZ });
                 
                 // Garante sincronização entre matriz e objetos visuais
                 if (snake.length !== snakeBoard.length) {
@@ -1140,14 +1099,15 @@ function animate(time) {
                         snakeBoard.pop();
                     }
                 }
-                  // Remove a maçã existente
+                
+                // Remove a maçã existente
                 scene.remove(apple);
                 
                 // Create new apple with proper barrier collision checking
                 createApple(
                     scene, 
                     snake, 
-                    isAppleOnSnake, 
+                    isAppleOnSnake,
                     snakeBoard, 
                     hitboxes, 
                     obstacles, 

@@ -259,9 +259,25 @@ export function applyTheme(themeName) {
       // Add the new styles
     style.id = 'theme-style';
     document.head.appendChild(style);
-    
-    // Update theme buttons state
+      // Update theme buttons state
     updateThemeButtonsState();
+    
+    // Update snake theme if a snake exists in the game
+    try {
+        // Check if we're in main.js context and snake exists
+        if (typeof window !== 'undefined' && window.snake && Array.isArray(window.snake) && window.snake.length > 0) {
+            // Import and use the updateSnakeTheme function
+            import('./Snake.js').then(snakeModule => {
+                if (snakeModule.updateSnakeTheme) {
+                    snakeModule.updateSnakeTheme(window.snake);
+                }
+            }).catch(error => {
+                console.log('Snake module not loaded yet, theme will apply to new snakes');
+            });
+        }
+    } catch (error) {
+        console.log('Could not update snake theme, continuing with theme update');
+    }
 }
 
 // Helper function to convert hex to rgb
