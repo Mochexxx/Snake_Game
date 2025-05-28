@@ -43,6 +43,7 @@ import {
     isLightingDebugMenuVisible,
     createLights 
 } from './lighting-system.js';
+import { animateSky } from './sky-system.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -65,6 +66,7 @@ let hitboxes;
 let snakeTargetPositions = []; // Target positions for each snake segment
 let snakeStartPositions = []; // Starting positions for interpolation
 let animationProgress = 0; // Progress of current animation (0 to 1)
+let previousTime = 0; // For calculating deltaTime for sky animation
 // Carrega o estado do modo debug do localStorage
 export let debugMode = localStorage.getItem('debugMode') === 'true'; // Flag para ativar/desativar o modo de debug
 let applesCollected = 0; // Contador de maçãs para o modo campanha
@@ -1152,11 +1154,15 @@ function animate(time) {
     }    // Update smooth snake animation
     updateSnakeVisualPositions(time);
       // Animate terrain shader
-    Scene.animateTerrain(scene, time);
-      // Animate environmental decorations if they exist
+    Scene.animateTerrain(scene, time);    // Animate environmental decorations if they exist
     if (environmentalDecorations && environmentalDecorations.length > 0) {
         animateEnvironmentalDecorations(environmentalDecorations, time);
     }
+    
+    // Animate sky system (clouds and sky colors)
+    const deltaTime = (time - previousTime) / 1000; // Convert to seconds
+    animateSky(deltaTime);
+    previousTime = time;
     
     // Get current camera in case it was switched
     camera = Scene.getCurrentCamera();

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 import { loadModel } from './model-loader.js';
 import { setTheme, updateSceneTheme, getThemeColors } from './scene.js';
+import { createAdvancedSkyDome, updateAdvancedSkyColors, disposeSkySystem } from './sky-system.js';
 
 // Board theme configuration
 const BOARD_THEMES = {
@@ -289,89 +290,7 @@ function applyThemeColors(scene, themeConfig) {
     console.log('Applied theme colors for:', themeConfig.name);
 }
 
-// Update sky dome with board theme colors
-function updateSkyDomeWithBoardTheme(scene, themeConfig) {
-    // Find the sky dome in the scene
-    const skyDome = scene.getObjectByName("skyDome");
-    
-    if (skyDome && skyDome.material && skyDome.material.uniforms) {
-        // Update sky dome colors using theme configuration
-        const skyTop = themeConfig.colors.skyTop || themeConfig.colors.background;
-        const skyBottom = themeConfig.colors.skyBottom || themeConfig.colors.background;
-        const skyIntensity = themeConfig.colors.skyIntensity || 1.0;
-        
-        skyDome.material.uniforms.topColor.value.set(skyTop);
-        skyDome.material.uniforms.bottomColor.value.set(skyBottom);
-        
-        // Update scene background as fallback
-        scene.background = new THREE.Color(skyTop);
-        
-        console.log(`Updated sky dome for ${themeConfig.name}: top=${skyTop.toString(16)}, bottom=${skyBottom.toString(16)}`);
-    } else {
-        // Create sky dome if it doesn't exist
-        console.log('Sky dome not found, creating new one with board theme colors');
-        createSkyDomeWithBoardTheme(scene, themeConfig);
-    }
-}
-
-// Create sky dome with board theme colors
-function createSkyDomeWithBoardTheme(scene, themeConfig) {
-    // Remove any existing sky dome
-    const existingSkyDome = scene.getObjectByName("skyDome");
-    if (existingSkyDome) {
-        scene.remove(existingSkyDome);
-        existingSkyDome.geometry.dispose();
-        existingSkyDome.material.dispose();
-    }
-    
-    // Create sky dome geometry
-    const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
-    
-    // Get theme colors with fallbacks
-    const skyTop = themeConfig.colors.skyTop || themeConfig.colors.background;
-    const skyBottom = themeConfig.colors.skyBottom || themeConfig.colors.background;
-    const skyIntensity = themeConfig.colors.skyIntensity || 1.0;
-    
-    // Create gradient material for sky
-    const skyMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            topColor: { value: new THREE.Color(skyTop) },
-            bottomColor: { value: new THREE.Color(skyBottom) },
-            offset: { value: 10 },
-            exponent: { value: 0.6 }
-        },
-        vertexShader: `
-            varying vec3 vWorldPosition;
-            void main() {
-                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                vWorldPosition = worldPosition.xyz;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 topColor;
-            uniform vec3 bottomColor;
-            uniform float offset;
-            uniform float exponent;
-            varying vec3 vWorldPosition;
-            void main() {
-                float h = normalize(vWorldPosition + offset).y;
-                gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-            }
-        `,
-        side: THREE.BackSide // Render inside faces
-    });
-    
-    const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
-    skyDome.name = "skyDome";
-    scene.add(skyDome);
-    
-    // Also set scene background as fallback
-    scene.background = new THREE.Color(skyTop);
-    
-    console.log(`Created new sky dome for ${themeConfig.name}`);
-    return skyDome;
-}
+// Note: Sky dome functions have been moved to the advanced sky system integration section below
 
 // Apply complete board theme to scene
 export async function applyBoardThemeToScene(scene) {
@@ -391,13 +310,15 @@ export async function applyBoardThemeToScene(scene) {
         
         // Load theme landscapes
         const landscapes = await loadThemeLandscape(scene, themeConfig);
-        
-        // Store loaded models for this theme
+          // Store loaded models for this theme
         loadedThemeModels.set(currentBoardTheme, {
             decorations,
             landscapes,
             config: themeConfig
         });
+        
+        // Update sky system with new theme colors
+        updateSkyDomeWithBoardTheme(scene);
         
         console.log(`Successfully applied ${themeConfig.name} theme with ${decorations.length} decorations and ${landscapes.length} landscapes`);
         
@@ -641,9 +562,6 @@ export function getThemeDisplayInfo(themeName) {
 // Export theme configurations for other modules
 export { BOARD_THEMES };
 
-// Export sky dome update functions for external use
-export { updateSkyDomeWithBoardTheme, createSkyDomeWithBoardTheme };
-
 // Get theme-specific middle barrier model (for middle barrier game mode)
 export async function getThemeMiddleBarrierModel() {
     const currentTheme = getCurrentBoardTheme();
@@ -760,4 +678,35 @@ export async function recreateEnvironmentalDecorations(scene, currentDecorations
         console.error('Erro ao recriar decorações ambientais:', error);
         return [];
     }
+}
+
+// Create advanced sky dome with board theme integration
+export function createSkyDomeWithBoardTheme(scene) {
+    const themeConfig = getThemeConfig(currentBoardTheme);
+    return createAdvancedSkyDome(scene, themeConfig);
+}
+
+// Update sky dome colors when board theme changes
+export function updateSkyDomeWithBoardTheme(scene) {
+    const themeConfig = getThemeConfig(currentBoardTheme);
+    updateAdvancedSkyColors(scene, themeConfig);
+}
+
+// Integrate with advanced sky system
+export async function integrateAdvancedSkySystem(scene) {
+    const themeConfig = getThemeConfig(currentBoardTheme);
+    
+    // Create or update the advanced sky dome
+    const skyDome = await createAdvancedSkyDome(scene, themeConfig.colors);
+    
+    // Update sky colors
+    updateAdvancedSkyColors(skyDome, themeConfig.colors);
+    
+    // Dispose of old sky system if it exists
+    disposeSkySystem(scene);
+    
+    // Add the new sky dome to the scene
+    scene.add(skyDome);
+    
+    console.log('Integrated advanced sky system for theme:', currentBoardTheme);
 }

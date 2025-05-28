@@ -117,7 +117,7 @@ export async function createObstacles(scene, snake, snakeBoard, hitboxes, count 
                         scale = 3.0;  // 3x bigger for desert cacti
                         isTree = false;
                     } else if ((theme === 'classic' || theme === 'farm') && modelKey === 'farm_hay') {
-                        scale = 10.0; // 10x bigger for farm hay
+                        scale = 10.0 // 10x bigger for farm hay
                         isTree = false;
                     }
                     
@@ -421,11 +421,11 @@ export async function createEnvironmentalDecorations(scene) {
         },
         classic: {
             complex: ['barn_paisagem.glb'],
-            simple: ['Cow.glb', 'silo_paisagem.glb', 'hay_obstaculo.glb']
+            simple: ['Cow.glb', 'silo_paisagem.glb'] // Removed hay_obstaculo.glb
         },
         farm: {
             complex: ['barn_paisagem.glb'],
-            simple: ['Cow.glb', 'silo_paisagem.glb', 'hay_obstaculo.glb']
+            simple: ['Cow.glb', 'silo_paisagem.glb'] // Removed hay_obstaculo.glb
         },
         forest: {
             complex: [], // Will use trees at fixed positions
@@ -511,9 +511,9 @@ export async function createEnvironmentalDecorations(scene) {
                         
                         // Theme-specific scaling for simple objects
                         if (simpleFile.toLowerCase().includes('cow')) {
-                            simpleModel.scale.set(0.6, 0.6, 0.6); // Small cows
+                            simpleModel.scale.set(0.35, 0.35, 0.35); // Slightly bigger cows (was 0.25)
                         } else if (simpleFile.toLowerCase().includes('snowman')) {
-                            simpleModel.scale.set(7, 7, 7); // Snowmen 7x bigger (adjusted from 15x)
+                            simpleModel.scale.set(10.5, 10.5, 10.5); // Snowmen 1.5x bigger (7 × 1.5 = 10.5)
                         } else if (simpleFile.toLowerCase().includes('cactus') || simpleFile.toLowerCase().includes('cacto')) {
                             simpleModel.scale.set(3.0, 3.0, 3.0); // Cacti 3x bigger (was 1.0)
                         } else if (theme === 'snow' && simpleFile.toLowerCase().includes('avore_neve')) {

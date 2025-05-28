@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import { createTreeModel, createRockModel, getRandomTreePosition, getRandomRockPosition } from './models.js';
+import { createSkyDomeWithBoardTheme, updateSkyDomeWithBoardTheme } from './board-theme-manager.js';
 
 // Cores para cada tema
 const THEME_COLORS = {
@@ -57,73 +58,20 @@ let currentSkyDome = null;
 
 export function createScene() {
     const scene = new THREE.Scene();
-    // Create a sky dome instead of fog for better visual effect
+    // Create advanced sky dome with moving clouds instead of simple fog
     // The sky dome will be updated by the board theme manager when themes are applied
-    createSkyDome(scene);
+    createAdvancedSkyDome(scene);
     return scene;
 }
 
-// Create sky dome with gradient colors
-export function createSkyDome(scene) {
-    // Remove existing sky dome if it exists
-    if (currentSkyDome) {
-        scene.remove(currentSkyDome);
-        currentSkyDome.geometry.dispose();
-        currentSkyDome.material.dispose();
-        currentSkyDome = null;
-    }
-    
-    // Create sky dome geometry
-    const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
-    
-    // Create gradient material for sky
-    const skyMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            topColor: { value: new THREE.Color(COLORS.skyTop || COLORS.background) },
-            bottomColor: { value: new THREE.Color(COLORS.skyBottom || COLORS.background) },
-            offset: { value: 10 },
-            exponent: { value: 0.6 }
-        },
-        vertexShader: `
-            varying vec3 vWorldPosition;
-            void main() {
-                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                vWorldPosition = worldPosition.xyz;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 topColor;
-            uniform vec3 bottomColor;
-            uniform float offset;
-            uniform float exponent;
-            varying vec3 vWorldPosition;
-            void main() {
-                float h = normalize(vWorldPosition + offset).y;
-                gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-            }
-        `,
-        side: THREE.BackSide // Render inside faces
-    });
-    
-    currentSkyDome = new THREE.Mesh(skyGeometry, skyMaterial);
-    currentSkyDome.name = "skyDome";
-    scene.add(currentSkyDome);
-    
-    // Also set scene background as fallback
-    scene.background = new THREE.Color(COLORS.skyTop || COLORS.background);
-    
-    return currentSkyDome;
+// Create advanced sky dome with gradient colors and moving clouds
+export function createAdvancedSkyDome(scene) {
+    return createSkyDomeWithBoardTheme(scene);
 }
 
-// Update sky dome colors for theme changes
+// Update sky dome colors for theme changes using advanced sky system
 export function updateSkyDome(scene) {
-    if (currentSkyDome && currentSkyDome.material) {
-        currentSkyDome.material.uniforms.topColor.value.set(COLORS.skyTop || COLORS.background);
-        currentSkyDome.material.uniforms.bottomColor.value.set(COLORS.skyBottom || COLORS.background);
-        // Also update scene background
-        scene.background = new THREE.Color(COLORS.skyTop || COLORS.background);
-    }
+    updateSkyDomeWithBoardTheme(scene);
 }
 
 export function createCamera() {
@@ -143,10 +91,9 @@ function createBothCameras() {
     perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     perspectiveCamera.position.set(snakeX, 3, snakeZ);
     perspectiveCamera.lookAt(snakeX, 0, snakeZ);
-      
-    // Create orthographic camera - centered on board
+        // Create orthographic camera - properly centered and sized for the game board
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 80; // Increased size to see more of the board
+    const frustumSize = 70; // Optimal size for game board visibility
     const boardCenterX = 20; // Center of 40x40 board (0 to 40)
     const boardCenterZ = 20; // Center of 40x40 board (0 to 40)
     
@@ -158,7 +105,7 @@ function createBothCameras() {
         0.1,                       // near
         1000                       // far
     );
-    orthographicCamera.position.set(boardCenterX, 50, boardCenterZ); // Position directly above board center
+    orthographicCamera.position.set(boardCenterX, 45, boardCenterZ); // Position above board center
     orthographicCamera.lookAt(boardCenterX, 0, boardCenterZ); // Look down at board center
 }
 
