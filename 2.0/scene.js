@@ -319,38 +319,20 @@ function createFloatingScoreDisplay(scene, GRID_SIZE) {
     const eastWallX = 41;
     const boardCenterZ = GRID_SIZE / 2; // Center of the board
     
-    group.position.set(eastWallX - 3, 6, boardCenterZ); // Floating higher at y=6
-      // Rotate the entire score display 180 degrees to face the camera better
+    // Position adjusted for smaller digits (1.4x smaller)
+    group.position.set(eastWallX - 6, 10, boardCenterZ); // Closer to board and lower height
+    
+    // Rotate the entire score display 180 degrees to face the camera better
     group.rotation.y = Math.PI; // 180 degrees rotation
     
-    // Add some sparkle effect with small decorative elements
-    for (let i = 0; i < 6; i++) {
-        const sparkleGeometry = new THREE.SphereGeometry(0.08, 8, 8);
-        const sparkleMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            emissive: 0xffffff,
-            emissiveIntensity: 0.4,
-            transparent: true,
-            opacity: 0.8
-        });
-        const sparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
-        
-        // Random position around the score display
-        const angle = (i / 6) * Math.PI * 2;
-        const radius = 2.5 + Math.random() * 1;
-        sparkle.position.set(
-            Math.cos(angle) * radius,
-            0.5 + Math.random() * 3,
-            Math.sin(angle) * radius
-        );
-        group.add(sparkle);
-    }
+    group.name = "floatingScoreDisplay";
     
-    group.name = "floatingScoreDisplay";    // Store references for updating
+    // Store references for updating
     group.userData = {
         numbersGroup: new THREE.Group()
     };
-      // Rotate the numbers to face the camera properly
+    
+    // Rotate the numbers to face the camera properly
     group.userData.numbersGroup.rotation.y = Math.PI / 2; // Rotate +90 degrees around Y-axis to face camera
     
     // Add the numbers group to the main group
@@ -360,40 +342,6 @@ function createFloatingScoreDisplay(scene, GRID_SIZE) {
     updateFloatingScoreDisplay(group, 0);
     
     scene.add(group);
-}
-
-// Function to create 3D geometry for a specific digit (0-9)
-function create3DDigit(digit) {
-    const group = new THREE.Group();
-    const digitHeight = 2;
-    const digitWidth = 1.2;
-    const digitDepth = 0.3;
-    
-    // Material for the 3D numbers - gold with emission
-    const numberMaterial = new THREE.MeshStandardMaterial({
-        color: 0xFFD700, // Gold color
-        emissive: 0x332200, // Slight glow
-        emissiveIntensity: 0.2,
-        metalness: 0.7,
-        roughness: 0.2
-    });
-    
-    // Create segments based on digit
-    const segments = getDigitSegments(digit);
-    
-    // Segment dimensions
-    const segmentLength = digitWidth * 0.8;
-    const segmentThickness = 0.15;
-    
-    segments.forEach((segment, index) => {
-        if (segment) {
-            const geometry = getSegmentGeometry(index, segmentLength, segmentThickness, digitHeight, digitDepth);
-            const mesh = new THREE.Mesh(geometry, numberMaterial);
-            group.add(mesh);
-        }
-    });
-    
-    return group;
 }
 
 // Define which segments are active for each digit (7-segment display style)
@@ -413,48 +361,197 @@ function getDigitSegments(digit) {
     return segmentPatterns[digit] || segmentPatterns[0];
 }
 
-// Create geometry for each segment of the 7-segment display
-function getSegmentGeometry(segmentIndex, length, thickness, height, depth) {
+// Function to create 3D geometry for a specific digit (0-9)
+function create3DDigit(digit) {
+    const group = new THREE.Group();
+    const digitHeight = 8.57; // 1.4x smaller (was 12)
+    const digitWidth = 5.14; // 1.4x smaller (was 7.2)
+    const digitDepth = 1.71; // 1.4x smaller (was 2.4)
+    
+    // Enhanced material with more pronounced metallic properties
+    const numberMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFFD700, // Gold color
+        emissive: 0x332200, // Slight glow
+        emissiveIntensity: 0.4, // Increased for better visibility
+        metalness: 0.9, // More metallic
+        roughness: 0.05, // Very smooth for a glossy look
+        envMapIntensity: 2.0 // Enhanced reflection
+    });
+    
+    // Create segments based on digit
+    const segments = getDigitSegments(digit);
+    
+    // Segment dimensions - adjusted for roundness (and 1.4x smaller)
+    const segmentLength = digitWidth * 0.8;
+    const segmentThickness = 0.86; // 1.4x smaller (was 1.2)
+    const roundedRadius = segmentThickness * 0.5; // Use half thickness for perfect rounding
+    
+    segments.forEach((segment, index) => {
+        if (segment) {
+            // Use truly rounded segments
+            const mesh = createRoundedSegment(
+                index, 
+                segmentLength, 
+                segmentThickness, 
+                digitHeight, 
+                digitDepth, 
+                roundedRadius, 
+                numberMaterial
+            );
+            group.add(mesh);
+        }
+    });
+    
+    return group;
+}
+
+// New function to create truly rounded segments using cylinders and spheres
+function createRoundedSegment(segmentIndex, length, thickness, height, depth, radius, material) {
+    const group = new THREE.Group();
     const halfLength = length / 2;
     const halfHeight = height / 2;
-    const halfThickness = thickness / 2;
     
-    let geometry;
+    // Parameters based on segment type
+    let params = {};
     
     switch (segmentIndex) {
         case 0: // Top horizontal
-            geometry = new THREE.BoxGeometry(length, thickness, depth);
-            geometry.translate(0, halfHeight - halfThickness, 0);
+            params = { 
+                isHorizontal: true,
+                length: length,
+                position: [0, halfHeight, 0]
+            };
             break;
         case 1: // Top right vertical
-            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
-            geometry.translate(halfLength - halfThickness, halfHeight / 2, 0);
+            params = { 
+                isHorizontal: false,
+                length: height / 2 - thickness,
+                position: [halfLength - thickness/2, halfHeight/2, 0]
+            };
             break;
         case 2: // Bottom right vertical
-            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
-            geometry.translate(halfLength - halfThickness, -halfHeight / 2, 0);
+            params = { 
+                isHorizontal: false,
+                length: height / 2 - thickness,
+                position: [halfLength - thickness/2, -halfHeight/2, 0]
+            };
             break;
         case 3: // Bottom horizontal
-            geometry = new THREE.BoxGeometry(length, thickness, depth);
-            geometry.translate(0, -halfHeight + halfThickness, 0);
+            params = { 
+                isHorizontal: true,
+                length: length,
+                position: [0, -halfHeight, 0]
+            };
             break;
         case 4: // Bottom left vertical
-            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
-            geometry.translate(-halfLength + halfThickness, -halfHeight / 2, 0);
+            params = { 
+                isHorizontal: false,
+                length: height / 2 - thickness,
+                position: [-halfLength + thickness/2, -halfHeight/2, 0]
+            };
             break;
         case 5: // Top left vertical
-            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
-            geometry.translate(-halfLength + halfThickness, halfHeight / 2, 0);
+            params = { 
+                isHorizontal: false,
+                length: height / 2 - thickness,
+                position: [-halfLength + thickness/2, halfHeight/2, 0]
+            };
             break;
         case 6: // Middle horizontal
-            geometry = new THREE.BoxGeometry(length, thickness, depth);
-            geometry.translate(0, 0, 0);
+            params = { 
+                isHorizontal: true,
+                length: length,
+                position: [0, 0, 0]
+            };
             break;
         default:
-            geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Fallback
+            return new THREE.Group(); // Empty group as fallback
     }
     
-    return geometry;
+    // Create the segment based on orientation
+    if (params.isHorizontal) {
+        // Create a horizontal cylinder for the main segment
+        const cylinderGeometry = new THREE.CylinderGeometry(
+            radius, // radiusTop
+            radius, // radiusBottom
+            params.length - 2 * radius, // height (subtract the width of two caps)
+            16, // radialSegments (higher for smoother cylinders)
+            1, // heightSegments
+            false // openEnded
+        );
+        
+        const cylinder = new THREE.Mesh(cylinderGeometry, material);
+        cylinder.rotation.z = Math.PI / 2; // Rotate to horizontal orientation
+        cylinder.position.set(params.position[0], params.position[1], params.position[2]);
+        group.add(cylinder);
+        
+        // Add spherical caps at each end
+        const leftCap = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 16, 16),
+            material
+        );
+        leftCap.position.set(
+            params.position[0] - (params.length/2 - radius), 
+            params.position[1], 
+            params.position[2]
+        );
+        group.add(leftCap);
+        
+        const rightCap = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 16, 16),
+            material
+        );
+        rightCap.position.set(
+            params.position[0] + (params.length/2 - radius), 
+            params.position[1], 
+            params.position[2]
+        );
+        group.add(rightCap);
+        
+    } else {
+        // Create a vertical cylinder for the main segment
+        const cylinderGeometry = new THREE.CylinderGeometry(
+            radius, // radiusTop
+            radius, // radiusBottom
+            params.length, // height
+            16, // radialSegments
+            1, // heightSegments
+            false // openEnded
+        );
+        
+        const cylinder = new THREE.Mesh(cylinderGeometry, material);
+        cylinder.position.set(
+            params.position[0], 
+            params.position[1], 
+            params.position[2]
+        );
+        group.add(cylinder);
+        
+        // Add spherical caps at each end
+        const topCap = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 16, 16),
+            material
+        );
+        topCap.position.set(
+            params.position[0], 
+            params.position[1] + params.length/2, 
+            params.position[2]
+        );
+        group.add(topCap);
+        
+        const bottomCap = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 16, 16),
+            material
+        );
+        bottomCap.position.set(
+            params.position[0], 
+            params.position[1] - params.length/2, 
+            params.position[2]
+        );
+        group.add(bottomCap);
+    }
+    
+    return group;
 }
 
 // Function to update the floating score display
@@ -470,7 +567,7 @@ export function updateFloatingScoreDisplay(scoreGroup, score) {
     
     // Convert score to string and create 3D digits
     const scoreString = score.toString();
-    const digitSpacing = 1.5; // Space between digits
+    const digitSpacing = 5.36; // 1.4x smaller (was 7.5)
     const totalWidth = (scoreString.length - 1) * digitSpacing;
     
     // Create each digit
@@ -604,12 +701,12 @@ export function updateSceneTheme(scene) {
             object.material.color.set(COLORS.floor);
         }
         
-        // Manter as linhas da grade sempre pretas
+        // Manter as linhas da grade sempre pretas        
         if (object.name === "gridLines" && object.material) {
             object.material.color.set(0x000000);
         }
         
-        // Update border glow
+        // Update border glow        
         if (object.name === "borderGlow" && object.material && object.material.uniforms) {
             if (object.material.uniforms.color) {
                 object.material.uniforms.color.value.set(COLORS.border);
@@ -656,7 +753,8 @@ export function animateFloatingScore(scene, time) {
     const scoreDisplay = scene.getObjectByName("floatingScoreDisplay");
     if (scoreDisplay && scoreDisplay.userData.numbersGroup) {
         const numbersGroup = scoreDisplay.userData.numbersGroup;
-        if (numbersGroup.userData) {            // Gentle floating animation
+        if (numbersGroup.userData) {
+            // Gentle floating animation
             numbersGroup.userData.time += 0.01;
             const floatOffset = Math.sin(numbersGroup.userData.time) * 0.1;
             numbersGroup.position.y = numbersGroup.userData.originalY + floatOffset;
@@ -665,5 +763,3 @@ export function animateFloatingScore(scene, time) {
         }
     }
 }
-
-
