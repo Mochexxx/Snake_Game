@@ -11,70 +11,70 @@ export const campaignLevels = [
         level: 1,
         name: "Iniciante",
         description: "Sua jornada começa! Colete 10 maçãs.",
-        barrierCount: 3,
+        barrierCount: 5,
         targetApples: 10
     },
     {
         level: 2,
         name: "Aprendiz",
         description: "Mais obstáculos para superar. Colete 10 maçãs.",
-        barrierCount: 5,
+        barrierCount: 7,
         targetApples: 10
     },
     {
         level: 3,
         name: "Explorador",
         description: "O caminho fica mais estreito. Colete 10 maçãs.",
-        barrierCount: 8,
+        barrierCount: 10,
         targetApples: 10
     },
     {
         level: 4,
         name: "Aventureiro",
         description: "Agora as coisas ficam mais desafiadoras. Colete 10 maçãs.",
-        barrierCount: 10,
+        barrierCount: 12,
         targetApples: 10
     },
     {
         level: 5,
         name: "Caçador",
         description: "Metade do caminho. Continue focado! Colete 10 maçãs.",
-        barrierCount: 12,
+        barrierCount: 14,
         targetApples: 10
     },
     {
         level: 6,
         name: "Guerreiro",
         description: "A serpente se torna um guerreiro. Colete 10 maçãs.",
-        barrierCount: 15,
+        barrierCount: 17,
         targetApples: 10
     },
     {
         level: 7,
         name: "Mestre",
         description: "Habilidade e estratégia são essenciais agora. Colete 10 maçãs.",
-        barrierCount: 18,
+        barrierCount: 20,
         targetApples: 10
     },
     {
         level: 8,
         name: "Estrategista",
         description: "Planeje seus movimentos com cuidado. Colete 10 maçãs.",
-        barrierCount: 22,
+        barrierCount: 24,
         targetApples: 10
     },
     {
         level: 9,
         name: "Lendário",
         description: "Quase lá! O desafio é intenso. Colete 10 maçãs.",
-        barrierCount: 25,
+        barrierCount: 27,
         targetApples: 10
     },
     {
         level: 10,
         name: "Desafiante Final",
         description: "O labirinto final! Supere este último desafio. Colete 10 maçãs.",
-        barrierCount: 30,
+        barrierCount: 32,
         targetApples: 10
     }
 ];
