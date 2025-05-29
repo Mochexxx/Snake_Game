@@ -473,8 +473,16 @@ export async function createEnvironmentalDecorations(scene) {
                     model.scale.set(2, 2, 2); // Barns standard
                 }
                 
-                model.rotation.y = Math.random() * Math.PI * 2; // Random rotation
-                model.userData.isThemeModel = true;
+                model.rotation.y = Math.random() * Math.PI * 2; // Random rotation                model.userData.isThemeModel = true;
+                
+                // Enable shadows for environmental decorations
+                model.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                
                 scene.add(model);
                 decorations.push({ 
                     mesh: model, 
@@ -521,10 +529,18 @@ export async function createEnvironmentalDecorations(scene) {
                         } else {
                             simpleModel.scale.set(1.2, 1.2, 1.2); // Default medium
                         }
-                        
-                        simpleModel.position.set(sx, 0, sz);
+                          simpleModel.position.set(sx, 0, sz);
                         simpleModel.rotation.y = Math.random() * Math.PI * 2;
                         simpleModel.userData.isThemeModel = true;
+                        
+                        // Enable shadows for environmental decorations
+                        simpleModel.traverse(child => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        
                         scene.add(simpleModel);
                         decorations.push({ 
                             mesh: simpleModel, 
@@ -536,12 +552,20 @@ export async function createEnvironmentalDecorations(scene) {
             } catch (e) {
                 console.warn('Failed to load theme model', modelFile, ':', e);
             }
-        } else if (theme === 'forest') {
-            // For forest theme, place large trees at the X positions
+        } else if (theme === 'forest') {            // For forest theme, place large trees at the X positions
             const tree = createTreeModel();
             tree.scale.set(2.0, 2.0, 2.0); // Original was 3.0, then 1.76, now 2.0 (1.5x smaller than 3.0)
             tree.position.set(pos.x, 0, pos.z);
             tree.rotation.y = Math.random() * Math.PI * 2;
+            
+            // Enable shadows for environmental trees
+            tree.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
             scene.add(tree);
             decorations.push({
                 mesh: tree,
@@ -568,8 +592,7 @@ export async function createEnvironmentalDecorations(scene) {
                 
                 // Adiciona à lista de posições usadas
                 usedPositions.push({ x: sx, z: sz });
-                
-                const rock = createRockModel();
+                  const rock = createRockModel();
                 rock.scale.set(1.5, 1.2, 1.5);
                 rock.position.set(sx, 0, sz);
                 rock.rotation.set(
@@ -577,6 +600,15 @@ export async function createEnvironmentalDecorations(scene) {
                     Math.random() * Math.PI * 2,
                     Math.random() * 0.3
                 );
+                
+                // Enable shadows for forest environmental rocks
+                rock.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                
                 scene.add(rock);
                 decorations.push({
                     mesh: rock,
