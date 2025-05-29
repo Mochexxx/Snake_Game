@@ -45,6 +45,7 @@ import {
 } from './lighting-system.js';
 import { animateSky } from './sky-system.js';
 import { audioSystem, addButtonSounds } from './audio-system.js';
+import { addHumanToScene, removeHumanFromScene } from './human-model.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -62,6 +63,7 @@ let score = 0;
 let highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
 let gameMode = 'classic'; // classic, barriers, obstacles, campaign
 let hitboxes;
+let humanModel = null; // Track the human easter egg model
 
 // Smooth animation variables
 let snakeTargetPositions = []; // Target positions for each snake segment
@@ -439,6 +441,9 @@ function setupControls() {
                     camera = Scene.switchCameraType(newCameraType);
                     console.log(`Camera switched to: ${newCameraType}`);
                     
+                    // Update human visibility based on new camera type
+                    updateHumanVisibility();
+                    
                     // Show visual feedback using camera indicator
                     updateCameraIndicator(newCameraType);
                 }
@@ -584,6 +589,14 @@ function startGame() {
     
     // Initialize smooth animation positions
     initializeSnakeAnimationPositions();
+    
+    // Create human easter egg model if it appears
+    // Get the perspective camera for positioning
+    const perspectiveCamera = Scene.getCurrentCamera();
+    humanModel = addHumanToScene(scene, perspectiveCamera, debugMode);
+    
+    // Set initial human visibility based on current camera type
+    updateHumanVisibility();
 
     // Criar maçã - use promise-based approach
     createInitialApple().then(newApple => {
@@ -781,6 +794,12 @@ function endGame(gameCompleted = false) {
         removeBarriers(scene, barriers);
         barriers = [];
     }
+    
+    // Remove human easter egg model if it exists
+    if (humanModel) {
+        removeHumanFromScene(scene);
+        humanModel = null;
+    }
 
     isPaused = true;
     gameRunning = false;
@@ -898,6 +917,15 @@ function updateSnakeTargetPositions() {
 // Smooth interpolation function with easing
 function easeInOutQuad(t) {
     return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+// Control human model visibility based on camera type
+function updateHumanVisibility() {
+    if (humanModel) {
+        const currentCameraType = Scene.getCameraType();
+        // Human is only visible when viewing from orthographic camera
+        humanModel.visible = (currentCameraType === 'orthographic');
+    }
 }
 
 // Update snake visual positions with smooth interpolation

@@ -158,53 +158,46 @@ export function createHumanModel() {
 }
 
 /**
- * Adiciona o ser humano à cena como objeto ambiental raro (1 em 10 jogos) ou sempre em debug mode
+ * Adiciona o ser humano à cena posicionado sob a câmera perspectiva
+ * Apenas visível na câmera ortográfica
  * @param {THREE.Scene} scene - A cena do jogo
- * @param {boolean} forceShow - Se true, força a aparição (modo debug)
+ * @param {THREE.Camera} perspectiveCamera - A câmera perspectiva para posicionamento
+ * @param {boolean} debugMode - Se true, sempre mostra o humano; se false, 1/10 chance
  * @returns {THREE.Group|null} O modelo do ser humano adicionado ou null se não aparecer
  */
-export function addHumanToScene(scene, forceShow = false) {
-    // Debug mode: always show human at board center for testing
-    if (forceShow) {
-        const human = createHumanModel();
-        human.position.set(20, 0, 20);
-        human.scale.set(2, 2, 2);
-        scene.add(human);
-        console.log('🔧 DEBUG MODE: Human ambient object forced at center (20, 0, 20)');
-        return human;
-    }
-    // Easter egg raro: 1 em 10 jogos (10% de chance) em modo normal
-    const shouldShow = Math.random() < 0.1;
-    if (!shouldShow) {
-        console.log('Human ambient object: Not appearing this game (1/10 chance)');
+export function addHumanToScene(scene, perspectiveCamera, debugMode = false) {
+    // Lógica de probabilidade baseada no modo debug
+    if (!debugMode && Math.random() > 0.1) {
+        console.log('Easter egg human did not appear this time (90% chance)');
         return null;
     }
-
+    
     const human = createHumanModel();
-    // Posições possíveis como objeto ambiental (fora do tabuleiro, mas no ambiente)
-    const ambientPositions = [
-        // Posições mais distantes, como objetos ambientais
-        { x: -8, z: 15, rotation: Math.PI / 3 },     // Longe à esquerda
-        { x: -6, z: 25, rotation: Math.PI / 4 },     // Esquerda mais ao fundo
-        { x: 48, z: 12, rotation: -Math.PI / 3 },    // Longe à direita
-        { x: 45, z: 28, rotation: -Math.PI / 4 },    // Direita mais ao fundo
-        { x: 12, z: -8, rotation: Math.PI / 6 },     // Frente esquerda
-        { x: 28, z: -6, rotation: -Math.PI / 6 },    // Frente direita
-        { x: 15, z: 48, rotation: Math.PI },         // Fundo centro
-        { x: 8, z: 45, rotation: 3 * Math.PI / 4 },  // Fundo esquerda
-        { x: 32, z: 47, rotation: -3 * Math.PI / 4 }, // Fundo direita
-        // Posições mais próximas mas ainda fora da área de jogo
-        { x: -4, z: 35, rotation: Math.PI / 8 },     // Lateral esquerda longe
-        { x: 44, z: 5, rotation: -Math.PI / 8 },     // Lateral direita próxima
-        { x: 35, z: -4, rotation: Math.PI / 12 }     // Frente lateral
-    ];
-    const randomPosition = ambientPositions[Math.floor(Math.random() * ambientPositions.length)];
-
-    human.position.set(randomPosition.x, 0, randomPosition.z);
-    human.rotation.y = randomPosition.rotation;
+    human.userData.isThemeModel = true;
+    human.userData.themeType = 'ambient-human';
+    human.userData.isHumanEasterEgg = true;
+    
+    // Override spawn at user-specified red X coordinates
+    const spawnX = 20;
+    const spawnZ = -5;
+    human.position.set(spawnX, 0, spawnZ);
+    // Rotate to look toward board center
+    const boardCenter = new THREE.Vector3(20, 0, 20);
+    const direction = new THREE.Vector3().subVectors(boardCenter, new THREE.Vector3(spawnX, 0, spawnZ)).normalize();
+    human.lookAt(spawnX + direction.x, 0, spawnZ + direction.z);
+    
     human.scale.set(1.2, 1.2, 1.2);
+    
+    // Inicialmente invisível - será controlado pela função de visibilidade da câmera
+    human.visible = false;
+    
     scene.add(human);
-    console.log(`🎉 RARE EASTER EGG: Human ambient object appeared at position (${randomPosition.x}, 0, ${randomPosition.z})! (1/10 chance)`);
+    
+    const message = debugMode ? 
+        `🎉 DEBUG MODE: Human easter egg placed under perspective camera at (${human.position.x.toFixed(1)}, 0, ${human.position.z.toFixed(1)})` :
+        `🎉 RARE EASTER EGG: Human appeared under perspective camera! (1/10 chance) Position: (${human.position.x.toFixed(1)}, 0, ${human.position.z.toFixed(1)})`;
+    
+    console.log(message);
     return human;
 }
 
