@@ -101,3 +101,9 @@ function createFallbackFence() {
     
     return group;
 }
+
+// Create a rock model instance
+export async function createRockModel() {
+    const { scene } = await loader.loadAsync('./assets/models/Rock.glb');
+    return scene.clone(true);
+}

@@ -3,7 +3,7 @@
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 import { getBoardCellCenter } from './scene.js';
 import { createBarriers, removeBarriers } from './barriers.js';
-import { createWoodenFenceModel } from './model-loader.js';
+import { createWoodenFenceModel, createRockModel } from './model-loader.js';
 
 // Estrutura para armazenar definições dos níveis
 export const campaignLevels = [
@@ -312,7 +312,7 @@ async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boar
     // use farm model at board center
     try {
         // Try to use wooden fence model first
-        const fence = await createWoodenFenceModel();
+        const fence = await createRockModel();
         
         // Position the fence at the center of the board cell
         fence.position.set(centerX, 0, centerZ);
@@ -333,7 +333,7 @@ async function createComplexBarrierStack(scene, barriers, centerX, centerZ, boar
             hitbox: { x: boardX, z: boardZ },
             centerX: centerX,
             centerZ: centerZ,
-            model: 'wooden-fence'
+            model: 'rock'
         });
         
     } catch (error) {
