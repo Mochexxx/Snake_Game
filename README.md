@@ -1,4 +1,4 @@
-# OutRunCG
+# Snake Game 3D- Node.js
 
 **Autor:** Pedro Sousa  
 **Disciplina:** Computação Gráfica (UTAD)  
