@@ -1577,10 +1577,6 @@ document.getElementById('muteToggle').addEventListener('change', function() {
     audioSystem.setMuted(this.checked);
 });
 
-document.getElementById('graphicsQuality').addEventListener('change', function() {
-    localStorage.setItem('graphicsQuality', this.value);
-});
-
 document.getElementById('showFPSToggle').addEventListener('change', function() {
     localStorage.setItem('showFPS', this.checked);
     // Immediately update FPS display visibility
@@ -1603,16 +1599,11 @@ function loadOptionsSettings() {
         document.getElementById('sfxVolume').value = sfxVolume;
         audioSystem.setSfxVolume(parseInt(sfxVolume));
     }
-    
-    const muted = localStorage.getItem('muted') === 'true';
+      const muted = localStorage.getItem('muted') === 'true';
     document.getElementById('muteToggle').checked = muted;
     audioSystem.setMuted(muted);
     
-    const graphicsQuality = localStorage.getItem('graphicsQuality');
-    if (graphicsQuality !== null) {
-        document.getElementById('graphicsQuality').value = graphicsQuality;
-    }
-      const showFPS = localStorage.getItem('showFPS') === 'true';
+    const showFPS = localStorage.getItem('showFPS') === 'true';
     document.getElementById('showFPSToggle').checked = showFPS;
     // Initialize FPS display visibility
     const fpsElement = document.getElementById('fps');

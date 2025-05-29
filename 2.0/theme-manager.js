@@ -299,17 +299,23 @@ export function setupThemeButtons() {
     const purpleBtn = document.getElementById('purpleThemeBtn');
     const orangeBtn = document.getElementById('orangeThemeBtn');
     
-    greenBtn.addEventListener('click', () => {
-        applyTheme('green');
-    });
+    if (greenBtn) {
+        greenBtn.addEventListener('click', () => {
+            applyTheme('green');
+        });
+    }
     
-    purpleBtn.addEventListener('click', () => {
-        applyTheme('purple');
-    });
+    if (purpleBtn) {
+        purpleBtn.addEventListener('click', () => {
+            applyTheme('purple');
+        });
+    }
     
-    orangeBtn.addEventListener('click', () => {
-        applyTheme('orange');
-    });
+    if (orangeBtn) {
+        orangeBtn.addEventListener('click', () => {
+            applyTheme('orange');
+        });
+    }
 }
 
 // Update theme buttons to show current selection
