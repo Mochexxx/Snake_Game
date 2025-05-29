@@ -70,6 +70,12 @@ let snakeTargetPositions = []; // Target positions for each snake segment
 let snakeStartPositions = []; // Starting positions for interpolation
 let animationProgress = 0; // Progress of current animation (0 to 1)
 let previousTime = 0; // For calculating deltaTime for sky animation
+
+// FPS counter variables
+let frameCount = 0;
+let fpsLastTime = 0;
+let fpsUpdateInterval = 1000; // Update FPS every 1000ms (1 second)
+
 // Carrega o estado do modo debug do localStorage
 export let debugMode = localStorage.getItem('debugMode') === 'true'; // Flag para ativar/desativar o modo de debug
 let applesCollected = 0; // Contador de maçãs para o modo campanha
@@ -1210,6 +1216,23 @@ function animate(time) {
     // Get current camera in case it was switched
     camera = Scene.getCurrentCamera();
     
+    // FPS counter logic
+    frameCount++;
+    if (time - fpsLastTime >= fpsUpdateInterval) {
+        const fps = Math.round((frameCount * 1000) / (time - fpsLastTime));
+        const fpsElement = document.getElementById('fps');
+        const showFPS = localStorage.getItem('showFPS') === 'true';
+        
+        if (fpsElement) {
+            fpsElement.textContent = `FPS: ${fps}`;
+            fpsElement.style.display = showFPS ? 'block' : 'none';
+        }
+        
+        // Reset for next calculation
+        frameCount = 0;
+        fpsLastTime = time;
+    }
+    
     renderer.render(scene, camera);
 }
 
@@ -1560,6 +1583,11 @@ document.getElementById('graphicsQuality').addEventListener('change', function()
 
 document.getElementById('showFPSToggle').addEventListener('change', function() {
     localStorage.setItem('showFPS', this.checked);
+    // Immediately update FPS display visibility
+    const fpsElement = document.getElementById('fps');
+    if (fpsElement) {
+        fpsElement.style.display = this.checked ? 'block' : 'none';
+    }
 });
 
 // Load options settings from localStorage
@@ -1584,9 +1612,13 @@ function loadOptionsSettings() {
     if (graphicsQuality !== null) {
         document.getElementById('graphicsQuality').value = graphicsQuality;
     }
-    
-    const showFPS = localStorage.getItem('showFPS') === 'true';
+      const showFPS = localStorage.getItem('showFPS') === 'true';
     document.getElementById('showFPSToggle').checked = showFPS;
+    // Initialize FPS display visibility
+    const fpsElement = document.getElementById('fps');
+    if (fpsElement) {
+        fpsElement.style.display = showFPS ? 'block' : 'none';
+    }
 }
 
 // Chama a função para carregar as configurações ao iniciar o jogo
