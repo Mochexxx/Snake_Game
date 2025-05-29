@@ -227,20 +227,18 @@ export function addBoard(scene) {
             (scene.children[i].isLineSegments && scene.children[i].name === "gridLines")) {
             scene.remove(scene.children[i]);
         }
-    }
-    
-    // Constants for game board and extended terrain
+    }    // Constants for game board and extended terrain
     const GRID_DIVISIONS = 20; // Exactly 20x20 grid
     const CELL_SIZE = 2; // Each cell is 2x2 units
     const GRID_SIZE = GRID_DIVISIONS * CELL_SIZE; // 40x40 units for game board
-    const TERRAIN_EXTEND = 160; // Extended terrain around the game area
+    const TERRAIN_SIZE = 2000; // Much larger terrain: 2000x2000 units
     
     // Create an extended terrain with playdoh-style material
     const terrainGeometry = new THREE.PlaneGeometry(
-        GRID_SIZE + TERRAIN_EXTEND, 
-        GRID_SIZE + TERRAIN_EXTEND, 
-        32, // Reduced subdivisions for uniform appearance
-        32
+        TERRAIN_SIZE, 
+        TERRAIN_SIZE, 
+        64, // Increased subdivisions for better detail over large area
+        64
     );
     
     // Create simple playdoh-style material that responds to lighting
@@ -254,7 +252,8 @@ export function addBoard(scene) {
     
     const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
     terrain.rotation.x = -Math.PI / 2;
-    terrain.position.set(GRID_SIZE / 2, -0.1, GRID_SIZE / 2); // Slightly below game board
+    // Center terrain around game board center (20, 20)
+    terrain.position.set(20, -0.1, 20); // Game board is centered at (20, 20)
     terrain.receiveShadow = true;
     terrain.castShadow = false;
     terrain.name = "terrain";
