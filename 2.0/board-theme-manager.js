@@ -7,9 +7,11 @@ import { loadModel } from './model-loader.js';
 import { setTheme, updateSceneTheme, getThemeColors } from './scene.js';
 import { createAdvancedSkyDome, updateAdvancedSkyColors, disposeSkySystem } from './sky-system.js';
 
+// Texture loader for floor textures
+const textureLoader = new THREE.TextureLoader();
+
 // Board theme configuration
-const BOARD_THEMES = {
-    classic: {
+const BOARD_THEMES = {    classic: {
         name: 'Classic Farm',
         folder: 'quinta',
         colors: {
@@ -22,14 +24,16 @@ const BOARD_THEMES = {
             skyBottom: 0xB3E5FC,  // Light blue/white
             skyIntensity: 1.0
         },
+        textures: {
+            floor: 'images/dirt-450-mm-architextures.jpg'
+        },
         models: {
             decoration: ['Big Barn.glb', 'Cow.glb', 'silo.glb'],
             landscape: ['barn_paisagem.glb', 'silo_paisagem.glb', 'paisagem.glb'],
             obstacle: ['Hay.glb', 'hay_obstaculo.glb'],
             barrier: 'barreira_madeira.glb'
         }
-    },
-    desert: {
+    },desert: {
         name: 'Desert Oasis',
         folder: 'desert',
         colors: {
@@ -42,14 +46,16 @@ const BOARD_THEMES = {
             skyBottom: 0xFFE4B5,  // Light orange/peach
             skyIntensity: 0.95
         },
+        textures: {
+            floor: 'images/sandstone-750-mm-architextures.jpg'
+        },
         models: {
             decoration: ['Camel.glb'],
             landscape: ['Camelo_paisagem.glb'],
             obstacle: ['Cactus.glb', 'cacto_obstaculo.glb'],
             barrier: 'barreira_deserto.glb'
         }
-    },
-    forest: {
+    },    forest: {
         name: 'Enchanted Forest',
         folder: 'floresta',
         colors: {
@@ -62,14 +68,16 @@ const BOARD_THEMES = {
             skyBottom: 0x87CEEB,  // Light sky blue
             skyIntensity: 0.8
         },
+        textures: {
+            floor: 'images/mondo-grass-300-mm-architextures.jpg'
+        },
         models: {
             decoration: [],
             landscape: [],
             obstacle: [],
             barrier: 'barreira_floresta.glb'
         }
-    },
-    snow: {
+    },    snow: {
         name: 'Winter Wonderland',
         folder: 'neve',
         colors: {
@@ -81,6 +89,9 @@ const BOARD_THEMES = {
             skyTop: 0x87CEEB,     // Winter sky blue
             skyBottom: 0xF0F8FF,  // Alice blue/white
             skyIntensity: 0.7
+        },
+        textures: {
+            floor: 'images/snow-60d44f8305cd5-1200.jpg'
         },
         models: {
             decoration: ['Snowman.glb', 'Igloo.glb', 'Pine Tree with Snow.glb'],
@@ -94,6 +105,61 @@ const BOARD_THEMES = {
 // Current board theme
 let currentBoardTheme = 'classic';
 let loadedThemeModels = new Map();
+
+// Cache for loaded textures
+const textureCache = new Map();
+
+// ===== FLOOR TEXTURE SYSTEM =====
+// This system provides enhanced floor visuals for all themes:
+// - Desert: Uses sandstone-750-mm-architextures.jpg for realistic sand/stone appearance
+// - Forest: Uses mondo-grass-300-mm-architextures.jpg for lush grass appearance
+// - Classic Farm: Uses dirt-450-mm-architextures.jpg for farmland dirt/soil appearance  
+// - Snow: Uses snow-60d44f8305cd5-1200.jpg for realistic snow texture
+// All themes get appropriate material properties (roughness, metalness) for realism
+
+// Load texture with caching
+async function loadTexture(texturePath) {
+    if (textureCache.has(texturePath)) {
+        return textureCache.get(texturePath);
+    }
+    
+    return new Promise((resolve, reject) => {
+        textureLoader.load(
+            texturePath,
+            (texture) => {
+                // Configure texture for better tiling
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                
+                // Set different repeat values based on texture type for optimal appearance
+                if (texturePath.includes('dirt-450')) {
+                    texture.repeat.set(6, 6); // More repetitions for dirt to show detail
+                } else if (texturePath.includes('mondo-grass-300')) {
+                    texture.repeat.set(8, 8); // Higher repetition for grass for natural look
+                } else if (texturePath.includes('sandstone-750')) {
+                    texture.repeat.set(3, 3); // Fewer repetitions for larger sandstone pattern
+                } else if (texturePath.includes('snow-60d44f8305cd5')) {
+                    texture.repeat.set(5, 5); // Medium repetition for snow texture
+                } else {
+                    texture.repeat.set(4, 4); // Default repeat
+                }
+                
+                texture.minFilter = THREE.LinearMipmapLinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.anisotropy = 16; // Better quality when viewed at angles
+                
+                textureCache.set(texturePath, texture);
+                console.log('Loaded texture:', texturePath);
+                resolve(texture);
+            },
+            undefined,
+            (error) => {
+                console.warn('Failed to load texture:', texturePath, error);
+                reject(error);
+            }
+        );
+    });
+}
 
 // Initialize board theme manager
 export function initBoardThemeManager() {
@@ -255,18 +321,85 @@ async function loadThemeLandscape(scene, themeConfig) {
 }
 
 // Apply board theme colors to scene
-function applyThemeColors(scene, themeConfig) {
+async function applyThemeColors(scene, themeConfig) {
     // Update scene colors using the scene module's function
     setTheme('green'); // Use base green theme structure but override colors
     
     // Update sky dome with theme-specific colors
     updateSkyDomeWithBoardTheme(scene, themeConfig);
+      // Load floor texture if available
+    let floorTexture = null;
+    if (themeConfig.textures && themeConfig.textures.floor) {
+        try {
+            floorTexture = await loadTexture(themeConfig.textures.floor);
+        } catch (error) {
+            console.warn('Failed to load floor texture, using fallback color:', error);
+        }
+    }
     
-    // Override colors with theme-specific colors
+    // If no specific texture file, create a procedural one for better visual quality
+    if (!floorTexture) {
+        floorTexture = createProceduralTexture(getCurrentBoardTheme());
+        console.log('Created procedural texture for theme:', getCurrentBoardTheme());
+    }    // Override colors with theme-specific colors
     scene.traverse((object) => {
-        // Update floor/terrain colors
+        // Update floor/terrain colors and textures
         if ((object.name === "floor" || object.name === "terrain") && object.material) {
-            object.material.color.set(themeConfig.colors.floor);
+            // Clone the material to avoid affecting other objects
+            object.material = object.material.clone();
+            
+            // Apply texture (now we always have one)
+            object.material.map = floorTexture;
+            
+            // Set base color based on theme (this will tint the texture)
+            switch (getCurrentBoardTheme()) {
+                case 'desert':
+                    object.material.color.setHex(0xffffff); // Pure white to show sandstone texture
+                    break;
+                case 'forest':
+                    object.material.color.setHex(0xffffff); // Pure white to show rock texture
+                    break;
+                case 'snow':
+                    object.material.color.setHex(0xffffff); // Pure white for snow
+                    break;
+                case 'classic':
+                default:
+                    object.material.color.setHex(0xffffff); // Pure white to show grass texture
+                    break;
+            }
+            
+            console.log('Applied texture to floor for theme:', themeConfig.name);            // Apply theme-specific material properties
+            switch (getCurrentBoardTheme()) {
+                case 'desert':
+                    // Sandy, rough surface with sandstone texture
+                    object.material.roughness = 0.9;
+                    object.material.metalness = 0.0;
+                    break;
+                case 'snow':
+                    // Snow: high roughness, slightly reflective, bright white
+                    object.material.roughness = 0.95;
+                    object.material.metalness = 0.05;
+                    // Snow should remain bright white to enhance texture detail
+                    object.material.color.setHex(0xffffff);
+                    break;
+                case 'forest':
+                    // Forest grass: natural, earthy appearance
+                    object.material.roughness = 0.8;
+                    object.material.metalness = 0.0;
+                    // Slightly green tint to enhance grass texture
+                    object.material.color.setHex(0xf0fff0);
+                    break;
+                case 'classic':
+                default:
+                    // Farm dirt: earthy, natural farmland appearance
+                    object.material.roughness = 0.85;
+                    object.material.metalness = 0.0;
+                    // Slight warm tint to enhance dirt texture
+                    object.material.color.setHex(0xfff8f0);
+                    break;
+            }
+            
+            object.material.needsUpdate = true;
         }
         
         // Update grid line colors
@@ -297,12 +430,11 @@ export async function applyBoardThemeToScene(scene) {
     console.log('Applying board theme to scene:', currentBoardTheme);
     
     const themeConfig = getThemeConfig(currentBoardTheme);
-    
-    // Clear any previously loaded theme models
+      // Clear any previously loaded theme models
     clearThemeModels(scene);
     
-    // Apply theme colors
-    applyThemeColors(scene, themeConfig);
+    // Apply theme colors (now async to handle texture loading)
+    await applyThemeColors(scene, themeConfig);
     
     try {
         // Load theme decorations
@@ -739,4 +871,129 @@ export async function integrateAdvancedSkySystem(scene) {
     scene.add(skyDome);
     
     console.log('Integrated advanced sky system for theme:', currentBoardTheme);
+}
+
+// Create procedural textures for themes without specific texture files
+function createProceduralTexture(themeName, size = 512) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d');
+    
+    // Create different patterns based on theme
+    switch (themeName) {
+        case 'classic':
+            // Grass-like pattern
+            createGrassPattern(context, size);
+            break;
+        case 'snow':
+            // Snow pattern with subtle sparkles
+            createSnowPattern(context, size);
+            break;
+        case 'forest':
+            // If no rock texture is available, create forest floor pattern
+            createForestFloorPattern(context, size);
+            break;
+        default:
+            // Default noise pattern
+            createNoisePattern(context, size);
+            break;
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2, 2);
+    texture.needsUpdate = true;
+    
+    return texture;
+}
+
+function createGrassPattern(context, size) {
+    // Base green color
+    context.fillStyle = '#90EE90';
+    context.fillRect(0, 0, size, size);
+    
+    // Add random darker green spots for variation
+    for (let i = 0; i < size * 2; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const radius = Math.random() * 3 + 1;
+        
+        context.fillStyle = `rgba(34, 139, 34, ${Math.random() * 0.3})`;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+    }
+}
+
+function createSnowPattern(context, size) {
+    // Pure white base
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, size, size);
+    
+    // Add subtle blue-white variations
+    for (let i = 0; i < size; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const radius = Math.random() * 2 + 0.5;
+        
+        context.fillStyle = `rgba(240, 248, 255, ${Math.random() * 0.2})`;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+    }
+    
+    // Add tiny sparkles
+    for (let i = 0; i < 50; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        context.fillRect(x, y, 1, 1);
+    }
+}
+
+function createForestFloorPattern(context, size) {
+    // Dark forest green base
+    context.fillStyle = '#1a5c1a';
+    context.fillRect(0, 0, size, size);
+    
+    // Add brown earth patches
+    for (let i = 0; i < size / 4; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const radius = Math.random() * 8 + 2;
+        
+        context.fillStyle = `rgba(101, 67, 33, ${Math.random() * 0.4 + 0.2})`;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+    }
+    
+    // Add leaf litter spots
+    for (let i = 0; i < size / 2; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const radius = Math.random() * 3 + 1;
+        
+        context.fillStyle = `rgba(139, 69, 19, ${Math.random() * 0.3})`;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+    }
+}
+
+function createNoisePattern(context, size) {
+    const imageData = context.createImageData(size, size);
+    const data = imageData.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        const noise = Math.random() * 50;
+        data[i] = 100 + noise;     // R
+        data[i + 1] = 100 + noise; // G
+        data[i + 2] = 100 + noise; // B
+        data[i + 3] = 255;         // A
+    }
+    
+    context.putImageData(imageData, 0, 0);
 }
