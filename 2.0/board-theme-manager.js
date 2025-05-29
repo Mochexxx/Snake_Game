@@ -337,20 +337,48 @@ async function applyThemeColors(scene, themeConfig) {
             console.warn('Failed to load floor texture, using fallback color:', error);
         }
     }
-    
-    // If no specific texture file, create a procedural one for better visual quality
+      // If no specific texture file, create a procedural one for better visual quality
     if (!floorTexture) {
         floorTexture = createProceduralTexture(getCurrentBoardTheme());
         console.log('Created procedural texture for theme:', getCurrentBoardTheme());
-    }    // Override colors with theme-specific colors
+    }
+    
+    // Override colors with theme-specific colors
     scene.traverse((object) => {
         // Update floor/terrain colors and textures
         if ((object.name === "floor" || object.name === "terrain") && object.material) {
             // Clone the material to avoid affecting other objects
             object.material = object.material.clone();
             
-            // Apply texture (now we always have one)
-            object.material.map = floorTexture;
+            // Create separate texture instance for terrain with different repeat settings
+            let objectTexture = floorTexture;
+            if (object.name === "terrain") {
+                // Clone texture for terrain to apply different repeat settings
+                objectTexture = floorTexture.clone();
+                objectTexture.needsUpdate = true;
+                
+                // Adjust texture repeat for terrain based on its larger size
+                // Terrain is ~5x larger than game board (200 vs 40), so scale texture repeat accordingly
+                const currentTheme = getCurrentBoardTheme();
+                switch (currentTheme) {
+                    case 'desert':
+                        objectTexture.repeat.set(15, 15); // More repetitions for large terrain
+                        break;
+                    case 'forest':
+                        objectTexture.repeat.set(20, 20); // Even more for grass texture
+                        break;
+                    case 'snow':
+                        objectTexture.repeat.set(18, 18); // Medium-high for snow
+                        break;
+                    case 'classic':
+                    default:
+                        objectTexture.repeat.set(16, 16); // High repetition for dirt
+                        break;
+                }
+            }
+            
+            // Apply texture (now terrain-specific)
+            object.material.map = objectTexture;
             
             // Set base color based on theme (this will tint the texture)
             switch (getCurrentBoardTheme()) {
@@ -369,7 +397,7 @@ async function applyThemeColors(scene, themeConfig) {
                     break;
             }
             
-            console.log('Applied texture to floor for theme:', themeConfig.name);            // Apply theme-specific material properties
+            console.log(`Applied texture to ${object.name} for theme:`, themeConfig.name);// Apply theme-specific material properties
             switch (getCurrentBoardTheme()) {
                 case 'desert':
                     // Sandy, rough surface with sandstone texture
@@ -886,7 +914,7 @@ export async function integrateAdvancedSkySystem(scene) {
 }
 
 // Create procedural textures for themes without specific texture files
-function createProceduralTexture(themeName, size = 512) {
+function createProceduralTexture(themeName, size = 1024) { // Increased from 512 to 1024 for better quality
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -915,8 +943,13 @@ function createProceduralTexture(themeName, size = 512) {
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(2, 2);
+    texture.repeat.set(4, 4); // Good base repeat for procedural textures
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.anisotropy = 16; // High quality filtering
     texture.needsUpdate = true;
+    
+    console.log(`Created high-quality procedural texture for ${themeName} theme (${size}x${size})`);
     
     return texture;
 }
@@ -1008,4 +1041,110 @@ function createNoisePattern(context, size) {
     }
     
     context.putImageData(imageData, 0, 0);
+}
+
+// Test function to verify shadow configuration for environmental decorations
+export function testEnvironmentalShadows(scene) {
+    console.log('=== ENVIRONMENTAL DECORATIONS SHADOW TEST ===');
+    
+    let decorationCount = 0;
+    let shadowCastingCount = 0;
+    let shadowReceivingCount = 0;
+    
+    scene.traverse((object) => {
+        // Check for environmental decorations (they should have userData.isThemeModel or be from obstacles.js)
+        if (object.isMesh && (
+            object.userData?.isThemeModel ||
+            object.userData?.decorationType ||
+            object.name?.includes('tree') ||
+            object.name?.includes('decoration') ||
+            object.name?.includes('environmental')
+        )) {
+            decorationCount++;
+            
+            if (object.castShadow) {
+                shadowCastingCount++;
+                console.log(`✓ ${object.name || 'Decoration'} is casting shadows`);
+            } else {
+                console.warn(`✗ ${object.name || 'Decoration'} is NOT casting shadows`);
+            }
+            
+            if (object.receiveShadow) {
+                shadowReceivingCount++;
+                console.log(`✓ ${object.name || 'Decoration'} is receiving shadows`);
+            } else {
+                console.warn(`✗ ${object.name || 'Decoration'} is NOT receiving shadows`);
+            }
+        }
+    });
+    
+    console.log('\n=== SHADOW TEST SUMMARY ===');
+    console.log(`Total decorations found: ${decorationCount}`);
+    console.log(`Casting shadows: ${shadowCastingCount}/${decorationCount}`);
+    console.log(`Receiving shadows: ${shadowReceivingCount}/${decorationCount}`);
+    
+    // Check lighting system
+    const lights = scene.children.filter(child => 
+        child.isDirectionalLight || child.isPointLight || child.isSpotLight
+    );
+    
+    console.log(`\nLight sources with shadows: ${lights.filter(light => light.castShadow).length}/${lights.length}`);
+    
+    // Check renderer shadow settings (this would need to be passed or accessed globally)
+    console.log('\nNote: Verify renderer has shadowMap.enabled = true and appropriate shadowMap.type');
+    
+    return {
+        decorationCount,
+        shadowCastingCount,
+        shadowReceivingCount,
+        lightCount: lights.length,
+        shadowLightCount: lights.filter(light => light.castShadow).length
+    };
+}
+
+// Debug function to analyze terrain texture quality
+export function debugTerrainTextureQuality(scene) {
+    console.log('=== TERRAIN TEXTURE QUALITY DEBUG ===');
+    
+    scene.traverse((object) => {
+        if (object.name === "terrain" || object.name === "floor") {
+            console.log(`\n${object.name.toUpperCase()} Analysis:`);
+            console.log(`- Geometry size: ${object.geometry.parameters?.width || 'unknown'} x ${object.geometry.parameters?.height || 'unknown'}`);
+            console.log(`- Position: (${object.position.x.toFixed(1)}, ${object.position.y.toFixed(1)}, ${object.position.z.toFixed(1)})`);
+            
+            if (object.material) {
+                console.log(`- Material type: ${object.material.constructor.name}`);
+                console.log(`- Color: #${object.material.color.getHexString()}`);
+                console.log(`- Roughness: ${object.material.roughness}`);
+                console.log(`- Metalness: ${object.material.metalness}`);
+                
+                if (object.material.map) {
+                    const texture = object.material.map;
+                    console.log(`- Texture: ${texture.image?.src || 'Canvas texture'}`);
+                    console.log(`- Texture size: ${texture.image?.width || 'unknown'} x ${texture.image?.height || 'unknown'}`);
+                    console.log(`- Repeat: (${texture.repeat.x}, ${texture.repeat.y})`);
+                    console.log(`- Wrap: S=${texture.wrapS === THREE.RepeatWrapping ? 'Repeat' : 'Other'}, T=${texture.wrapT === THREE.RepeatWrapping ? 'Repeat' : 'Other'}`);
+                    console.log(`- Anisotropy: ${texture.anisotropy}`);
+                    console.log(`- MinFilter: ${getFilterName(texture.minFilter)}`);
+                    console.log(`- MagFilter: ${getFilterName(texture.magFilter)}`);
+                } else {
+                    console.log('- No texture applied');
+                }
+            } else {
+                console.log('- No material found');
+            }
+        }
+    });
+    
+    function getFilterName(filter) {
+        const filterNames = {
+            [THREE.NearestFilter]: 'Nearest',
+            [THREE.LinearFilter]: 'Linear',
+            [THREE.NearestMipmapNearestFilter]: 'NearestMipmapNearest',
+            [THREE.NearestMipmapLinearFilter]: 'NearestMipmapLinear',
+            [THREE.LinearMipmapNearestFilter]: 'LinearMipmapNearest',
+            [THREE.LinearMipmapLinearFilter]: 'LinearMipmapLinear'
+        };
+        return filterNames[filter] || 'Unknown';
+    }
 }

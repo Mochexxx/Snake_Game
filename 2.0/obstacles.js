@@ -551,10 +551,9 @@ export async function createEnvironmentalDecorations(scene) {
                 }
             } catch (e) {
                 console.warn('Failed to load theme model', modelFile, ':', e);
-            }
-        } else if (theme === 'forest') {            // For forest theme, place large trees at the X positions
+            }        } else if (theme === 'forest') {            // For forest theme, place large trees at the X positions
             const tree = createTreeModel();
-            tree.scale.set(2.0, 2.0, 2.0); // Original was 3.0, then 1.76, now 2.0 (1.5x smaller than 3.0)
+            tree.scale.set(10.0, 10.0, 10.0); // Made 5x bigger (was 2.0, now 10.0)
             tree.position.set(pos.x, 0, pos.z);
             tree.rotation.y = Math.random() * Math.PI * 2;
             
@@ -692,26 +691,10 @@ export function animateEnvironmentalDecorations(decorations, time) {
         if (decoration.type === 'environmental-rock') {
             // Rotação muito lenta para as pedras
             decoration.mesh.rotation.y += 0.0005;
-        } 
-        else if (decoration.type === 'environmental-tree') {
-            // Movimento de ondulação leve para árvores baseado em seno
-            // Isso simula uma brisa leve movendo as árvores
-            const waveAmount = Math.sin(now * 0.5 + decoration.position.x * 0.1) * 0.005;
-            
-            // Aplicar ondulação na inclinação da árvore
-            const rotationSpeed = 0.0005;
-            decoration.mesh.rotation.x = Math.sin(now * 0.3) * 0.01;
-            decoration.mesh.rotation.z = Math.cos(now * 0.4 + decoration.position.z * 0.1) * 0.01;
-            
-            // Cada árvore tem seu próprio padrão de movimento sutil
-            if (!decoration.animOffset) {
-                decoration.animOffset = Math.random() * Math.PI * 2;
-            }
-            
-            // Movimento muito sutil para cima e para baixo
-            const originalY = 0;
-            const heightOffset = Math.sin(now * 0.2 + decoration.animOffset) * 0.1;
-            decoration.mesh.position.y = originalY + heightOffset;
+        }        else if (decoration.type === 'environmental-tree') {
+            // Trees no longer animate - they are now static for better visual stability
+            // Previous animation code disabled to stop tree "shaking" movement
+            // Trees are now stationary environmental decorations
         }
     });
 }
