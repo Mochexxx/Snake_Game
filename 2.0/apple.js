@@ -151,69 +151,18 @@ function createFallbackApple() {
 
 // Helper function to generate a valid apple position
 function generateApplePosition(snakeBoard, obstacles = [], barriers = [], isAppleOnSnake, snake) {
-    return new Promise((resolve) => {
-        // Verifica se ainda existem células livres no tabuleiro
-        const totalCells = 20 * 20; // Tabuleiro 20x20
-        const occupiedCells = snakeBoard.length;
-        
-        // Se a cobra ocupar quase todo o tabuleiro (mais de 90%), considere vitória
-        if (occupiedCells > totalCells * 0.9) {
-            console.log("Tabuleiro quase cheio! A cobra venceu o jogo!");
-            // Coloca a maçã em uma posição padrão e marca como "vitória"
+    return new Promise(resolve => {
+        // monta lista de células livres (cobra, obstáculos e barreiras já excluídos)
+        const freePositions = findAvailablePositions(snakeBoard, obstacles, barriers);
+        // se não há células livres, considera vitória
+        if (freePositions.length === 0) {
+            console.log("Tabuleiro cheio ou sem posições livres para maçã, vitória!");
             resolve({ x: 0, z: 0, gameCompleted: true });
             return;
         }
-
-        // Gera posições aleatórias até encontrar uma que não colida com a cobra
-        let x, z;
-        let maxAttempts = 200; // Aumenta o número de tentativas para lidar com tabuleiros mais cheios
-        let attempts = 0;
-        
-        do {
-            x = Math.floor(Math.random() * 20);
-            z = Math.floor(Math.random() * 20);
-            attempts++;
-            
-            // Sai do loop se atingir o máximo de tentativas
-            if (attempts >= maxAttempts) {
-                console.warn("Máximo de tentativas atingido para posicionar a maçã. Usando método alternativo.");
-                // Método alternativo: verifica o tabuleiro de forma sistemática
-                const availablePositions = findAvailablePositions(snakeBoard, obstacles, barriers); // Passa barriers
-                if (availablePositions.length > 0) {
-                    // Escolhe uma posição aleatória entre as disponíveis
-                    const randomIndex = Math.floor(Math.random() * availablePositions.length);
-                    x = availablePositions[randomIndex].x;
-                    z = availablePositions[randomIndex].z;
-                    console.log("Posição alternativa encontrada:", x, z);
-                } else {
-                    console.error("Nenhuma posição disponível para a maçã!");
-                    // Coloca em uma posição padrão
-                    x = 0;
-                    z = 0;
-                }
-                break;
-            }
-        } while (isAppleOnSnake(snake, x, z, snakeBoard) || 
-                (obstacles && obstacles.length > 0 ? obstacles.some(obs => obs && obs.boardPosition && obs.boardPosition.x === x && obs.boardPosition.z === z) : false) || 
-                (barriers && barriers.length > 0 ? barriers.some(barrier => { // Adiciona verificação de colisão com barreiras
-                    if (!barrier) return false;
-                    
-                    if (barrier.type === 'complex' && barrier.boardPosition) {
-                        return barrier.boardPosition.x === x && barrier.boardPosition.z === z;
-                    }
-                    if (barrier.type === 'boundary' && barrier.boardPositions) {
-                        return barrier.boardPositions.some(pos => pos && pos.x === x && pos.z === z);
-                    }
-                    if (barrier.type === 'random-piece' && barrier.boardPositions) {
-                        return barrier.boardPositions.some(pos => pos && pos.x === x && pos.z === z);
-                    }
-                    return false;
-                }) : false));
-
-        // Garante que as coordenadas estejam dentro dos limites do tabuleiro
-        x = Math.max(0, Math.min(19, x));
-        z = Math.max(0, Math.min(19, z));
-
+        // escolhe aleatoriamente uma posição válida
+        const idx = Math.floor(Math.random() * freePositions.length);
+        const { x, z } = freePositions[idx];
         resolve({ x, z, gameCompleted: false });
     });
 }
