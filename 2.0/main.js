@@ -11,7 +11,7 @@ import { addControlsHelpButton } from './game-controls.js';
 import { setupTouchControls } from './touch-controls.js';
 import { initializeCameraIndicator, updateCameraIndicator } from './camera-indicator.js';
 import { checkGameIntegrity } from './integrity-checker.js';
-import { updateFloatingScoreDisplay } from './scene.js';
+import { updateFloatingScoreDisplay, animateFloatingScore } from './scene.js';
 import {
     campaignLevels,  
     nextLevel, 
@@ -1210,7 +1210,12 @@ function animate(time) {
     }    // Update smooth snake animation
     updateSnakeVisualPositions(time);
       // Animate terrain shader
-    Scene.animateTerrain(scene, time);    // Animate environmental decorations if they exist
+    Scene.animateTerrain(scene, time);
+    
+    // Animate floating 3D score display
+    animateFloatingScore(scene, time);
+    
+    // Animate environmental decorations if they exist
     if (environmentalDecorations && environmentalDecorations.length > 0) {
         animateEnvironmentalDecorations(environmentalDecorations, time);
     }

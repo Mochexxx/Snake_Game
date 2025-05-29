@@ -315,33 +315,13 @@ export function addBoard(scene) {
 function createFloatingScoreDisplay(scene, GRID_SIZE) {
     const group = new THREE.Group();
     
-    // Create a canvas for text rendering
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    canvas.width = 512;
-    canvas.height = 256;
-    
-    // Create texture from canvas
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.LinearFilter;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    
-    // Create sprite material
-    const spriteMaterial = new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true
-    });
-    
-    // Create sprite
-    const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(8, 4, 1); // Make it visible and appropriately sized
-    
     // Position the score display at the East wall where snake initially faces
     const eastWallX = 41;
     const boardCenterZ = GRID_SIZE / 2; // Center of the board
     
-    sprite.position.set(eastWallX - 3, 6, boardCenterZ); // Floating higher at y=6
+    group.position.set(eastWallX - 3, 6, boardCenterZ); // Floating higher at y=6
+      // Rotate the entire score display 180 degrees to face the camera better
+    group.rotation.y = Math.PI; // 180 degrees rotation
     
     // Add some sparkle effect with small decorative elements
     for (let i = 0; i < 6; i++) {
@@ -366,16 +346,15 @@ function createFloatingScoreDisplay(scene, GRID_SIZE) {
         group.add(sparkle);
     }
     
-    group.add(sprite);
-    group.name = "floatingScoreDisplay";
-    
-    // Store references for updating
+    group.name = "floatingScoreDisplay";    // Store references for updating
     group.userData = {
-        canvas: canvas,
-        context: context,
-        texture: texture,
-        sprite: sprite
+        numbersGroup: new THREE.Group()
     };
+      // Rotate the numbers to face the camera properly
+    group.userData.numbersGroup.rotation.y = Math.PI / 2; // Rotate +90 degrees around Y-axis to face camera
+    
+    // Add the numbers group to the main group
+    group.add(group.userData.numbersGroup);
     
     // Initial score render
     updateFloatingScoreDisplay(group, 0);
@@ -383,33 +362,134 @@ function createFloatingScoreDisplay(scene, GRID_SIZE) {
     scene.add(group);
 }
 
+// Function to create 3D geometry for a specific digit (0-9)
+function create3DDigit(digit) {
+    const group = new THREE.Group();
+    const digitHeight = 2;
+    const digitWidth = 1.2;
+    const digitDepth = 0.3;
+    
+    // Material for the 3D numbers - gold with emission
+    const numberMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFFD700, // Gold color
+        emissive: 0x332200, // Slight glow
+        emissiveIntensity: 0.2,
+        metalness: 0.7,
+        roughness: 0.2
+    });
+    
+    // Create segments based on digit
+    const segments = getDigitSegments(digit);
+    
+    // Segment dimensions
+    const segmentLength = digitWidth * 0.8;
+    const segmentThickness = 0.15;
+    
+    segments.forEach((segment, index) => {
+        if (segment) {
+            const geometry = getSegmentGeometry(index, segmentLength, segmentThickness, digitHeight, digitDepth);
+            const mesh = new THREE.Mesh(geometry, numberMaterial);
+            group.add(mesh);
+        }
+    });
+    
+    return group;
+}
+
+// Define which segments are active for each digit (7-segment display style)
+function getDigitSegments(digit) {
+    const segmentPatterns = {
+        0: [true, true, true, true, true, true, false],    // Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft, Middle
+        1: [false, true, true, false, false, false, false],
+        2: [true, true, false, true, true, false, true],
+        3: [true, true, true, true, false, false, true],
+        4: [false, true, true, false, false, true, true],
+        5: [true, false, true, true, false, true, true],
+        6: [true, false, true, true, true, true, true],
+        7: [true, true, true, false, false, false, false],
+        8: [true, true, true, true, true, true, true],
+        9: [true, true, true, true, false, true, true]
+    };
+    return segmentPatterns[digit] || segmentPatterns[0];
+}
+
+// Create geometry for each segment of the 7-segment display
+function getSegmentGeometry(segmentIndex, length, thickness, height, depth) {
+    const halfLength = length / 2;
+    const halfHeight = height / 2;
+    const halfThickness = thickness / 2;
+    
+    let geometry;
+    
+    switch (segmentIndex) {
+        case 0: // Top horizontal
+            geometry = new THREE.BoxGeometry(length, thickness, depth);
+            geometry.translate(0, halfHeight - halfThickness, 0);
+            break;
+        case 1: // Top right vertical
+            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
+            geometry.translate(halfLength - halfThickness, halfHeight / 2, 0);
+            break;
+        case 2: // Bottom right vertical
+            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
+            geometry.translate(halfLength - halfThickness, -halfHeight / 2, 0);
+            break;
+        case 3: // Bottom horizontal
+            geometry = new THREE.BoxGeometry(length, thickness, depth);
+            geometry.translate(0, -halfHeight + halfThickness, 0);
+            break;
+        case 4: // Bottom left vertical
+            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
+            geometry.translate(-halfLength + halfThickness, -halfHeight / 2, 0);
+            break;
+        case 5: // Top left vertical
+            geometry = new THREE.BoxGeometry(thickness, halfHeight, depth);
+            geometry.translate(-halfLength + halfThickness, halfHeight / 2, 0);
+            break;
+        case 6: // Middle horizontal
+            geometry = new THREE.BoxGeometry(length, thickness, depth);
+            geometry.translate(0, 0, 0);
+            break;
+        default:
+            geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Fallback
+    }
+    
+    return geometry;
+}
+
 // Function to update the floating score display
 export function updateFloatingScoreDisplay(scoreGroup, score) {
-    if (!scoreGroup || !scoreGroup.userData) return;
+    if (!scoreGroup || !scoreGroup.userData || !scoreGroup.userData.numbersGroup) return;
     
-    const { canvas, context, texture } = scoreGroup.userData;
+    const numbersGroup = scoreGroup.userData.numbersGroup;
     
-    // Clear canvas
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear existing numbers
+    while (numbersGroup.children.length > 0) {
+        numbersGroup.remove(numbersGroup.children[0]);
+    }
     
-    // Set text style
-    context.fillStyle = '#FFD700'; // Gold color
-    context.strokeStyle = '#000000'; // Black outline
-    context.lineWidth = 8;
-    context.font = 'bold 120px Arial';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
+    // Convert score to string and create 3D digits
+    const scoreString = score.toString();
+    const digitSpacing = 1.5; // Space between digits
+    const totalWidth = (scoreString.length - 1) * digitSpacing;
     
-    // Draw text with outline
-    const text = score.toString();
-    const x = canvas.width / 2;
-    const y = canvas.height / 2;
+    // Create each digit
+    scoreString.split('').forEach((digitChar, index) => {
+        const digit = parseInt(digitChar);
+        const digitMesh = create3DDigit(digit);
+        
+        // Position digit (center the whole number)
+        const xOffset = (index * digitSpacing) - (totalWidth / 2);
+        digitMesh.position.set(xOffset, 0, 0);
+        
+        numbersGroup.add(digitMesh);
+    });
     
-    context.strokeText(text, x, y);
-    context.fillText(text, x, y);
-    
-    // Update texture
-    texture.needsUpdate = true;
+    // Add a subtle floating animation to the numbers group
+    numbersGroup.userData = { 
+        originalY: numbersGroup.position.y,
+        time: 0
+    };
 }
 
 export function getBoardCellCenter(x, z) {
@@ -569,6 +649,21 @@ export function getThemeColors() {
 export function animateTerrain(scene, time) {
     // No animation needed for simple playdoh materials
     // This function is kept for compatibility with main.js
+}
+
+// Function to animate the floating 3D score display
+export function animateFloatingScore(scene, time) {
+    const scoreDisplay = scene.getObjectByName("floatingScoreDisplay");
+    if (scoreDisplay && scoreDisplay.userData.numbersGroup) {
+        const numbersGroup = scoreDisplay.userData.numbersGroup;
+        if (numbersGroup.userData) {            // Gentle floating animation
+            numbersGroup.userData.time += 0.01;
+            const floatOffset = Math.sin(numbersGroup.userData.time) * 0.1;
+            numbersGroup.position.y = numbersGroup.userData.originalY + floatOffset;
+            
+            // Keep numbers facing camera - no rotation animation
+        }
+    }
 }
 
 
