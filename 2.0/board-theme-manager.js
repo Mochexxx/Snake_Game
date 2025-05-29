@@ -339,9 +339,39 @@ export function getThemeBarrierModel() {
         const currentTheme = getCurrentBoardTheme();
         const themeConfig = getThemeConfig(currentTheme);
         const basePath = `assets/temas_models/${themeConfig.folder}/`;
-        
+
         console.log(`Getting barrier model for theme: ${currentTheme}`);
-        
+
+        // Special case: use Rock.glb for forest theme barriers
+        if (currentTheme === 'forest') {
+            const rockPath = 'assets/models/Rock.glb';
+            console.log(`Loading Rock barrier for forest theme: ${rockPath}`);
+            gltfLoader.load(
+                rockPath,
+                (gltf) => {
+                    const barrier = gltf.scene;
+                    barrier.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    barrier.scale.set(1.5, 1.5, 1.5); // Adjust scale as needed
+                    barrier.userData.isThemeModel = true;
+                    barrier.userData.themeType = 'barrier';
+                    barrier.userData.themeBarrier = true;
+                    barrier.userData.themeName = currentTheme;
+                    resolve(barrier);
+                },
+                undefined,
+                (error) => {
+                    console.error('Failed to load Rock barrier for forest theme:', error);
+                    reject(error);
+                }
+            );
+            return;
+        }
+
         // Map themes to their specific barrier model files
         const themeBarrierFiles = {
             'forest': 'assets/barreira_floresta.glb',
