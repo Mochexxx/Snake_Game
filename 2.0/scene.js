@@ -306,9 +306,81 @@ export function addBoard(scene) {
     floor.name = "floor";
     floor.receiveShadow = true;
     scene.add(floor);
+      // Add the grid lines on top
+    scene.add(gridMesh);    // Create 3D number '1' at the East barrier where snake initially faces
+    createNumber1AtBarrier(scene, GRID_SIZE);
+}
+
+// Function to create a 3D number "1" at the East barrier
+function createNumber1AtBarrier(scene, GRID_SIZE) {
+    const group = new THREE.Group();
     
-    // Add the grid lines on top
-    scene.add(gridMesh);
+    // Create the main vertical bar of the "1"
+    const mainBarGeometry = new THREE.BoxGeometry(0.6, 4, 0.6);
+    const numberMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffd700, // Gold color
+        roughness: 0.3,
+        metalness: 0.2,
+        emissive: 0x221100,
+        emissiveIntensity: 0.2
+    });
+    
+    const mainBar = new THREE.Mesh(mainBarGeometry, numberMaterial);
+    mainBar.position.set(0, 2, 0);
+    mainBar.castShadow = true;
+    mainBar.receiveShadow = true;
+    group.add(mainBar);
+    
+    // Create the top angled stroke of the "1"
+    const topStrokeGeometry = new THREE.BoxGeometry(2, 0.6, 0.6);
+    const topStroke = new THREE.Mesh(topStrokeGeometry, numberMaterial);
+    topStroke.position.set(-0.7, 3.5, 0);
+    topStroke.rotation.z = Math.PI / 6; // 30 degrees angle
+    topStroke.castShadow = true;
+    topStroke.receiveShadow = true;
+    group.add(topStroke);
+    
+    // Create the base/foot of the "1"
+    const baseGeometry = new THREE.BoxGeometry(2.5, 0.6, 0.6);
+    const base = new THREE.Mesh(baseGeometry, numberMaterial);
+    base.position.set(0, 0.3, 0);
+    base.castShadow = true;
+    base.receiveShadow = true;
+    group.add(base);
+      // Position the number at the East wall where snake initially faces
+    // East wall is at x=41 in world coordinates (20 * 2 + 1)
+    // Position it slightly in front of the wall for visibility
+    const eastWallX = 41;
+    const boardCenterZ = GRID_SIZE / 2; // Center of the board
+    
+    group.position.set(eastWallX - 3, 6, boardCenterZ); // Floating higher at y=6
+    group.rotation.y = Math.PI + Math.PI / 2; // Face towards the board/snake + 90 degrees rotation
+    
+    // Add some sparkle effect with small decorative elements
+    for (let i = 0; i < 6; i++) {
+        const sparkleGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+        const sparkleMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.4,
+            transparent: true,
+            opacity: 0.8
+        });
+        const sparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
+        
+        // Random position around the number
+        const angle = (i / 6) * Math.PI * 2;
+        const radius = 2.5 + Math.random() * 1;
+        sparkle.position.set(
+            Math.cos(angle) * radius,
+            0.5 + Math.random() * 3,
+            Math.sin(angle) * radius
+        );
+        group.add(sparkle);
+    }
+    
+    group.name = "number1AtBarrier";
+    scene.add(group);
 }
 
 export function getBoardCellCenter(x, z) {
