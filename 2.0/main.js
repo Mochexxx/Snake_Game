@@ -11,7 +11,8 @@ import { addControlsHelpButton } from './game-controls.js';
 import { setupTouchControls } from './touch-controls.js';
 import { initializeCameraIndicator, updateCameraIndicator } from './camera-indicator.js';
 import { checkGameIntegrity } from './integrity-checker.js';
-import { 
+import { updateFloatingScoreDisplay } from './scene.js';
+import {
     campaignLevels,  
     nextLevel, 
     resetCampaign,
@@ -505,10 +506,12 @@ function startGame() {
     
     // Reset camera animation state
     cameraAnimationComplete = false;
-    
-    // Atualiza a interface
+      // Atualiza a interface
     document.getElementById('score').textContent = 'Score: 0';
     document.getElementById('highscore').textContent = 'Highscore: ' + highscore;
+    
+    // Update floating score display to show initial score
+    setTimeout(() => updateFloatingScore(), 100); // Small delay to ensure scene is loaded
     
     // Atualiza o texto do modo
     let modeText = '';
@@ -729,9 +732,14 @@ function startGame() {
             // isPaused remains false (from start of startGame)
         }
     }
-    
-    // Configura controles e inicia a animação
+      // Configura controles e inicia a animação
     setupControls();
+    
+    // Update floating score display after scene is created
+    setTimeout(() => {
+        updateFloatingScore();
+    }, 100);
+    
     animate();
     
     // Adiciona o botão de ajuda com os controles
@@ -1154,6 +1162,9 @@ function animate(time) {
             },            () => {                // Aumenta o score e atualiza o placar
                 score += 10;
                 
+                // Update floating score display
+                updateFloatingScore();
+                
                 // Play apple eat sound
                 audioSystem.playSound('appleEat');
                 
@@ -1234,6 +1245,14 @@ function animate(time) {
     }
     
     renderer.render(scene, camera);
+}
+
+// Helper function to update the floating score display
+function updateFloatingScore() {
+    const scoreGroup = scene.getObjectByName("floatingScoreDisplay");
+    if (scoreGroup) {
+        updateFloatingScoreDisplay(scoreGroup, score);
+    }
 }
 
 // Função para mostrar informações do nível na overlay

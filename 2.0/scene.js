@@ -307,54 +307,41 @@ export function addBoard(scene) {
     floor.receiveShadow = true;
     scene.add(floor);
       // Add the grid lines on top
-    scene.add(gridMesh);    // Create 3D number '1' at the East barrier where snake initially faces
-    createNumber1AtBarrier(scene, GRID_SIZE);
+    scene.add(gridMesh);    // Create 3D floating score display at the East barrier where snake initially faces
+    createFloatingScoreDisplay(scene, GRID_SIZE);
 }
 
-// Function to create a 3D number "1" at the East barrier
-function createNumber1AtBarrier(scene, GRID_SIZE) {
+// Function to create a 3D floating score display at the East barrier
+function createFloatingScoreDisplay(scene, GRID_SIZE) {
     const group = new THREE.Group();
     
-    // Create the main vertical bar of the "1"
-    const mainBarGeometry = new THREE.BoxGeometry(0.6, 4, 0.6);
-    const numberMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffd700, // Gold color
-        roughness: 0.3,
-        metalness: 0.2,
-        emissive: 0x221100,
-        emissiveIntensity: 0.2
+    // Create a canvas for text rendering
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 512;
+    canvas.height = 256;
+    
+    // Create texture from canvas
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    
+    // Create sprite material
+    const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true
     });
     
-    const mainBar = new THREE.Mesh(mainBarGeometry, numberMaterial);
-    mainBar.position.set(0, 2, 0);
-    mainBar.castShadow = true;
-    mainBar.receiveShadow = true;
-    group.add(mainBar);
+    // Create sprite
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(8, 4, 1); // Make it visible and appropriately sized
     
-    // Create the top angled stroke of the "1"
-    const topStrokeGeometry = new THREE.BoxGeometry(2, 0.6, 0.6);
-    const topStroke = new THREE.Mesh(topStrokeGeometry, numberMaterial);
-    topStroke.position.set(-0.7, 3.5, 0);
-    topStroke.rotation.z = Math.PI / 6; // 30 degrees angle
-    topStroke.castShadow = true;
-    topStroke.receiveShadow = true;
-    group.add(topStroke);
-    
-    // Create the base/foot of the "1"
-    const baseGeometry = new THREE.BoxGeometry(2.5, 0.6, 0.6);
-    const base = new THREE.Mesh(baseGeometry, numberMaterial);
-    base.position.set(0, 0.3, 0);
-    base.castShadow = true;
-    base.receiveShadow = true;
-    group.add(base);
-      // Position the number at the East wall where snake initially faces
-    // East wall is at x=41 in world coordinates (20 * 2 + 1)
-    // Position it slightly in front of the wall for visibility
+    // Position the score display at the East wall where snake initially faces
     const eastWallX = 41;
     const boardCenterZ = GRID_SIZE / 2; // Center of the board
     
-    group.position.set(eastWallX - 3, 6, boardCenterZ); // Floating higher at y=6
-    group.rotation.y = Math.PI + Math.PI / 2; // Face towards the board/snake + 90 degrees rotation
+    sprite.position.set(eastWallX - 3, 6, boardCenterZ); // Floating higher at y=6
     
     // Add some sparkle effect with small decorative elements
     for (let i = 0; i < 6; i++) {
@@ -368,7 +355,7 @@ function createNumber1AtBarrier(scene, GRID_SIZE) {
         });
         const sparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
         
-        // Random position around the number
+        // Random position around the score display
         const angle = (i / 6) * Math.PI * 2;
         const radius = 2.5 + Math.random() * 1;
         sparkle.position.set(
@@ -379,8 +366,50 @@ function createNumber1AtBarrier(scene, GRID_SIZE) {
         group.add(sparkle);
     }
     
-    group.name = "number1AtBarrier";
+    group.add(sprite);
+    group.name = "floatingScoreDisplay";
+    
+    // Store references for updating
+    group.userData = {
+        canvas: canvas,
+        context: context,
+        texture: texture,
+        sprite: sprite
+    };
+    
+    // Initial score render
+    updateFloatingScoreDisplay(group, 0);
+    
     scene.add(group);
+}
+
+// Function to update the floating score display
+export function updateFloatingScoreDisplay(scoreGroup, score) {
+    if (!scoreGroup || !scoreGroup.userData) return;
+    
+    const { canvas, context, texture } = scoreGroup.userData;
+    
+    // Clear canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Set text style
+    context.fillStyle = '#FFD700'; // Gold color
+    context.strokeStyle = '#000000'; // Black outline
+    context.lineWidth = 8;
+    context.font = 'bold 120px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    
+    // Draw text with outline
+    const text = score.toString();
+    const x = canvas.width / 2;
+    const y = canvas.height / 2;
+    
+    context.strokeText(text, x, y);
+    context.fillText(text, x, y);
+    
+    // Update texture
+    texture.needsUpdate = true;
 }
 
 export function getBoardCellCenter(x, z) {
