@@ -252,8 +252,10 @@ export function createAdvancedSkyDome(scene, themeConfig) {
     
     // Get theme colors with fallbacks
     const skyTop = themeConfig?.colors?.skyTop || 0x87CEEB;
-    const skyBottom = themeConfig?.colors?.skyBottom || 0xE0F6FF;    // Create sky dome geometry - much larger radius to cover 2000x2000 terrain
-    const skyGeometry = new THREE.SphereGeometry(2500, 32, 32);
+    const skyBottom = themeConfig?.colors?.skyBottom || 0xE0F6FF;
+    
+    // Create sky dome geometry
+    const skyGeometry = new THREE.SphereGeometry(490, 32, 32);
     
     // Create enhanced sky material
     const skyMaterial = new THREE.ShaderMaterial({
@@ -271,8 +273,10 @@ export function createAdvancedSkyDome(scene, themeConfig) {
     
     skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
     skyDome.name = "advancedSkyDome";
-    scene.add(skyDome);    // Create cloud layer geometry (slightly smaller radius to be inside sky dome)
-    const cloudGeometry = new THREE.SphereGeometry(2490, 32, 32);
+    scene.add(skyDome);
+    
+    // Create cloud layer geometry (slightly smaller radius to be inside sky dome)
+    const cloudGeometry = new THREE.SphereGeometry(485, 32, 32);
     
     // Set cloud colors based on theme
     let cloudColorValue = new THREE.Color(0xFFFFFF);

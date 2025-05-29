@@ -6,6 +6,7 @@ import { GLTFLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders
 import { loadModel } from './model-loader.js';
 import { setTheme, updateSceneTheme, getThemeColors } from './scene.js';
 import { createAdvancedSkyDome, updateAdvancedSkyColors, disposeSkySystem } from './sky-system.js';
+import { applyThemeLighting } from './lighting-system.js';
 
 // Texture loader for floor textures
 const textureLoader = new THREE.TextureLoader();
@@ -448,9 +449,20 @@ export async function applyBoardThemeToScene(scene) {
             landscapes,
             config: themeConfig
         });
-        
-        // Update sky system with new theme colors
+          // Update sky system with new theme colors
         updateSkyDomeWithBoardTheme(scene);
+        
+        // Apply theme-specific lighting configuration
+        try {
+            const lightingApplied = applyThemeLighting(currentBoardTheme);
+            if (lightingApplied) {
+                console.log(`Applied ${currentBoardTheme} lighting configuration`);
+            } else {
+                console.warn(`Failed to apply lighting for theme: ${currentBoardTheme}`);
+            }
+        } catch (error) {
+            console.warn('Error applying theme lighting:', error);
+        }
         
         console.log(`Successfully applied ${themeConfig.name} theme with ${decorations.length} decorations and ${landscapes.length} landscapes`);
         

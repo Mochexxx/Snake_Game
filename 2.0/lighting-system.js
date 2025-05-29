@@ -1,5 +1,106 @@
 import * as THREE from 'three';
 
+// Theme-specific lighting configurations
+const THEME_LIGHTING_CONFIGS = {
+    classic: {
+        // Early morning lighting for farm theme
+        ambient: {
+            color: 0xfff8dc,  // Cream/warm white for soft morning light
+            intensity: 0.4,
+            enabled: true
+        },
+        directional: {
+            color: 0xffeaa7,  // Warm golden morning sun
+            intensity: 1.2,
+            position: { x: 60, y: 45, z: 30 }, // Lower sun angle for morning
+            castShadow: true,
+            enabled: true
+        },
+        fill: {
+            color: 0xdda0dd,  // Soft lavender fill light for morning sky reflection
+            intensity: 0.35,
+            position: { x: -30, y: 25, z: -30 },
+            enabled: true
+        }
+    },
+    
+    desert: {
+        // Orange sunset/sunrise lighting for desert theme
+        ambient: {
+            color: 0xffa07a,  // Light orange for warm desert ambiance
+            intensity: 0.5,
+            enabled: true
+        },
+        directional: {
+            color: 0xff7f50,  // Coral/orange sunset sun
+            intensity: 1.4,
+            position: { x: 80, y: 30, z: 40 }, // Low sun angle for sunset
+            castShadow: true,
+            enabled: true
+        },
+        fill: {
+            color: 0xffd4c4,  // Warm peach fill light
+            intensity: 0.4,
+            position: { x: -40, y: 20, z: -25 },
+            enabled: true
+        }
+    },
+    
+    forest: {
+        // Mid-day lighting for forest theme
+        ambient: {
+            color: 0xf0f8ff,  // Cool white for bright daylight
+            intensity: 0.6,
+            enabled: true
+        },
+        directional: {
+            color: 0xfffacd,  // Lemon chiffon - bright daylight sun
+            intensity: 1.6,
+            position: { x: 40, y: 60, z: 40 }, // High sun angle for midday
+            castShadow: true,
+            enabled: true
+        },
+        fill: {
+            color: 0x98fb98,  // Pale green fill light to simulate forest canopy
+            intensity: 0.45,
+            position: { x: -20, y: 40, z: -20 },
+            enabled: true
+        }
+    },
+    
+    snow: {
+        // Night lighting for winter theme
+        ambient: {
+            color: 0x4169e1,  // Royal blue for moonlit night
+            intensity: 0.35,
+            enabled: true
+        },
+        directional: {
+            color: 0xe6e6fa,  // Lavender moonlight
+            intensity: 0.8,
+            position: { x: 25, y: 50, z: 60 }, // Moon position
+            castShadow: true,
+            enabled: true
+        },
+        fill: {
+            color: 0xb0c4de,  // Light steel blue for night sky reflection
+            intensity: 0.25,
+            position: { x: -35, y: 35, z: -35 },
+            enabled: true
+        },
+        // Add a subtle point light for extra winter atmosphere
+        point: {
+            color: 0xf0f8ff,  // Alice blue
+            intensity: 0.6,
+            position: { x: 0, y: 40, z: 0 },
+            distance: 80,
+            decay: 1.5,
+            castShadow: false,
+            enabled: true
+        }
+    }
+};
+
 // Lighting configuration
 let lightingConfig = {
     ambient: {
@@ -502,6 +603,107 @@ export function setLightingConfig(newConfig) {
             updateLight(lightType, 'intensity', config.intensity);
             updateLight(lightType, 'color', config.color);
             // Update other properties as needed
+        }
+    });
+}
+
+// Apply theme-specific lighting configuration
+export function applyThemeLighting(themeName) {
+    const themeConfig = THEME_LIGHTING_CONFIGS[themeName];
+    if (!themeConfig) {
+        console.warn(`No lighting configuration found for theme: ${themeName}`);
+        return false;
+    }
+    
+    console.log(`Applying ${themeName} lighting configuration`);
+    
+    // Deep merge theme config with current config
+    Object.keys(themeConfig).forEach(lightType => {
+        if (lightingConfig[lightType]) {
+            lightingConfig[lightType] = { ...lightingConfig[lightType], ...themeConfig[lightType] };
+            
+            // Update the actual light if it exists
+            if (lights[lightType] && scene) {
+                const config = lightingConfig[lightType];
+                
+                // Update basic properties
+                updateLight(lightType, 'enabled', config.enabled);
+                updateLight(lightType, 'intensity', config.intensity);
+                updateLight(lightType, 'color', config.color);
+                
+                // Update position if applicable
+                if (config.position) {
+                    updateLight(lightType, 'positionX', config.position.x);
+                    updateLight(lightType, 'positionY', config.position.y);
+                    updateLight(lightType, 'positionZ', config.position.z);
+                }
+                
+                // Update special properties for point lights
+                if (lightType === 'point' && config.distance !== undefined) {
+                    updateLight(lightType, 'distance', config.distance);
+                }
+                if (lightType === 'point' && config.decay !== undefined) {
+                    updateLight(lightType, 'decay', config.decay);
+                }
+                
+                // Update shadow settings
+                if (config.castShadow !== undefined) {
+                    updateLight(lightType, 'castShadow', config.castShadow);
+                }
+            }
+        }
+    });
+    
+    return true;
+}
+
+// Get available theme lighting configurations
+export function getAvailableThemeLightingConfigs() {
+    return Object.keys(THEME_LIGHTING_CONFIGS);
+}
+
+// Get specific theme lighting configuration
+export function getThemeLightingConfig(themeName) {
+    return THEME_LIGHTING_CONFIGS[themeName] || null;
+}
+
+// Update lighting debug menu with current values (if visible)
+function updateLightingDebugMenu() {
+    if (!debugMenuVisible) return;
+    
+    Object.keys(lightingConfig).forEach(lightType => {
+        const config = lightingConfig[lightType];
+        
+        // Update enabled checkbox
+        const enabledCheckbox = document.getElementById(`${lightType}-enabled`);
+        if (enabledCheckbox) {
+            enabledCheckbox.checked = config.enabled;
+        }
+        
+        // Update intensity slider and value
+        const intensitySlider = document.getElementById(`${lightType}-intensity`);
+        const intensityValue = document.getElementById(`${lightType}-intensity-value`);
+        if (intensitySlider && intensityValue) {
+            intensitySlider.value = config.intensity;
+            intensityValue.textContent = config.intensity;
+        }
+        
+        // Update color picker
+        const colorPicker = document.getElementById(`${lightType}-color`);
+        if (colorPicker) {
+            colorPicker.value = '#' + config.color.toString(16).padStart(6, '0');
+        }
+        
+        // Update position sliders if applicable
+        if (config.position) {
+            ['X', 'Y', 'Z'].forEach(axis => {
+                const slider = document.getElementById(`${lightType}-pos${axis}`);
+                const valueSpan = document.getElementById(`${lightType}-pos${axis}-value`);
+                if (slider && valueSpan) {
+                    slider.value = config.position[axis.toLowerCase()];
+                    valueSpan.textContent = config.position[axis.toLowerCase()];
+                }
+            });
         }
     });
 }
