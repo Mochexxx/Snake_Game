@@ -61,15 +61,16 @@
         #endScreenBackButton:active, #optionsBackButton:active {
             transform: scale(0.98);
             filter: brightness(0.9);
-        }
-        
-        #startScreen, #endScreen {
+        }          #startScreen, #endScreen {
             position: absolute;
             width: 100%;
             height: 100%;
             /* background-image: url('assets/bcktest.png'); */
-            background: none;
-            background-size: cover;
+            background-image: url('images/background.png');
+            background-size: 100% auto;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: #000; /* Fallback color for any uncovered areas */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -101,11 +102,13 @@
             color: white;
             font-size: 20px;
             z-index: 1;
-        }
-        #endScreen {
+        }        #endScreen {
             display: none;
             background-color: rgba(0, 0, 0, 0.7); /* semi-transparente para dar contraste */
-            background-image: none;
+            background-image: url('images/background.png');
+            background-size: 100% auto;
+            background-repeat: no-repeat;
+            background-position: center;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -318,7 +321,7 @@
         </div>
         <p id="pressKeyMessage" style="color: rgb(255, 0, 0); margin-top: 40px; font-size: 2.5vw; font-family: 'Consolas', 'Courier New', monospace; opacity: 0; transition: opacity 1s ease; text-shadow: 1px 1px #333;">Press any key to continue</p>
     </div>    <!-- Tela de menu principal -->
-    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">        <div id="titleContainer" style="position:relative;width:500px;max-width:90%;height:auto;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;">
+    <div id="mainMenu" style="position:absolute;width:100%;height:100%;background-image:url('images/background.png');background-size:100% auto;background-repeat:no-repeat;background-position:center;background-color:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;"><div id="titleContainer" style="position:relative;width:500px;max-width:90%;height:auto;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;">
             <div id="title" style="background-image:url('assets/Titlecards/mainmenu_verde.png');background-size:contain;background-position:center;background-repeat:no-repeat;width:100%;height:0;padding-bottom:40%;"></div>
         </div>
         
@@ -327,7 +330,7 @@
             <button id="optionsMenuButton" class="btn-image" style="width:200px;height:80px;background-image:url('assets/Buttons/settings_verde.png');">Opções</button>
         </div>
     </div><!-- Tela de modos de jogo -->
-    <div id="gameModeMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+    <div id="gameModeMenu" style="position:absolute;width:100%;height:100%;background-image:url('images/background.png');background-size:100% auto;background-repeat:no-repeat;background-position:center;background-color:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="gameModeTitle" style="background-image:url('assets/Titlecards/gamemodes_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:60px;"></div>
         
         <div style="display:flex;flex-direction:row;gap:40px;justify-content:center;margin-bottom:50px;">
@@ -335,10 +338,8 @@
             <button id="campaignButton" class="btn-image" style="width:200px;height:100px;background-image:url('assets/Gamemodes/campaign_verde.png');background-position:center;"><!--Campaign--></button>
         </div>
         
-        <button id="gameModeBackButton" class="btn-image" style="width:120px;height:60px;background-image:url('assets/Buttons/back_verde.png');">Voltar</button>    </div>
-
-    <!-- Menu de Seleção de Temas de Tabuleiro -->
-    <div id="boardThemeMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+        <button id="gameModeBackButton" class="btn-image" style="width:120px;height:60px;background-image:url('assets/Buttons/back_verde.png');">Voltar</button>    </div>    <!-- Menu de Seleção de Temas de Tabuleiro -->
+    <div id="boardThemeMenu" style="position:absolute;width:100%;height:100%;background-image:url('images/background.png');background-size:100% auto;background-repeat:no-repeat;background-position:center;background-color:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="boardThemeTitle" style="background-image:url('assets/Titlecards/options_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:50px;"></div>
         
         <div class="settings-section" style="width:600px;">
@@ -392,10 +393,8 @@
             <button id="endScreenBackButton" class="btn-image" style="width:120px; height:60px; background-image:url('assets/Buttons/home_verde.png');">Menu</button>
             <button id="playAgainButton" class="btn-image" style="width:200px; height:100px; background-image:url('assets/Buttons/restart_verde.png');" aria-label="Play Again"></button>
         </div>
-    </div>
-
-    <!-- Tela de opções -->
-    <div id="optionsMenu" style="position:absolute;width:100%;height:100%;background-image:none;background-size:cover;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
+    </div>    <!-- Tela de opções -->
+    <div id="optionsMenu" style="position:absolute;width:100%;height:100%;background-image:url('images/background.png');background-size:100% auto;background-repeat:no-repeat;background-position:center;background-color:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:3;">
         <div id="optionsTitle" style="background-image:url('assets/Titlecards/options_verde.png');background-size:contain;background-repeat:no-repeat;width:500px;height:200px;margin-bottom:50px;"></div>
           <!-- Configurações de som -->
         <div class="settings-section">
@@ -456,15 +455,14 @@
         
         <button id="optionsBackButton" class="btn-image" style="width:120px;height:60px;background-image:url('assets/Buttons/back_verde.png');margin-top:30px;">Voltar</button>
     </div>    <!-- Placar durante o jogo -->
-    <div id="scoreBoard" style="position:absolute; top:15px; left:15px; background-color:rgba(0,0,0,0.5); padding:10px 15px; border-radius:10px; color:white; font-size:18px; z-index:1; box-shadow:0 0 10px rgba(0,0,0,0.3);">
+    <div id="scoreBoard" style="position:absolute; top:15px; left:15px; background-color:rgba(0,0,0,0.5); padding:10px 15px; border-radius:10px; color:white; font-size:18px; z-index:1; box-shadow:0 0 10px rgba(0,0,0,0.3); display:none;">
         <span id="score" style="display:block; margin-bottom:5px; font-weight:bold;">Score: 0</span>
         <span id="highscore" style="display:block; margin-bottom:5px;">Highscore: 0</span>
         <span id="currentMode" style="display:block; margin-bottom:5px;">Mode: Classic</span>
         <span style="display:block; font-size:14px; opacity:0.8;">Press ESC for menu</span>
     </div>
-    
-    <!-- Menu de Escape (ESC) -->
-    <div id="escMenu" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:2000; flex-direction:column; justify-content:center; align-items:center;">
+      <!-- Menu de Escape (ESC) -->
+    <div id="escMenu" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-image:url('images/background.png'); background-size:100% auto; background-repeat:no-repeat; background-position:center; background-color:rgba(0,0,0,0.8); z-index:2000; flex-direction:column; justify-content:center; align-items:center;">
         <h2 style="color:white; font-size:36px; margin-bottom:40px;">Pause</h2>
         <div style="display:flex; flex-direction:column; gap:20px; align-items:center;">
             <button id="resumeButton" class="btn-image" style="width:150px; height:80px; background-image:url('assets/Buttons/resume_verde.png');">Retomar</button>
